@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Ethereum，pow on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/ethereumpow/</link>
+    <description>Recent content in Ethereum，pow on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Wed, 03 Oct 2018 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/ethereumpow/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Pow算法</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-10-03-pow/</link>
+      <pubDate>Wed, 03 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-10-03-pow/</guid>
+      <description>什么是Pow算法？ Pow的全称是Proof of Work，即工作量证明，是区块链中用来判断由哪个矿工获得区块打包权的算法。
+区块链的块的结构 在聊Pow之前，首先，必须先认识区块的结构，基本的区块结构如下
+   区块结构     当前块的hash值   前一个区块的哈希值   Merkle根哈希值   时间戳   难度值   随机数Nonce   区块包含的交易列表    Merkle根 交易列表里记录的每一笔交易都有一个唯一的哈希值，将交易的hash值两两组合，最后生成Merkle根
+Merkle保证了区块的交易信息不会被串改
+Nonce值 矿工挖矿的过程其实就是对交易数据进行打包后，算出一个符合如下公式的Nonce值的过程
+CryptoJS.SHA256(index + previousHash + timestamp + data + nonce) 该公式的结果是一个hash值，而挖矿的难度就是这个hash值的前面有几个0，难度越大，即要求的0的个数越多，就越难算出来，这个算的过程就是矿工工作的过程，所以这个算法才叫工作量证明算法。</description>
+    </item>
+    
+  </channel>
+</rss>

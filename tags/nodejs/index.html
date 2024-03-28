@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>NodeJs | Lambert&#39;s blog</title>
+<meta name="keywords" content="" />
+<meta name="description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod">
+<meta name="author" content="Theme PaperMod">
+<link rel="canonical" href="https://lambertxiao.github.io/tags/nodejs/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" type="application/rss+xml" href="https://lambertxiao.github.io/tags/nodejs/index.xml">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="NodeJs" />
+<meta property="og:description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://lambertxiao.github.io/tags/nodejs/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="NodeJs"/>
+<meta name="twitter:description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod"/>
+
+</head>
+
+<body class="list" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main"> 
+<header class="page-header"><div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/tags/">Tags</a></div>
+  <h1>NodeJs</h1>
+</header>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>koa的洋葱设计模型
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>async function a(ctx, next) { console.log(&#34;invoke a&#34;) await next() console.log(&#34;exit a&#34;) } async function b(ctx, next) { console.log(&#34;invoke b&#34;) await next() console.log(&#34;exit b&#34;) } function compose(middleware) { return (ctx, next) =&gt; { let index = -1 async function dispatch(i) { if (i &lt;= index) { throw new Error(&#39;next() called multiple times&#39;) } index = i let fn = middleware[i] if (i === middleware.length) { fn = next } if (!fn) { return } return await fn(ctx, () =&gt; { return dispatch(i &#43; 1) }) } return dispatch(0) } } let func = compose([a, b]) func(&#39;context&#39;, () =&gt; { console....</p>
+  </section>
+  <footer class="entry-footer"><span title='2020-06-05 00:00:00 +0000 UTC'>June 5, 2020</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Theme PaperMod</footer>
+  <a class="entry-link" aria-label="post link to koa的洋葱设计模型" href="https://lambertxiao.github.io/posts/_posts/2020-06-05-koa%E7%9A%84%E6%B4%8B%E8%91%B1%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%9E%8B/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>NodeJS与ES6的模块化
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>NodeJS的module 对于 circle.js
+// 这种导出方式，相当于将变量地址导出，会被外界修改 exports.varA = &#39;varA&#39; exports.func1 = () =&gt; { console.log(&#39;func1&#39;) } module.exports.varB = &#39;varB&#39; // 以上写法等价于 module.exports = { varA: &#39;varA&#39;, varB: &#39;varB&#39;, func1 () { console.log(&#39;func&#39;) } } 在 main.js 中可以这么引入
+let math = require(&#39;./utils/math&#39;) console.log(math.varA) console.log(math.varB) math.func1() math.varA = &#39;A&#39;; math.varB = &#39;B&#39;; math.func1 = () =&gt; { console.log(&#39;another func&#39;) } let math2 = require(&#39;./utils/math&#39;) // varA, varB 和 func1 都发生了改变，证明import进来的模块是单例的 console.log(math2.varA) console.log(math2.varB) math2.func1() ES6的module ES6 模块不是对象，而是通过export命令显式指定输出的代码，再通过import命令输入。...</p>
+  </section>
+  <footer class="entry-footer"><span title='2019-08-14 00:00:00 +0000 UTC'>August 14, 2019</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Theme PaperMod</footer>
+  <a class="entry-link" aria-label="post link to NodeJS与ES6的模块化" href="https://lambertxiao.github.io/posts/_posts/2019-08-14-nodejs%E4%B8%8Ees6%E7%9A%84%E6%A8%A1%E5%9D%97%E5%8C%96/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>nodejs-异步编程
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>异步编程 callback瀑布级回调 Promise Generator Async 和 Await   在函数体前通过关键字async可以将函数变为async函数
+  在async函数中对需要异步执行的函数前需加await关键字
+  await后的函数必须使用Promise对象封装
+  async函数执行后返回的是一个Promise对象
+  NodeJs单线程是怎么保证效率的 </p>
+  </section>
+  <footer class="entry-footer"><span title='2018-10-06 00:00:00 +0000 UTC'>October 6, 2018</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Theme PaperMod</footer>
+  <a class="entry-link" aria-label="post link to nodejs-异步编程" href="https://lambertxiao.github.io/posts/_posts/2019-08-06-nodejs-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B/"></a>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>

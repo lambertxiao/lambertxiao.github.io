@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Themes Guide | Lambert&#39;s blog</title>
+<meta name="keywords" content="" />
+<meta name="description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod">
+<meta name="author" content="Theme PaperMod">
+<link rel="canonical" href="https://lambertxiao.github.io/series/themes-guide/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" type="application/rss+xml" href="https://lambertxiao.github.io/series/themes-guide/index.xml">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="Themes Guide" />
+<meta property="og:description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://lambertxiao.github.io/series/themes-guide/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="Themes Guide"/>
+<meta name="twitter:description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod"/>
+
+</head>
+
+<body class="list" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main"> 
+<header class="page-header"><div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/series/">Series</a></div>
+  <h1>Themes Guide</h1>
+</header>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>线程相关
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>线程：我可是CPU调度的基本单位，进程是我爹</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 线程相关" href="https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E7%BA%BF%E7%A8%8B/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>网络世界的传输基石-TCP
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>姜还是老的辣</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 网络世界的传输基石-TCP" href="https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/tcp/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>进程相关
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>进程：我可是操作系统调度的基本单位，线程是我儿子</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 进程相关" href="https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E8%BF%9B%E7%A8%8B/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>五种IO模型
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>同步异步、阻塞非阻塞，傻傻分不清</p>
+  </section>
+  <footer class="entry-footer"><span title='2019-12-27 00:00:00 +0000 UTC'>December 27, 2019</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 五种IO模型" href="https://lambertxiao.github.io/posts/%E4%BA%94%E7%A7%8Dio%E6%A8%A1%E5%9E%8B/%E4%BA%94%E7%A7%8Dio%E6%A8%A1%E5%9E%8B/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Kafka的基本命令
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>脚本命令使用 生产消息 ./kafka-console-producer.sh --broker-list kafkas:9092 --topic user_register 输入消息:
+{&#34;accountname&#34;:&#34;test@qq.com&#34;,&#34;action&#34;:&#34;register&#34;,&#34;appname&#34;:&#34;CoolLine&#34;,&#34;appversion&#34;:&#34;1.6.xx&#34;,&#34;channelName&#34;:&#34;googleplay&#34;,&#34;cityen&#34;:&#34;&#34;,&#34;cityzh&#34;:&#34;&#34;,&#34;continentsen&#34;:&#34;&#34;,&#34;continentszh&#34;:&#34;&#34;,&#34;countryen&#34;:&#34;&#34;,&#34;countryZh&#34;:&#34;美国&#34;,&#34;createTimestamp&#34;:1566376441,&#34;deviceid&#34;:&#34;edb3d8ce8df595ad&#34;,&#34;isPrivilegedUser&#34;:&#34;true&#34;,&#34;line&#34;:&#34;CoolLine&#34;,&#34;mail&#34;:&#34;test@qq.com&#34;,&#34;pkgname&#34;:&#34;cc.coolline.client&#34;,&#34;platform&#34;:&#34;Android&#34;,&#34;provinceen&#34;:&#34;&#34;,&#34;provincezh&#34;:&#34;&#34;,&#34;pt&#34;:&#34;2019-08-21&#34;,&#34;registerip&#34;:&#34;10.244.2.64&#34;,&#34;registertime&#34;:&#34;2019-08-21 16:34:01&#34;,&#34;registertype&#34;:&#34;mail&#34;,&#34;userid&#34;:19348,&#34;userName&#34;:&#34;test@qq.com&#34;,&#34;userpwd&#34;:&#34;86A8F132223D033619389988E663F6C2&#34;,&#34;userstate&#34;:0,&#34;virtualCountryCode&#34;:&#34;AF&#34;} 消费主题 ./kafka-console-consumer.sh --bootstrap-server kafkas:9092 --topic user_register --from-beginning 设置某个主题的消息缓存时间 ./kafka-configs.sh --zookeeper zookeeper:2181 --alter --entity-name ${主题} --entity-type topics --add-config retention.ms=86400000 立即生效 ./kafka-topics.sh --zookeeper zookeeper:2181 --alter --topic ${主题} --config cleanup.policy=delete </p>
+  </section>
+  <footer class="entry-footer"><span title='2019-08-26 00:00:00 +0000 UTC'>August 26, 2019</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Kafka的基本命令" href="https://lambertxiao.github.io/posts/kafak%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%91%BD%E4%BB%A4/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Grunt
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>Grunt是一个基于NodeJS，可用于自动化构建、测试、生成文档的项目管理工具。</p>
+  </section>
+  <footer class="entry-footer"><span title='2018-09-04 00:00:00 +0000 UTC'>September 4, 2018</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Grunt" href="https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/grunt/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Gulp
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>Gulp 是一个构建工具，可以通过它自动执行网站开发过程中的公共任务，比如编译 SASS/Less，编译压缩混淆 JavaScript,，合并编译模板和版本控制等。因为 gulp 是基于 Node.js 构建的，所以 gulp 源文件和开发者自己定义的 gulpfile 都被写进 JavaScript 里，前端开发者可以用自己熟悉的语言来编写 gulp 任务。</p>
+  </section>
+  <footer class="entry-footer"><span title='2018-09-04 00:00:00 +0000 UTC'>September 4, 2018</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Gulp" href="https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/gulp/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Webpack
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>webpack 是一个模块打包器(module bundler)。打包器(bundler)帮助您取得准备用于部署的 JavaScript 和样式表，将它们转换为适合浏览器的可用格式。</p>
+  </section>
+  <footer class="entry-footer"><span title='2018-09-04 00:00:00 +0000 UTC'>September 4, 2018</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Webpack" href="https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/webpack/"></a>
+</article>
+<footer class="page-footer">
+  <nav class="pagination">
+    <a class="prev" href="https://lambertxiao.github.io/series/themes-guide/page/6/">« Prev Page</a>
+  </nav>
+</footer>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>

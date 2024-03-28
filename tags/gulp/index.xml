@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Gulp on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/gulp/</link>
+    <description>Recent content in Gulp on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Tue, 04 Sep 2018 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/gulp/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Gulp</title>
+      <link>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/gulp/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/gulp/</guid>
+      <description>Gulp 是一个构建工具，可以通过它自动执行网站开发过程中的公共任务，比如编译 SASS/Less，编译压缩混淆 JavaScript,，合并编译模板和版本控制等。因为 gulp 是基于 Node.js 构建的，所以 gulp 源文件和开发者自己定义的 gulpfile 都被写进 JavaScript 里，前端开发者可以用自己熟悉的语言来编写 gulp 任务。</description>
+    </item>
+    
+  </channel>
+</rss>

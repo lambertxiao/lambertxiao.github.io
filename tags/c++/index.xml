@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>c&#43;&#43; on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/c&#43;&#43;/</link>
+    <description>Recent content in c&#43;&#43; on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Thu, 15 Feb 2024 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/c++/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>使用GDB调试程序</title>
+      <link>https://lambertxiao.github.io/posts/gdb_usage/doc/</link>
+      <pubDate>Thu, 15 Feb 2024 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/gdb_usage/doc/</guid>
+      <description>好记性不如烂笔头</description>
+    </item>
+    
+    <item>
+      <title>安装新版gcc</title>
+      <link>https://lambertxiao.github.io/posts/c&#43;&#43;/%E5%AE%89%E8%A3%85%E6%96%B0%E7%89%88gcc/doc/</link>
+      <pubDate>Mon, 31 Oct 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/c&#43;&#43;/%E5%AE%89%E8%A3%85%E6%96%B0%E7%89%88gcc/doc/</guid>
+      <description>查找当前gcc的版本 http://ftp.gnu.org/gnu/gcc/
+下载对应的版本，并解压 cd ~/gcc 使用gcc自带的脚本安装依赖 ./contrib/download_prerequisites 生成makefile mkdir build &amp;amp;&amp;amp; cd build/ ../configure -enable-checking=release -enable-languages=c,c++ -disable-multilib 编译 make -j 8 如果中途出现g++: error: gengtype-lex.c: No such file or directory, 需要安装apt install flex
+安装到机器上 make install 设置环境变量 export CC=/usr/local/bin/gcc export CXX=/usr/local/bin/g++ 查看默认编译选项 echo &amp;quot;&amp;quot; | gcc -v -x c++ -E -
+解决GLIBCXX之类的错误 这是因为glibc++的版本太老，先查找
+whereis libstdc++.so.6 // /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ls -al /usr/lib/x86_64-linux-gnu/libstdc++.so.6 // /usr/lib/x86_64-linux-gnu/libstdc++.so.6 -&amp;gt; libstdc++.so.6.0.24 在gcc的build目录下查找新编译出来的libstdc++.so
+find . -name &amp;quot;*libstdc++*&amp;quot; 将找到的libstdc++.so.6.0.30放到/usr/lib/x86_64-linux-gnu/下，并通过软链替换掉原本的指向</description>
+    </item>
+    
+    <item>
+      <title>编译aws-sdk-cpp</title>
+      <link>https://lambertxiao.github.io/posts/c&#43;&#43;/%E7%BC%96%E8%AF%91aws-sdk-cpp/doc/</link>
+      <pubDate>Mon, 31 Oct 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/c&#43;&#43;/%E7%BC%96%E8%AF%91aws-sdk-cpp/doc/</guid>
+      <description>git clone https://github.com/aws/aws-sdk-cpp cd aws-sdk-cpp mkdir build &amp;amp;&amp;amp; cd build cmake ../ -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_ONLY=&amp;quot;s3&amp;quot; cmake --build aws-cpp-sdk-core cmake --build aws-cpp-sdk-s3 cmake --install aws-cpp-sdk-core --prefix ~/workspace/aws cmake --install aws-cpp-sdk-s3 --prefix ~/workspace/aws BUILD_ONLY 选项可以指定编译的模块，不同模块用;隔开</description>
+    </item>
+    
+    <item>
+      <title>c&#43;&#43;之什么是智能指针</title>
+      <link>https://lambertxiao.github.io/posts/c&#43;&#43;/%E6%99%BA%E8%83%BD%E6%8C%87%E9%92%88/doc/</link>
+      <pubDate>Sun, 17 Jul 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/c&#43;&#43;/%E6%99%BA%E8%83%BD%E6%8C%87%E9%92%88/doc/</guid>
+      <description>普通指针存在的问题 如何解决 官方库里给的方法 </description>
+    </item>
+    
+    <item>
+      <title>什么是eventfd</title>
+      <link>https://lambertxiao.github.io/posts/c&#43;&#43;/eventfd/doc/</link>
+      <pubDate>Sun, 17 Jul 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/c&#43;&#43;/eventfd/doc/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>

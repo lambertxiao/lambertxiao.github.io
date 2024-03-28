@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>programming language on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/programming-language/</link>
+    <description>Recent content in programming language on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Tue, 22 May 2012 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/programming-language/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Java和Golang的区别</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-01-java-golang-defference/</link>
+      <pubDate>Tue, 22 May 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-01-java-golang-defference/</guid>
+      <description>Golang与Java的区别 1. 结构体 -&amp;gt; 类 // 包名即为包含该文件的目录名字 package collection // 声明一个结构体，类似Java中的类 type Stack struct { data []string } // 声明一个Push函数，并通过一个Stack的指针对象实现该方法 // 类似声明了Stack的成员方法 func (s *Stack) Push(x string) { s.data = append(s.data, x) } func (s *Stack) Pop() string { n := len(s.data) - 1 res := s.data[n] s.data[n] = &amp;#34;&amp;#34; // to avoid memory leak  s.data = s.data[:n] return res } func (s *Stack) Size() int { return len(s.data) }   结构体对应Java里的类, 但结构体里只能有变量，不能有方法</description>
+    </item>
+    
+  </channel>
+</rss>

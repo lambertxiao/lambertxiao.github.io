@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>如何使用liburing读写磁盘 | Lambert&#39;s blog</title>
+<meta name="keywords" content="storage" />
+<meta name="description" content="什么是liburing liburing是一个用于异步IO库，它提供了简洁易用的API来处理文件I/O、网络I/O以及事件驱动I/O等各种I/O操作。liburing库基于Linux内核中的io_uring特性实现，将I/O请求从应用层转移到内核层以提高应用程序的I/O性能。
+ 由于liburing在内核版本5.1才引入，所以需要运行环境的linux内核版本大于等于5.1
+ 为什么使用liburing liburing库对于一些高并发、高吞吐量的程序，特别是网络服务器、云存储等高性能系统的设计和实现有很大的帮助作用。
+如何使用 建议参考源码里的步骤自行编译安装，源码：https://github.com/axboe/liburing
+常用函数介绍：
+ io_uring_queue_init：用于初始化io_uring并且返回其句柄。 io_uring_queue_exit：用于关闭并释放io_uring的句柄。 io_uring_get_sqe：用于获取一个可用的sqe，即I/O请求对应的队列元素数据结构。 io_uring_prep_readv：用于准备一个异步读请求。 io_uring_prep_writev：用于准备一个异步写请求。 io_uring_sqe_set_data：用于将用户私有数据关联到一个sqe（请求）中。 io_uring_submit：用于提交一个或一批异步IO请求到io_uring。 io_uring_peek_cqe：用于查看完成队列（cq）中的未处理项数量。 io_uring_wait_cqe：阻塞等待一个处理完成的io。 io_uring_cqe_get_data：用于获取特定的完成队列项（cqe），其中包含先前提交的IO请求的结果以及相关的私有数据。 io_uring_cqe_seen：用于标记一个完成队列项（cqe）已被处理过。  下面使用liburing封装一个DiskUtil实现对文件的基本读写
+编写disk_util.h头文件
+#include &lt;functional&gt;#include &lt;string&gt;#include &lt;liburing.h&gt;#include &lt;thread&gt; enum IO_OP { OP_READ = 0, OP_WRITE = 1 }; struct IORequest { IO_OP opcode; // 0: read, 1: write  char* buffer; off_t offset; size_t length; std::function&lt;void(int)&gt; callback; }; class DiskUtil { public: DiskUtil(const std::string&amp; file_path, int block_size); ~DiskUtil(); void submit_request(IORequest* req); void start(); void stop(); private: void io_worker_thread(); int open_file(); void close_file(); void process_io_request(IORequest* req); int submit_io_request(IORequest* req); void complete_io_request(); private: int fd_ = -1; io_uring io_ring_; const std::string file_path_; const int block_size_; std::thread io_worker_; bool is_running_ = false; }; 编写disk_tool.">
+<meta name="author" content="Lambert Xiao">
+<link rel="canonical" href="https://lambertxiao.github.io/posts/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8liburing%E8%AF%BB%E5%86%99%E7%A3%81%E7%9B%98/doc/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js" integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5&#43;kdJvBz5iKbt6B5PJI="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="如何使用liburing读写磁盘" />
+<meta property="og:description" content="什么是liburing liburing是一个用于异步IO库，它提供了简洁易用的API来处理文件I/O、网络I/O以及事件驱动I/O等各种I/O操作。liburing库基于Linux内核中的io_uring特性实现，将I/O请求从应用层转移到内核层以提高应用程序的I/O性能。
+ 由于liburing在内核版本5.1才引入，所以需要运行环境的linux内核版本大于等于5.1
+ 为什么使用liburing liburing库对于一些高并发、高吞吐量的程序，特别是网络服务器、云存储等高性能系统的设计和实现有很大的帮助作用。
+如何使用 建议参考源码里的步骤自行编译安装，源码：https://github.com/axboe/liburing
+常用函数介绍：
+ io_uring_queue_init：用于初始化io_uring并且返回其句柄。 io_uring_queue_exit：用于关闭并释放io_uring的句柄。 io_uring_get_sqe：用于获取一个可用的sqe，即I/O请求对应的队列元素数据结构。 io_uring_prep_readv：用于准备一个异步读请求。 io_uring_prep_writev：用于准备一个异步写请求。 io_uring_sqe_set_data：用于将用户私有数据关联到一个sqe（请求）中。 io_uring_submit：用于提交一个或一批异步IO请求到io_uring。 io_uring_peek_cqe：用于查看完成队列（cq）中的未处理项数量。 io_uring_wait_cqe：阻塞等待一个处理完成的io。 io_uring_cqe_get_data：用于获取特定的完成队列项（cqe），其中包含先前提交的IO请求的结果以及相关的私有数据。 io_uring_cqe_seen：用于标记一个完成队列项（cqe）已被处理过。  下面使用liburing封装一个DiskUtil实现对文件的基本读写
+编写disk_util.h头文件
+#include &lt;functional&gt;#include &lt;string&gt;#include &lt;liburing.h&gt;#include &lt;thread&gt; enum IO_OP { OP_READ = 0, OP_WRITE = 1 }; struct IORequest { IO_OP opcode; // 0: read, 1: write  char* buffer; off_t offset; size_t length; std::function&lt;void(int)&gt; callback; }; class DiskUtil { public: DiskUtil(const std::string&amp; file_path, int block_size); ~DiskUtil(); void submit_request(IORequest* req); void start(); void stop(); private: void io_worker_thread(); int open_file(); void close_file(); void process_io_request(IORequest* req); int submit_io_request(IORequest* req); void complete_io_request(); private: int fd_ = -1; io_uring io_ring_; const std::string file_path_; const int block_size_; std::thread io_worker_; bool is_running_ = false; }; 编写disk_tool." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://lambertxiao.github.io/posts/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8liburing%E8%AF%BB%E5%86%99%E7%A3%81%E7%9B%98/doc/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-03-26T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2023-03-26T00:00:00&#43;00:00" />
+<meta property="og:see_also" content="https://lambertxiao.github.io/posts/gdb_usage/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/numa/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/uio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/vfio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/virtio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="如何使用liburing读写磁盘"/>
+<meta name="twitter:description" content="什么是liburing liburing是一个用于异步IO库，它提供了简洁易用的API来处理文件I/O、网络I/O以及事件驱动I/O等各种I/O操作。liburing库基于Linux内核中的io_uring特性实现，将I/O请求从应用层转移到内核层以提高应用程序的I/O性能。
+ 由于liburing在内核版本5.1才引入，所以需要运行环境的linux内核版本大于等于5.1
+ 为什么使用liburing liburing库对于一些高并发、高吞吐量的程序，特别是网络服务器、云存储等高性能系统的设计和实现有很大的帮助作用。
+如何使用 建议参考源码里的步骤自行编译安装，源码：https://github.com/axboe/liburing
+常用函数介绍：
+ io_uring_queue_init：用于初始化io_uring并且返回其句柄。 io_uring_queue_exit：用于关闭并释放io_uring的句柄。 io_uring_get_sqe：用于获取一个可用的sqe，即I/O请求对应的队列元素数据结构。 io_uring_prep_readv：用于准备一个异步读请求。 io_uring_prep_writev：用于准备一个异步写请求。 io_uring_sqe_set_data：用于将用户私有数据关联到一个sqe（请求）中。 io_uring_submit：用于提交一个或一批异步IO请求到io_uring。 io_uring_peek_cqe：用于查看完成队列（cq）中的未处理项数量。 io_uring_wait_cqe：阻塞等待一个处理完成的io。 io_uring_cqe_get_data：用于获取特定的完成队列项（cqe），其中包含先前提交的IO请求的结果以及相关的私有数据。 io_uring_cqe_seen：用于标记一个完成队列项（cqe）已被处理过。  下面使用liburing封装一个DiskUtil实现对文件的基本读写
+编写disk_util.h头文件
+#include &lt;functional&gt;#include &lt;string&gt;#include &lt;liburing.h&gt;#include &lt;thread&gt; enum IO_OP { OP_READ = 0, OP_WRITE = 1 }; struct IORequest { IO_OP opcode; // 0: read, 1: write  char* buffer; off_t offset; size_t length; std::function&lt;void(int)&gt; callback; }; class DiskUtil { public: DiskUtil(const std::string&amp; file_path, int block_size); ~DiskUtil(); void submit_request(IORequest* req); void start(); void stop(); private: void io_worker_thread(); int open_file(); void close_file(); void process_io_request(IORequest* req); int submit_io_request(IORequest* req); void complete_io_request(); private: int fd_ = -1; io_uring io_ring_; const std::string file_path_; const int block_size_; std::thread io_worker_; bool is_running_ = false; }; 编写disk_tool."/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://lambertxiao.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "如何使用liburing读写磁盘",
+      "item": "https://lambertxiao.github.io/posts/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8liburing%E8%AF%BB%E5%86%99%E7%A3%81%E7%9B%98/doc/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "如何使用liburing读写磁盘",
+  "name": "如何使用liburing读写磁盘",
+  "description": "什么是liburing liburing是一个用于异步IO库，它提供了简洁易用的API来处理文件I/O、网络I/O以及事件驱动I/O等各种I/O操作。liburing库基于Linux内核中的io_uring特性实现，将I/O请求从应用层转移到内核层以提高应用程序的I/O性能。\n 由于liburing在内核版本5.1才引入，所以需要运行环境的linux内核版本大于等于5.1\n 为什么使用liburing liburing库对于一些高并发、高吞吐量的程序，特别是网络服务器、云存储等高性能系统的设计和实现有很大的帮助作用。\n如何使用 建议参考源码里的步骤自行编译安装，源码：https://github.com/axboe/liburing\n常用函数介绍：\n io_uring_queue_init：用于初始化io_uring并且返回其句柄。 io_uring_queue_exit：用于关闭并释放io_uring的句柄。 io_uring_get_sqe：用于获取一个可用的sqe，即I/O请求对应的队列元素数据结构。 io_uring_prep_readv：用于准备一个异步读请求。 io_uring_prep_writev：用于准备一个异步写请求。 io_uring_sqe_set_data：用于将用户私有数据关联到一个sqe（请求）中。 io_uring_submit：用于提交一个或一批异步IO请求到io_uring。 io_uring_peek_cqe：用于查看完成队列（cq）中的未处理项数量。 io_uring_wait_cqe：阻塞等待一个处理完成的io。 io_uring_cqe_get_data：用于获取特定的完成队列项（cqe），其中包含先前提交的IO请求的结果以及相关的私有数据。 io_uring_cqe_seen：用于标记一个完成队列项（cqe）已被处理过。  下面使用liburing封装一个DiskUtil实现对文件的基本读写\n编写disk_util.h头文件\n#include \u0026lt;functional\u0026gt;#include \u0026lt;string\u0026gt;#include \u0026lt;liburing.h\u0026gt;#include \u0026lt;thread\u0026gt; enum IO_OP { OP_READ = 0, OP_WRITE = 1 }; struct IORequest { IO_OP opcode; // 0: read, 1: write  char* buffer; off_t offset; size_t length; std::function\u0026lt;void(int)\u0026gt; callback; }; class DiskUtil { public: DiskUtil(const std::string\u0026amp; file_path, int block_size); ~DiskUtil(); void submit_request(IORequest* req); void start(); void stop(); private: void io_worker_thread(); int open_file(); void close_file(); void process_io_request(IORequest* req); int submit_io_request(IORequest* req); void complete_io_request(); private: int fd_ = -1; io_uring io_ring_; const std::string file_path_; const int block_size_; std::thread io_worker_; bool is_running_ = false; }; 编写disk_tool.",
+  "keywords": [
+    "storage"
+  ],
+  "articleBody": "什么是liburing liburing是一个用于异步IO库，它提供了简洁易用的API来处理文件I/O、网络I/O以及事件驱动I/O等各种I/O操作。liburing库基于Linux内核中的io_uring特性实现，将I/O请求从应用层转移到内核层以提高应用程序的I/O性能。\n 由于liburing在内核版本5.1才引入，所以需要运行环境的linux内核版本大于等于5.1\n 为什么使用liburing liburing库对于一些高并发、高吞吐量的程序，特别是网络服务器、云存储等高性能系统的设计和实现有很大的帮助作用。\n如何使用 建议参考源码里的步骤自行编译安装，源码：https://github.com/axboe/liburing\n常用函数介绍：\n io_uring_queue_init：用于初始化io_uring并且返回其句柄。 io_uring_queue_exit：用于关闭并释放io_uring的句柄。 io_uring_get_sqe：用于获取一个可用的sqe，即I/O请求对应的队列元素数据结构。 io_uring_prep_readv：用于准备一个异步读请求。 io_uring_prep_writev：用于准备一个异步写请求。 io_uring_sqe_set_data：用于将用户私有数据关联到一个sqe（请求）中。 io_uring_submit：用于提交一个或一批异步IO请求到io_uring。 io_uring_peek_cqe：用于查看完成队列（cq）中的未处理项数量。 io_uring_wait_cqe：阻塞等待一个处理完成的io。 io_uring_cqe_get_data：用于获取特定的完成队列项（cqe），其中包含先前提交的IO请求的结果以及相关的私有数据。 io_uring_cqe_seen：用于标记一个完成队列项（cqe）已被处理过。  下面使用liburing封装一个DiskUtil实现对文件的基本读写\n编写disk_util.h头文件\n#include #include #include #include  enum IO_OP { OP_READ = 0, OP_WRITE = 1 }; struct IORequest { IO_OP opcode; // 0: read, 1: write  char* buffer; off_t offset; size_t length; std::functionvoid(int) callback; }; class DiskUtil { public: DiskUtil(const std::string\u0026 file_path, int block_size); ~DiskUtil(); void submit_request(IORequest* req); void start(); void stop(); private: void io_worker_thread(); int open_file(); void close_file(); void process_io_request(IORequest* req); int submit_io_request(IORequest* req); void complete_io_request(); private: int fd_ = -1; io_uring io_ring_; const std::string file_path_; const int block_size_; std::thread io_worker_; bool is_running_ = false; }; 编写disk_tool.cpp\n#include #include #include #include #include #include #include #include #include \"disk_util.h\" DiskUtil::DiskUtil(const std::string\u0026 file_path, int block_size) : file_path_(file_path), block_size_(block_size) { fd_ = open_file(); if (fd_  0) { throw std::runtime_error(\"Failed to open file\"); } int ret = io_uring_queue_init(128, \u0026io_ring_, 0); if (ret  0) { close(fd_); throw std::runtime_error(\"Failed to setup io ring, ret:\" + std::to_string(ret)); } is_running_ = true; io_worker_ = std::thread(std::bind(\u0026DiskUtil::io_worker_thread, this)); } DiskUtil::~DiskUtil() { stop(); io_uring_queue_exit(\u0026io_ring_); close_file(); } void DiskUtil::submit_request(IORequest* req) { submit_io_request(req); } void DiskUtil::start() { is_running_ = true; } void DiskUtil::stop() { if (is_running_) { is_running_ = false; if (io_worker_.joinable()) { io_worker_.join(); } } } int DiskUtil::open_file() { int flags = O_RDWR | O_DIRECT | O_CREAT; int mode = S_IRUSR | S_IWUSR; return open(file_path_.c_str(), flags); } void DiskUtil::close_file() { if (fd_ = 0) { close(fd_); } } int DiskUtil::submit_io_request(IORequest* req) { struct io_uring_sqe* sqe = io_uring_get_sqe(\u0026io_ring_); if (!sqe) { return -1; } struct iovec iov; iov.iov_base = req-buffer; iov.iov_len = req-length; if (req-opcode == OP_READ) { io_uring_prep_readv(sqe, fd_, \u0026iov, 1, req-offset); } else if (req-opcode == OP_WRITE) { io_uring_prep_writev(sqe, fd_, \u0026iov, 1, req-offset); } io_uring_sqe_set_data(sqe, (void*)req); io_uring_submit(\u0026io_ring_); return 0; } void DiskUtil::io_worker_thread() { while (is_running_) { struct io_uring_cqe* cqe = nullptr; int ret = io_uring_wait_cqe(\u0026io_ring_, \u0026cqe); if (ret  0) { std::cout  \"io_uring_wait_cqe error:\"  ret  std::endl; return; } std::cout  \"ret:\"  ret  std::endl; if (cqe-res  0) { std::cerr  \"IO error: \"  std::strerror(-cqe-res)  \" ret_code:\"  cqe-res  std::endl; std::this_thread::sleep_for(std::chrono::milliseconds(500)); cqe = nullptr; continue; } else { IORequest* req = (IORequest*)io_uring_cqe_get_data(cqe); if (req-callback) { req-callback(0); } } io_uring_cqe_seen(\u0026io_ring_, cqe); } } 下面是调用的例子\n#include #include #include #include \"disk_util.h\" #define BLOCK_SIZE 4096  void test_read(DiskUtil\u0026 disk, off_t offset, size_t length) { char* buffer = nullptr; int ret = posix_memalign((void**)\u0026buffer, 4096, length); if (ret  0) { std::cout  \"malloc buffer error\"; return; } IORequest* req = new IORequest; req-opcode = OP_READ; req-buffer = buffer; req-offset = offset; req-length = length; req-callback = [req](int ret) { if (ret == 0) { std::cout  \"Read complete, data:\"  req-buffer  std::endl; } else { std::cout  \"Read failed: \"  ret  std::endl; } free(req-buffer); delete req; }; disk.submit_request(req); } void test_write(DiskUtil\u0026 disk, off_t offset, size_t length, const char* data) { char* buffer = nullptr; int ret = posix_memalign((void**)\u0026buffer, 4096, length); if (ret  0) { std::cout  \"malloc buffer error\"; return; } std::memcpy(buffer, data, length); IORequest* req = new IORequest(); req-opcode = OP_WRITE; req-buffer = buffer; req-offset = offset; req-length = length; req-callback = [req](int ret) { if (ret == 0) { std::cout  \"Write complete\"  std::endl; } else { std::cout  \"Write failed: \"  ret  std::endl; } free(req-buffer); delete req; }; disk.submit_request(req); } int main() { DiskUtil disk(\"test.disk\", BLOCK_SIZE); disk.start(); size_t length = 4096; const char* data = \"Hello world\"; test_write(disk, 0, length, data); std::this_thread::sleep_for(std::chrono::seconds(1)); test_read(disk, 0, length); // std::system(\"rm test.disk\");  disk.stop(); return 0; } 注意点：\n 与libaio不同的是，liburing并不强制上层传递的buffer是4K对齐的，但是为了获取最佳性能，建议还是使用4K对齐的buffer。 实测在内核5.4版本上使用io_uring_prep_read和io_uring_prep_write方法会在调用io_uring_wait_cqe判断cqe-res的大小时报invalid argument，原因未知  完整代码参见github链接：https://github.com/lambertxiao/storage/tree/master/liburing\n为什么liburing性能高  零拷贝：在传统的系统调用中，数据需要在用户空间和内核空间进行多次内存拷贝，而io_uring可以通过内存映射来实现零拷贝，将数据从内核的缓存区直接传输到用户空间，从而减少了内存拷贝带来的性能开销。 批处理I/O操作：io_uring使用批处理机制来减少系统调用的次数，可以将多个I/O操作打包成一个请求提交给内核进行处理，从而提高了系统吞吐量。 高效内存管理：io_uring在内核中使用了自身的内存池机制，能够更有效地管理内部的内存，避免了频繁的分配和释放内存所带来的性能损失。 锁控制：io_uring使用了内核层面的锁机制，避免了多线程I/O操作时的竞争情况，提高了系统的并发能力。 io_uring的底层实现使用了ring buffer方式，可以根据需要进行高效的扩展，能够更好地应对高负载工作环境  ",
+  "wordCount" : "596",
+  "inLanguage": "en",
+  "datePublished": "2023-03-26T00:00:00Z",
+  "dateModified": "2023-03-26T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "Lambert Xiao"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lambertxiao.github.io/posts/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8liburing%E8%AF%BB%E5%86%99%E7%A3%81%E7%9B%98/doc/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lambert's blog",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lambertxiao.github.io/avatar.jpeg"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      如何使用liburing读写磁盘
+    </h1>
+    <div class="post-meta"><span title='2023-03-26 00:00:00 +0000 UTC'>March 26, 2023</span>&nbsp;·&nbsp;3 min&nbsp;·&nbsp;Lambert Xiao&nbsp;|&nbsp;<a href="https://github.com/adityatelange/hugo-PaperMod/tree/exampleSite/content/posts/%e5%a6%82%e4%bd%95%e4%bd%bf%e7%94%a8liburing%e8%af%bb%e5%86%99%e7%a3%81%e7%9b%98/doc.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+</div>
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#%e4%bb%80%e4%b9%88%e6%98%afliburing" aria-label="什么是liburing">什么是liburing</a></li>
+                <li>
+                    <a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e4%bd%bf%e7%94%a8liburing" aria-label="为什么使用liburing">为什么使用liburing</a></li>
+                <li>
+                    <a href="#%e5%a6%82%e4%bd%95%e4%bd%bf%e7%94%a8" aria-label="如何使用">如何使用</a></li>
+                <li>
+                    <a href="#%e4%b8%ba%e4%bb%80%e4%b9%88liburing%e6%80%a7%e8%83%bd%e9%ab%98" aria-label="为什么liburing性能高">为什么liburing性能高</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h2 id="什么是liburing">什么是liburing<a hidden class="anchor" aria-hidden="true" href="#什么是liburing">#</a></h2>
+<p>liburing是一个用于异步IO库，它提供了简洁易用的API来处理文件I/O、网络I/O以及事件驱动I/O等各种I/O操作。liburing库基于Linux内核中的io_uring特性实现，将I/O请求从应用层转移到内核层以提高应用程序的I/O性能。</p>
+<blockquote>
+<p>由于liburing在内核版本5.1才引入，所以需要运行环境的linux内核版本大于等于5.1</p>
+</blockquote>
+<h2 id="为什么使用liburing">为什么使用liburing<a hidden class="anchor" aria-hidden="true" href="#为什么使用liburing">#</a></h2>
+<p>liburing库对于一些高并发、高吞吐量的程序，特别是网络服务器、云存储等高性能系统的设计和实现有很大的帮助作用。</p>
+<h2 id="如何使用">如何使用<a hidden class="anchor" aria-hidden="true" href="#如何使用">#</a></h2>
+<p>建议参考源码里的步骤自行编译安装，源码：https://github.com/axboe/liburing</p>
+<p>常用函数介绍：</p>
+<ul>
+<li>io_uring_queue_init：用于初始化io_uring并且返回其句柄。</li>
+<li>io_uring_queue_exit：用于关闭并释放io_uring的句柄。</li>
+<li>io_uring_get_sqe：用于获取一个可用的sqe，即I/O请求对应的队列元素数据结构。</li>
+<li>io_uring_prep_readv：用于准备一个异步读请求。</li>
+<li>io_uring_prep_writev：用于准备一个异步写请求。</li>
+<li>io_uring_sqe_set_data：用于将用户私有数据关联到一个sqe（请求）中。</li>
+<li>io_uring_submit：用于提交一个或一批异步IO请求到io_uring。</li>
+<li>io_uring_peek_cqe：用于查看完成队列（cq）中的未处理项数量。</li>
+<li>io_uring_wait_cqe：阻塞等待一个处理完成的io。</li>
+<li>io_uring_cqe_get_data：用于获取特定的完成队列项（cqe），其中包含先前提交的IO请求的结果以及相关的私有数据。</li>
+<li>io_uring_cqe_seen：用于标记一个完成队列项（cqe）已被处理过。</li>
+</ul>
+<p>下面使用liburing封装一个DiskUtil实现对文件的基本读写</p>
+<p>编写disk_util.h头文件</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#000080">#include</span> <span style="color:#000080">&lt;functional&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&lt;string&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&lt;liburing.h&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&lt;thread&gt;</span><span style="color:#000080">
+</span><span style="color:#000080"></span>
+<span style="color:#cdcd00">enum</span> <span style="color:#00cdcd">IO_OP</span> { OP_READ <span style="color:#39c">=</span> <span style="color:#cd00cd">0</span>, OP_WRITE <span style="color:#39c">=</span> <span style="color:#cd00cd">1</span> };
+
+<span style="color:#cdcd00">struct</span> <span style="color:#00cdcd">IORequest</span> {
+  IO_OP opcode; <span style="color:#000080">// 0: read, 1: write
+</span><span style="color:#000080"></span>  <span style="color:#00cd00">char</span><span style="color:#39c">*</span> buffer;
+  off_t offset;
+  size_t length;
+  std<span style="color:#39c">::</span>function<span style="color:#39c">&lt;</span><span style="color:#00cd00">void</span>(<span style="color:#00cd00">int</span>)<span style="color:#39c">&gt;</span> callback;
+};
+
+<span style="color:#cdcd00">class</span> <span style="color:#00cdcd">DiskUtil</span> {
+<span style="color:#cdcd00">public</span><span style="color:#39c">:</span>
+  DiskUtil(<span style="color:#cdcd00">const</span> std<span style="color:#39c">::</span>string<span style="color:#39c">&amp;</span> file_path, <span style="color:#00cd00">int</span> block_size);
+  <span style="color:#39c">~</span>DiskUtil();
+  <span style="color:#00cd00">void</span> submit_request(IORequest<span style="color:#39c">*</span> req);
+  <span style="color:#00cd00">void</span> start();
+  <span style="color:#00cd00">void</span> stop();
+<span style="color:#cdcd00">private</span><span style="color:#39c">:</span>
+  <span style="color:#00cd00">void</span> io_worker_thread();
+  <span style="color:#00cd00">int</span> open_file();
+  <span style="color:#00cd00">void</span> close_file();
+  <span style="color:#00cd00">void</span> process_io_request(IORequest<span style="color:#39c">*</span> req);
+  <span style="color:#00cd00">int</span> submit_io_request(IORequest<span style="color:#39c">*</span> req);
+  <span style="color:#00cd00">void</span> complete_io_request();
+<span style="color:#cdcd00">private</span><span style="color:#39c">:</span>
+  <span style="color:#00cd00">int</span> fd_ <span style="color:#39c">=</span> <span style="color:#39c">-</span><span style="color:#cd00cd">1</span>;
+  io_uring io_ring_;
+  <span style="color:#cdcd00">const</span> std<span style="color:#39c">::</span>string file_path_;
+  <span style="color:#cdcd00">const</span> <span style="color:#00cd00">int</span> block_size_;
+  std<span style="color:#39c">::</span><span style="color:#cdcd00">thread</span> io_worker_;
+  <span style="color:#00cd00">bool</span> is_running_ <span style="color:#39c">=</span> <span style="color:#cd00cd">false</span>;
+};
+</code></pre></div><p>编写disk_tool.cpp</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#000080">#include</span> <span style="color:#000080">&lt;vector&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&lt;string&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&lt;fcntl.h&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&lt;unistd.h&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&lt;cstring&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&lt;stdexcept&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&lt;iostream&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&lt;liburing.h&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&#34;disk_util.h&#34;</span><span style="color:#000080">
+</span><span style="color:#000080"></span>
+DiskUtil<span style="color:#39c">::</span>DiskUtil(<span style="color:#cdcd00">const</span> std<span style="color:#39c">::</span>string<span style="color:#39c">&amp;</span> file_path, <span style="color:#00cd00">int</span> block_size)
+ <span style="color:#39c">:</span> file_path_(file_path), block_size_(block_size) {
+  fd_ <span style="color:#39c">=</span> open_file();
+  <span style="color:#cdcd00">if</span> (fd_ <span style="color:#39c">&lt;</span> <span style="color:#cd00cd">0</span>) {
+    <span style="color:#cdcd00">throw</span> std<span style="color:#39c">::</span>runtime_error(<span style="color:#cd0000">&#34;Failed to open file&#34;</span>);
+  }
+
+  <span style="color:#00cd00">int</span> ret <span style="color:#39c">=</span> io_uring_queue_init(<span style="color:#cd00cd">128</span>, <span style="color:#39c">&amp;</span>io_ring_, <span style="color:#cd00cd">0</span>);
+  <span style="color:#cdcd00">if</span> (ret <span style="color:#39c">&lt;</span> <span style="color:#cd00cd">0</span>) {
+    close(fd_);
+    <span style="color:#cdcd00">throw</span> std<span style="color:#39c">::</span>runtime_error(<span style="color:#cd0000">&#34;Failed to setup io ring, ret:&#34;</span> <span style="color:#39c">+</span> std<span style="color:#39c">::</span>to_string(ret));
+  }
+
+  is_running_ <span style="color:#39c">=</span> <span style="color:#cd00cd">true</span>;
+  io_worker_ <span style="color:#39c">=</span> std<span style="color:#39c">::</span><span style="color:#cdcd00">thread</span>(std<span style="color:#39c">::</span>bind(<span style="color:#39c">&amp;</span>DiskUtil<span style="color:#39c">::</span>io_worker_thread, <span style="color:#cdcd00">this</span>));
+}
+
+DiskUtil<span style="color:#39c">::~</span>DiskUtil() {
+  stop();
+  io_uring_queue_exit(<span style="color:#39c">&amp;</span>io_ring_);
+  close_file();
+}
+
+<span style="color:#00cd00">void</span> DiskUtil<span style="color:#39c">::</span>submit_request(IORequest<span style="color:#39c">*</span> req) {
+  submit_io_request(req);
+}
+
+<span style="color:#00cd00">void</span> DiskUtil<span style="color:#39c">::</span>start() {
+  is_running_ <span style="color:#39c">=</span> <span style="color:#cd00cd">true</span>;
+}
+
+<span style="color:#00cd00">void</span> DiskUtil<span style="color:#39c">::</span>stop() {
+  <span style="color:#cdcd00">if</span> (is_running_) {
+    is_running_ <span style="color:#39c">=</span> <span style="color:#cd00cd">false</span>;
+    <span style="color:#cdcd00">if</span> (io_worker_.joinable()) {
+        io_worker_.join();
+    }
+  }
+}
+
+<span style="color:#00cd00">int</span> DiskUtil<span style="color:#39c">::</span>open_file() {
+  <span style="color:#00cd00">int</span> flags <span style="color:#39c">=</span> O_RDWR <span style="color:#39c">|</span> O_DIRECT <span style="color:#39c">|</span> O_CREAT;
+  <span style="color:#00cd00">int</span> mode <span style="color:#39c">=</span> S_IRUSR <span style="color:#39c">|</span> S_IWUSR;
+  <span style="color:#cdcd00">return</span> open(file_path_.c_str(), flags);
+}
+
+<span style="color:#00cd00">void</span> DiskUtil<span style="color:#39c">::</span>close_file() {
+  <span style="color:#cdcd00">if</span> (fd_ <span style="color:#39c">&gt;=</span> <span style="color:#cd00cd">0</span>) {
+    close(fd_);
+  }
+}
+
+<span style="color:#00cd00">int</span> DiskUtil<span style="color:#39c">::</span>submit_io_request(IORequest<span style="color:#39c">*</span> req) {
+  <span style="color:#cdcd00">struct</span> <span style="color:#00cdcd">io_uring_sqe</span><span style="color:#39c">*</span> sqe <span style="color:#39c">=</span> io_uring_get_sqe(<span style="color:#39c">&amp;</span>io_ring_);
+  <span style="color:#cdcd00">if</span> (<span style="color:#39c">!</span>sqe) {
+      <span style="color:#cdcd00">return</span> <span style="color:#39c">-</span><span style="color:#cd00cd">1</span>;
+  }
+
+  <span style="color:#cdcd00">struct</span> <span style="color:#00cdcd">iovec</span> iov;
+  iov.iov_base <span style="color:#39c">=</span> req<span style="color:#39c">-&gt;</span>buffer;
+  iov.iov_len <span style="color:#39c">=</span> req<span style="color:#39c">-&gt;</span>length;
+
+  <span style="color:#cdcd00">if</span> (req<span style="color:#39c">-&gt;</span>opcode <span style="color:#39c">==</span> OP_READ) {
+    io_uring_prep_readv(sqe, fd_, <span style="color:#39c">&amp;</span>iov, <span style="color:#cd00cd">1</span>, req<span style="color:#39c">-&gt;</span>offset);
+  } <span style="color:#cdcd00">else</span> if (req<span style="color:#39c">-&gt;</span>opcode <span style="color:#39c">==</span> OP_WRITE) {
+    io_uring_prep_writev(sqe, fd_, <span style="color:#39c">&amp;</span>iov, <span style="color:#cd00cd">1</span>, req<span style="color:#39c">-&gt;</span>offset);
+  }
+  io_uring_sqe_set_data(sqe, (<span style="color:#00cd00">void</span><span style="color:#39c">*</span>)req);
+  io_uring_submit(<span style="color:#39c">&amp;</span>io_ring_);
+  <span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>;
+}
+
+<span style="color:#00cd00">void</span> DiskUtil<span style="color:#39c">::</span>io_worker_thread() {
+  <span style="color:#cdcd00">while</span> (is_running_) {
+    <span style="color:#cdcd00">struct</span> <span style="color:#00cdcd">io_uring_cqe</span><span style="color:#39c">*</span> cqe <span style="color:#39c">=</span> <span style="color:#cdcd00">nullptr</span>;
+    <span style="color:#00cd00">int</span> ret <span style="color:#39c">=</span> io_uring_wait_cqe(<span style="color:#39c">&amp;</span>io_ring_, <span style="color:#39c">&amp;</span>cqe);
+    <span style="color:#cdcd00">if</span> (ret <span style="color:#39c">&lt;</span> <span style="color:#cd00cd">0</span>) {
+      std<span style="color:#39c">::</span>cout <span style="color:#39c">&lt;&lt;</span> <span style="color:#cd0000">&#34;io_uring_wait_cqe error:&#34;</span> <span style="color:#39c">&lt;&lt;</span> ret <span style="color:#39c">&lt;&lt;</span> std<span style="color:#39c">::</span>endl;
+      <span style="color:#cdcd00">return</span>;
+    }
+    std<span style="color:#39c">::</span>cout <span style="color:#39c">&lt;&lt;</span> <span style="color:#cd0000">&#34;ret:&#34;</span> <span style="color:#39c">&lt;&lt;</span> ret <span style="color:#39c">&lt;&lt;</span> std<span style="color:#39c">::</span>endl;
+    <span style="color:#cdcd00">if</span> (cqe<span style="color:#39c">-&gt;</span>res <span style="color:#39c">&lt;</span> <span style="color:#cd00cd">0</span>) {
+      std<span style="color:#39c">::</span>cerr <span style="color:#39c">&lt;&lt;</span> <span style="color:#cd0000">&#34;IO error: &#34;</span> <span style="color:#39c">&lt;&lt;</span> std<span style="color:#39c">::</span>strerror(<span style="color:#39c">-</span>cqe<span style="color:#39c">-&gt;</span>res) <span style="color:#39c">&lt;&lt;</span> <span style="color:#cd0000">&#34; ret_code:&#34;</span> <span style="color:#39c">&lt;&lt;</span> cqe<span style="color:#39c">-&gt;</span>res <span style="color:#39c">&lt;&lt;</span> std<span style="color:#39c">::</span>endl;
+      std<span style="color:#39c">::</span>this_thread<span style="color:#39c">::</span>sleep_for(std<span style="color:#39c">::</span>chrono<span style="color:#39c">::</span>milliseconds(<span style="color:#cd00cd">500</span>));
+      cqe <span style="color:#39c">=</span> <span style="color:#cdcd00">nullptr</span>;
+      <span style="color:#cdcd00">continue</span>;
+    } <span style="color:#cdcd00">else</span> {
+      IORequest<span style="color:#39c">*</span> req <span style="color:#39c">=</span> (IORequest<span style="color:#39c">*</span>)io_uring_cqe_get_data(cqe);
+      <span style="color:#cdcd00">if</span> (req<span style="color:#39c">-&gt;</span>callback) {
+        req<span style="color:#39c">-&gt;</span>callback(<span style="color:#cd00cd">0</span>);
+      }
+    }
+    io_uring_cqe_seen(<span style="color:#39c">&amp;</span>io_ring_, cqe);
+  }
+ }
+</code></pre></div><p>下面是调用的例子</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#000080">#include</span> <span style="color:#000080">&lt;cstring&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&lt;cstdlib&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&lt;iostream&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&#34;disk_util.h&#34;</span><span style="color:#000080">
+</span><span style="color:#000080"></span>
+<span style="color:#000080">#define BLOCK_SIZE 4096
+</span><span style="color:#000080"></span>
+<span style="color:#00cd00">void</span> test_read(DiskUtil<span style="color:#39c">&amp;</span> disk, off_t offset, size_t length) {
+  <span style="color:#00cd00">char</span><span style="color:#39c">*</span> buffer <span style="color:#39c">=</span> <span style="color:#cdcd00">nullptr</span>;
+  <span style="color:#00cd00">int</span> ret <span style="color:#39c">=</span> posix_memalign((<span style="color:#00cd00">void</span><span style="color:#39c">**</span>)<span style="color:#39c">&amp;</span>buffer, <span style="color:#cd00cd">4096</span>, length);
+  <span style="color:#cdcd00">if</span> (ret <span style="color:#39c">&lt;</span> <span style="color:#cd00cd">0</span>) {
+    std<span style="color:#39c">::</span>cout <span style="color:#39c">&lt;&lt;</span> <span style="color:#cd0000">&#34;malloc buffer error&#34;</span>;
+    <span style="color:#cdcd00">return</span>;
+  }
+
+  IORequest<span style="color:#39c">*</span> req <span style="color:#39c">=</span> <span style="color:#cdcd00">new</span> IORequest;
+  req<span style="color:#39c">-&gt;</span>opcode <span style="color:#39c">=</span> OP_READ;
+  req<span style="color:#39c">-&gt;</span>buffer <span style="color:#39c">=</span> buffer;
+  req<span style="color:#39c">-&gt;</span>offset <span style="color:#39c">=</span> offset;
+  req<span style="color:#39c">-&gt;</span>length <span style="color:#39c">=</span> length;
+  req<span style="color:#39c">-&gt;</span>callback <span style="color:#39c">=</span> [req](<span style="color:#00cd00">int</span> ret) {
+    <span style="color:#cdcd00">if</span> (ret <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span>) {
+      std<span style="color:#39c">::</span>cout <span style="color:#39c">&lt;&lt;</span> <span style="color:#cd0000">&#34;Read complete, data:&#34;</span> <span style="color:#39c">&lt;&lt;</span> req<span style="color:#39c">-&gt;</span>buffer <span style="color:#39c">&lt;&lt;</span> std<span style="color:#39c">::</span>endl;
+    } <span style="color:#cdcd00">else</span> {
+      std<span style="color:#39c">::</span>cout <span style="color:#39c">&lt;&lt;</span> <span style="color:#cd0000">&#34;Read failed: &#34;</span> <span style="color:#39c">&lt;&lt;</span> ret <span style="color:#39c">&lt;&lt;</span> std<span style="color:#39c">::</span>endl;
+    }
+
+    free(req<span style="color:#39c">-&gt;</span>buffer);
+    <span style="color:#cdcd00">delete</span> req;
+  };
+  disk.submit_request(req);
+}
+
+<span style="color:#00cd00">void</span> test_write(DiskUtil<span style="color:#39c">&amp;</span> disk, off_t offset, size_t length, <span style="color:#cdcd00">const</span> <span style="color:#00cd00">char</span><span style="color:#39c">*</span> data) {
+  <span style="color:#00cd00">char</span><span style="color:#39c">*</span> buffer <span style="color:#39c">=</span> <span style="color:#cdcd00">nullptr</span>;
+  <span style="color:#00cd00">int</span> ret <span style="color:#39c">=</span> posix_memalign((<span style="color:#00cd00">void</span><span style="color:#39c">**</span>)<span style="color:#39c">&amp;</span>buffer, <span style="color:#cd00cd">4096</span>, length);
+  <span style="color:#cdcd00">if</span> (ret <span style="color:#39c">&lt;</span> <span style="color:#cd00cd">0</span>) {
+    std<span style="color:#39c">::</span>cout <span style="color:#39c">&lt;&lt;</span> <span style="color:#cd0000">&#34;malloc buffer error&#34;</span>;
+    <span style="color:#cdcd00">return</span>;
+  }
+
+  std<span style="color:#39c">::</span>memcpy(buffer, data, length);
+  IORequest<span style="color:#39c">*</span> req <span style="color:#39c">=</span> <span style="color:#cdcd00">new</span> IORequest();
+  req<span style="color:#39c">-&gt;</span>opcode <span style="color:#39c">=</span> OP_WRITE;
+  req<span style="color:#39c">-&gt;</span>buffer <span style="color:#39c">=</span> buffer;
+  req<span style="color:#39c">-&gt;</span>offset <span style="color:#39c">=</span> offset;
+  req<span style="color:#39c">-&gt;</span>length <span style="color:#39c">=</span> length;
+  req<span style="color:#39c">-&gt;</span>callback <span style="color:#39c">=</span> [req](<span style="color:#00cd00">int</span> ret) {
+    <span style="color:#cdcd00">if</span> (ret <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span>) {
+      std<span style="color:#39c">::</span>cout <span style="color:#39c">&lt;&lt;</span> <span style="color:#cd0000">&#34;Write complete&#34;</span> <span style="color:#39c">&lt;&lt;</span> std<span style="color:#39c">::</span>endl;
+    } <span style="color:#cdcd00">else</span> {
+      std<span style="color:#39c">::</span>cout <span style="color:#39c">&lt;&lt;</span> <span style="color:#cd0000">&#34;Write failed: &#34;</span> <span style="color:#39c">&lt;&lt;</span> ret <span style="color:#39c">&lt;&lt;</span> std<span style="color:#39c">::</span>endl;
+    }
+    free(req<span style="color:#39c">-&gt;</span>buffer);
+    <span style="color:#cdcd00">delete</span> req;
+  };
+  disk.submit_request(req);
+}
+
+<span style="color:#00cd00">int</span> main() {
+  DiskUtil disk(<span style="color:#cd0000">&#34;test.disk&#34;</span>, BLOCK_SIZE);
+  disk.start();
+  size_t length <span style="color:#39c">=</span> <span style="color:#cd00cd">4096</span>;
+  <span style="color:#cdcd00">const</span> <span style="color:#00cd00">char</span><span style="color:#39c">*</span> data <span style="color:#39c">=</span> <span style="color:#cd0000">&#34;Hello world&#34;</span>;
+  test_write(disk, <span style="color:#cd00cd">0</span>, length, data);
+  std<span style="color:#39c">::</span>this_thread<span style="color:#39c">::</span>sleep_for(std<span style="color:#39c">::</span>chrono<span style="color:#39c">::</span>seconds(<span style="color:#cd00cd">1</span>));
+  test_read(disk, <span style="color:#cd00cd">0</span>, length);
+  <span style="color:#000080">// std::system(&#34;rm test.disk&#34;);
+</span><span style="color:#000080"></span>  disk.stop();
+  <span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>;
+}
+</code></pre></div><p>注意点：</p>
+<ol>
+<li>与libaio不同的是，liburing并不强制上层传递的buffer是4K对齐的，但是为了获取最佳性能，建议还是使用4K对齐的buffer。</li>
+<li>实测在内核5.4版本上使用io_uring_prep_read和io_uring_prep_write方法会在调用io_uring_wait_cqe判断cqe-&gt;res的大小时报invalid argument，原因未知</li>
+</ol>
+<p>完整代码参见github链接：https://github.com/lambertxiao/storage/tree/master/liburing</p>
+<h2 id="为什么liburing性能高">为什么liburing性能高<a hidden class="anchor" aria-hidden="true" href="#为什么liburing性能高">#</a></h2>
+<ol>
+<li>零拷贝：在传统的系统调用中，数据需要在用户空间和内核空间进行多次内存拷贝，而io_uring可以通过内存映射来实现零拷贝，将数据从内核的缓存区直接传输到用户空间，从而减少了内存拷贝带来的性能开销。</li>
+<li>批处理I/O操作：io_uring使用批处理机制来减少系统调用的次数，可以将多个I/O操作打包成一个请求提交给内核进行处理，从而提高了系统吞吐量。</li>
+<li>高效内存管理：io_uring在内核中使用了自身的内存池机制，能够更有效地管理内部的内存，避免了频繁的分配和释放内存所带来的性能损失。</li>
+<li>锁控制：io_uring使用了内核层面的锁机制，避免了多线程I/O操作时的竞争情况，提高了系统的并发能力。</li>
+<li>io_uring的底层实现使用了ring buffer方式，可以根据需要进行高效的扩展，能够更好地应对高负载工作环境</li>
+</ol>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lambertxiao.github.io/tags/storage/">storage</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lambertxiao.github.io/posts/cmake-lesson/doc/">
+    <span class="title">« Prev Page</span>
+    <br>
+    <span>cmake-简单指北</span>
+  </a>
+  <a class="next" href="https://lambertxiao.github.io/posts/%E5%9C%A8centos%E4%B8%8A%E5%AE%89%E8%A3%85%E5%A4%9A%E7%89%88%E6%9C%ACgcc/doc/">
+    <span class="title">Next Page »</span>
+    <br>
+    <span>在centos上安装多版本gcc</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 如何使用liburing读写磁盘 on twitter"
+        href="https://twitter.com/intent/tweet/?text=%e5%a6%82%e4%bd%95%e4%bd%bf%e7%94%a8liburing%e8%af%bb%e5%86%99%e7%a3%81%e7%9b%98&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E5%25A6%2582%25E4%25BD%2595%25E4%25BD%25BF%25E7%2594%25A8liburing%25E8%25AF%25BB%25E5%2586%2599%25E7%25A3%2581%25E7%259B%2598%2fdoc%2f&amp;hashtags=storage">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 如何使用liburing读写磁盘 on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E5%25A6%2582%25E4%25BD%2595%25E4%25BD%25BF%25E7%2594%25A8liburing%25E8%25AF%25BB%25E5%2586%2599%25E7%25A3%2581%25E7%259B%2598%2fdoc%2f&amp;title=%e5%a6%82%e4%bd%95%e4%bd%bf%e7%94%a8liburing%e8%af%bb%e5%86%99%e7%a3%81%e7%9b%98&amp;summary=%e5%a6%82%e4%bd%95%e4%bd%bf%e7%94%a8liburing%e8%af%bb%e5%86%99%e7%a3%81%e7%9b%98&amp;source=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E5%25A6%2582%25E4%25BD%2595%25E4%25BD%25BF%25E7%2594%25A8liburing%25E8%25AF%25BB%25E5%2586%2599%25E7%25A3%2581%25E7%259B%2598%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 如何使用liburing读写磁盘 on reddit"
+        href="https://reddit.com/submit?url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E5%25A6%2582%25E4%25BD%2595%25E4%25BD%25BF%25E7%2594%25A8liburing%25E8%25AF%25BB%25E5%2586%2599%25E7%25A3%2581%25E7%259B%2598%2fdoc%2f&title=%e5%a6%82%e4%bd%95%e4%bd%bf%e7%94%a8liburing%e8%af%bb%e5%86%99%e7%a3%81%e7%9b%98">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 如何使用liburing读写磁盘 on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E5%25A6%2582%25E4%25BD%2595%25E4%25BD%25BF%25E7%2594%25A8liburing%25E8%25AF%25BB%25E5%2586%2599%25E7%25A3%2581%25E7%259B%2598%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 如何使用liburing读写磁盘 on whatsapp"
+        href="https://api.whatsapp.com/send?text=%e5%a6%82%e4%bd%95%e4%bd%bf%e7%94%a8liburing%e8%af%bb%e5%86%99%e7%a3%81%e7%9b%98%20-%20https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E5%25A6%2582%25E4%25BD%2595%25E4%25BD%25BF%25E7%2594%25A8liburing%25E8%25AF%25BB%25E5%2586%2599%25E7%25A3%2581%25E7%259B%2598%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 如何使用liburing读写磁盘 on telegram"
+        href="https://telegram.me/share/url?text=%e5%a6%82%e4%bd%95%e4%bd%bf%e7%94%a8liburing%e8%af%bb%e5%86%99%e7%a3%81%e7%9b%98&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E5%25A6%2582%25E4%25BD%2595%25E4%25BD%25BF%25E7%2594%25A8liburing%25E8%25AF%25BB%25E5%2586%2599%25E7%25A3%2581%25E7%259B%2598%2fdoc%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_KY25sRiRtb" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

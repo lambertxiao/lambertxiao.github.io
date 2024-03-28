@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>leveldb内部实现之compact | Lambert&#39;s blog</title>
+<meta name="keywords" content="leveldb" />
+<meta name="description" content="了解一下leveldb的WAL是怎么做的">
+<meta name="author" content="Lambert Xiao">
+<link rel="canonical" href="https://lambertxiao.github.io/posts/leveldb-compaction/doc/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js" integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5&#43;kdJvBz5iKbt6B5PJI="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="leveldb内部实现之compact" />
+<meta property="og:description" content="了解一下leveldb的WAL是怎么做的" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://lambertxiao.github.io/posts/leveldb-compaction/doc/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-03-31T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2022-03-31T00:00:00&#43;00:00" />
+<meta property="og:see_also" content="https://lambertxiao.github.io/posts/gdb_usage/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/numa/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/uio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/vfio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/virtio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="leveldb内部实现之compact"/>
+<meta name="twitter:description" content="了解一下leveldb的WAL是怎么做的"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://lambertxiao.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "leveldb内部实现之compact",
+      "item": "https://lambertxiao.github.io/posts/leveldb-compaction/doc/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "leveldb内部实现之compact",
+  "name": "leveldb内部实现之compact",
+  "description": "了解一下leveldb的WAL是怎么做的",
+  "keywords": [
+    "leveldb"
+  ],
+  "articleBody": "compact的作用 DB有一个后台线程负责将memtable持久化成sstable，以及均衡整个DB各个level层的sstable。compact分为minor compaction和major compaction。memtable持久化成sstable称为minor compaction，level(n)和level(n+1)之间某些sstable的merge称为major compaction。\ncompact的时机 compact的种类 Major Compaction 指的是 immutable memtable持久化为 sst 文件\n主要流程：\n  将内存中的memsstable格式化成sst文件的格式；\n  选择这个新sst文件放置的level，规则如图 2 所示（来自文献 [2]）；\n  将新sst文件放置到第2步选出的level中。\n  Major Compaction 指的是 sst 文件之间的 compaction\n主要分为：\n  Manual Compaction，是人工触发的Compaction，由外部接口调用产生\n  Size Compaction，是根据每个level的总文件大小来触发\n第1步：计算的score值，可以得出 max score，从而得出了应该哪一个 level 上进行 Compact，\n第2步：假设上面选出的是 level n，那么第 2 步就是选择出需要 Compact 的文件，其包含两步，首先在 level n 中选出需要 Compact 的文件文件（对应第2.1步）；然后根据level n选出的文件的key的begin和end来选出 level n+1 层的 sst 文件（对应第2.2步）：\n​ 第2.1步：确定level n参与Compact的文件列表\n​ 2.1.1: 将begin key更新为level n 上次Compact操作的文件的largest key。然后顺序查找level的sst文件，返回第一个largest key  begin key的sst文件，并加入到level n需要Compact的文件列表中；\n2.1.2: 如果是n==0，把sst文件都检查一遍，如果存在重叠则加入Compact文件列表中。因为level 0中，所有的文件之间都有可能存在重叠（overlap）。\n​ 第2.2步：确定level n+1参与Compact的文件列表；\n​ 2.2.1: 计算出level n参与Compact的文件列表的所有sst文件的总和key范围的begin和end；\n​ 2.2.2: 根据2.2.1计算出来的begin和end，去获取根level n+1有重叠（overlap）的sst文件列表；\n​ 2.2.3: 计算当前的level n 和 n+1参与Compact的两个文件列表的总和，如果小于阈值kExpandedCompactionByteSizeLimit=50M，那么会继续尝试在level n中选择出合适的sst文件，考虑到不影响理解，具体细节暂时省略。\n  Seek Compaction，每个文件的 seek miss 次数都有一个阈值，如果超过了这个阈值，那么认为这个文件需要Compact\n在levelDB中，每一个新的sst文件，都有一个 allowed_seek 的初始阈值，表示最多容忍 seek miss 多少次，每个调用 Get seek miss 的时候，就会执行减1（allowed_seek–）。其中 allowed_seek 的初始阈值的计算方式为：\nallowed_seeks = (sst文件的file size / 16384); // 16348——16kb if ( allowed_seeks 执行条件 当 allowed_seeks 递减到小于0了，那么将标记为需要Compact的文件。但是由于Size Compaction的优先级高于Seek Compaction，所以在不存在Size Compaction的时候，且触发了Compaction，那么Seek Compaction就能执行。\n核心过程 计算 sst 的 allowed_seek 都是在 sst 刚开始新建的时候完成；而每次 Get（key）操作都会更新 allowed_seek，当allowed_seeks 递减到小于0了，那么将标记为需要 Compact 的文件。\n  compact的具体实现 func openDB(s *session) (*DB, error) { ... if readOnly { db.SetReadOnly() } else { db.closeW.Add(2) go db.tCompaction() go db.mCompaction() // go db.jWriter() \t} ... }  mCompaction对应着将immutable持久化成sstable tCompaction则是对sstable之间的compact  mCompaction func (db *DB) mCompaction() { ... for { select { case x = db.mcompCmdC: switch x.(type) { case cAuto: db.memCompaction() x.ack(nil) x = nil default: panic(\"leveldb: unknown command\") } case db.closeC: return } } }  mCompaction工作在一个独立的协程中，接收mcompCmdC命令，执行memCompaction操作  memCompaction func (db *DB) memCompaction() { // 拿到immutable \tmdb := db.getFrozenMem() ... // 开启一个 \"memdb@flush\" 事 \t// Generate tables. \tdb.compactionTransactFunc(\"memdb@flush\", func(cnt *compactionTransactCounter) (err error) { stats.startTimer() // 在事务中处理memdb \tflushLevel, err = db.s.flushMemdb(rec, mdb.DB, db.memdbMaxLevel) stats.stopTimer() return }, func() error { for _, r := range rec.addedTables { db.logf(\"memdb@flush revert @%d\", r.num) if err := db.s.stor.Remove(storage.FileDesc{Type: storage.TypeTable, Num: r.num}); err != nil { return err } } return nil }) ... } compactionTransactFunc func (db *DB) compactionTransactFunc(name string, run func(cnt *compactionTransactCounter) error, revert func() error) { db.compactionTransact(name, \u0026compactionTransactFunc{run, revert}) }  定义了事务的执行方法run以及事务的恢复方法revert  flushMemdb func (s *session) flushMemdb(rec *sessionRecord, mdb *memdb.DB, maxLevel int) (int, error) { // Create sorted table. \titer := mdb.NewIterator(nil) defer iter.Release() t, n, err := s.tops.createFrom(iter) if err != nil { return 0, err } // 生成的sstable需要被放入哪一层有一套判断方式 \tflushLevel := s.pickMemdbLevel(t.imin.ukey(), t.imax.ukey(), maxLevel) rec.addTableFile(flushLevel, t) s.logf(\"memdb@flush created L%d@%d N·%d S·%s %q:%q\", flushLevel, t.fd.Num, n, shortenb(int(t.size)), t.imin, t.imax) return flushLevel, nil } pickMemdbLevel func (v *version) pickMemdbLevel(umin, umax []byte, maxLevel int) (level int) { if maxLevel  0 { if len(v.levels) == 0 { return maxLevel } if !v.levels[0].overlaps(v.s.icmp, umin, umax, true) { var overlaps tFiles for ; level ++ { if pLevel := level + 1; pLevel = len(v.levels) { return maxLevel } else if v.levels[pLevel].overlaps(v.s.icmp, umin, umax, false) { break } if gpLevel := level + 2; gpLevel len(v.levels) { overlaps = v.levels[gpLevel].getOverlaps(overlaps, v.s.icmp, umin, umax, false) if overlaps.size()  int64(v.s.o.GetCompactionGPOverlaps(level)) { break } } } } } return } tCompaction func (db *DB) tCompaction() { var ( x cCmd waitQ []cCmd ) ... for { ... if x != nil { switch cmd := x.(type) { case cAuto: if cmd.ackC != nil { // Check the write pause state before caching it. \tif db.resumeWrite() { x.ack(nil) } else { waitQ = append(waitQ, x) } } case cRange: x.ack(db.tableRangeCompaction(cmd.level, cmd.min, cmd.max)) default: panic(\"leveldb: unknown command\") } x = nil } db.tableAutoCompaction() } } tableRangeCompaction func (db *DB) tableRangeCompaction(level int, umin, umax []byte) error { db.logf(\"table@compaction range L%d %q:%q\", level, umin, umax) if level = 0 { if c := db.s.getCompactionRange(level, umin, umax, true); c != nil { db.tableCompaction(c, true) } } else { // 循环直到没有内容需要合并 \t// Retry until nothing to compact. \tfor { compacted := false // Scan for maximum level with overlapped tables. \tv := db.s.version() m := 1 for i := m; i len(v.levels); i++ { tables := v.levels[i] if tables.overlaps(db.s.icmp, umin, umax, false) { m = i } } v.release() for level := 0; level ++ { if c := db.s.getCompactionRange(level, umin, umax, false); c != nil { db.tableCompaction(c, true) compacted = true } } if !compacted { break } } } return nil } tableCompaction func (db *DB) tableCompaction(c *compaction, noTrivial bool) { defer c.release() rec := \u0026sessionRecord{} rec.addCompPtr(c.sourceLevel, c.imax) if !noTrivial \u0026\u0026 c.trivial() { t := c.levels[0][0] db.logf(\"table@move L%d@%d - L%d\", c.sourceLevel, t.fd.Num, c.sourceLevel+1) rec.delTable(c.sourceLevel, t.fd.Num) rec.addTableFile(c.sourceLevel+1, t) db.compactionCommit(\"table-move\", rec) return } var stats [2]cStatStaging for i, tables := range c.levels { for _, t := range tables { stats[i].read += t.size // Insert deleted tables into record \trec.delTable(c.sourceLevel+i, t.fd.Num) } } sourceSize := int(stats[0].read + stats[1].read) minSeq := db.minSeq() db.logf(\"table@compaction L%d·%d - L%d·%d S·%s Q·%d\", c.sourceLevel, len(c.levels[0]), c.sourceLevel+1, len(c.levels[1]), shortenb(sourceSize), minSeq) b := \u0026tableCompactionBuilder{ db: db, s: db.s, c: c, rec: rec, stat1: \u0026stats[1], minSeq: minSeq, strict: db.s.o.GetStrict(opt.StrictCompaction), tableSize: db.s.o.GetCompactionTableSize(c.sourceLevel + 1), } db.compactionTransact(\"table@build\", b) // Commit. \tstats[1].startTimer() db.compactionCommit(\"table\", rec) stats[1].stopTimer() resultSize := int(stats[1].write) db.logf(\"table@compaction committed F%s S%s Ke·%d D·%d T·%v\", sint(len(rec.addedTables)-len(rec.deletedTables)), sshortenb(resultSize-sourceSize), b.kerrCnt, b.dropCnt, stats[1].duration) // Save compaction stats \tfor i := range stats { db.compStats.addStat(c.sourceLevel+1, \u0026stats[i]) } switch c.typ { case level0Compaction: atomic.AddUint32(\u0026db.level0Comp, 1) case nonLevel0Compaction: atomic.AddUint32(\u0026db.nonLevel0Comp, 1) case seekCompaction: atomic.AddUint32(\u0026db.seekComp, 1) } } ",
+  "wordCount" : "847",
+  "inLanguage": "en",
+  "datePublished": "2022-03-31T00:00:00Z",
+  "dateModified": "2022-03-31T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "Lambert Xiao"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lambertxiao.github.io/posts/leveldb-compaction/doc/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lambert's blog",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lambertxiao.github.io/avatar.jpeg"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      leveldb内部实现之compact
+    </h1>
+    <div class="post-meta"><span title='2022-03-31 00:00:00 +0000 UTC'>March 31, 2022</span>&nbsp;·&nbsp;4 min&nbsp;·&nbsp;Lambert Xiao&nbsp;|&nbsp;<a href="https://github.com/adityatelange/hugo-PaperMod/tree/exampleSite/content/posts/leveldb-compaction/doc.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+</div>
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#compact%e7%9a%84%e4%bd%9c%e7%94%a8" aria-label="compact的作用">compact的作用</a></li>
+                <li>
+                    <a href="#compact%e7%9a%84%e6%97%b6%e6%9c%ba" aria-label="compact的时机">compact的时机</a></li>
+                <li>
+                    <a href="#compact%e7%9a%84%e7%a7%8d%e7%b1%bb" aria-label="compact的种类">compact的种类</a><ul>
+                        
+                <li>
+                    <a href="#major-compaction" aria-label="Major Compaction">Major Compaction</a></li>
+                <li>
+                    <a href="#major-compaction-1" aria-label="Major Compaction">Major Compaction</a></li></ul>
+                </li>
+                <li>
+                    <a href="#compact%e7%9a%84%e5%85%b7%e4%bd%93%e5%ae%9e%e7%8e%b0" aria-label="compact的具体实现">compact的具体实现</a><ul>
+                        
+                <li>
+                    <a href="#mcompaction" aria-label="mCompaction">mCompaction</a><ul>
+                        
+                <li>
+                    <a href="#memcompaction" aria-label="memCompaction">memCompaction</a></li>
+                <li>
+                    <a href="#compactiontransactfunc" aria-label="compactionTransactFunc">compactionTransactFunc</a></li>
+                <li>
+                    <a href="#flushmemdb" aria-label="flushMemdb">flushMemdb</a></li>
+                <li>
+                    <a href="#pickmemdblevel" aria-label="pickMemdbLevel">pickMemdbLevel</a></li></ul>
+                </li>
+                <li>
+                    <a href="#tcompaction" aria-label="tCompaction">tCompaction</a><ul>
+                        
+                <li>
+                    <a href="#tablerangecompaction" aria-label="tableRangeCompaction">tableRangeCompaction</a></li>
+                <li>
+                    <a href="#tablecompaction" aria-label="tableCompaction">tableCompaction</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h2 id="compact的作用">compact的作用<a hidden class="anchor" aria-hidden="true" href="#compact的作用">#</a></h2>
+<p>DB有一个后台线程负责将memtable持久化成sstable，以及均衡整个DB各个level层的sstable。compact分为minor compaction和major compaction。memtable持久化成sstable称为minor compaction，level(n)和level(n+1)之间某些sstable的merge称为major compaction。</p>
+<h2 id="compact的时机">compact的时机<a hidden class="anchor" aria-hidden="true" href="#compact的时机">#</a></h2>
+<h2 id="compact的种类">compact的种类<a hidden class="anchor" aria-hidden="true" href="#compact的种类">#</a></h2>
+<h3 id="major-compaction">Major Compaction<a hidden class="anchor" aria-hidden="true" href="#major-compaction">#</a></h3>
+<p>指的是 immutable memtable持久化为 sst 文件</p>
+<p>主要流程：</p>
+<ol>
+<li>
+<p>将内存中的memsstable格式化成sst文件的格式；</p>
+</li>
+<li>
+<p>选择这个新sst文件放置的level，规则如图 2 所示（来自文献 [2]）；</p>
+</li>
+<li>
+<p>将新sst文件放置到第2步选出的level中。</p>
+</li>
+</ol>
+<h3 id="major-compaction-1">Major Compaction<a hidden class="anchor" aria-hidden="true" href="#major-compaction-1">#</a></h3>
+<p>指的是 sst 文件之间的 compaction</p>
+<p>主要分为：</p>
+<ol>
+<li>
+<p>Manual Compaction，是人工触发的Compaction，由外部接口调用产生</p>
+</li>
+<li>
+<p>Size Compaction，是根据每个level的总文件大小来触发</p>
+<p>第1步：计算的score值，可以得出 max score，从而得出了应该哪一个 level 上进行 Compact，</p>
+<p>第2步：假设上面选出的是 level n，那么第 2 步就是选择出需要 Compact 的文件，其包含两步，首先在 level n 中选出需要 Compact 的文件文件（对应第2.1步）；然后根据level n选出的文件的key的begin和end来选出 level n+1 层的 sst 文件（对应第2.2步）：</p>
+<p>​ 第2.1步：确定level n参与Compact的文件列表</p>
+<p>​ 2.1.1: 将begin key更新为level n 上次Compact操作的文件的largest key。然后顺序查找level的sst文件，返回第一个largest key &gt; begin key的sst文件，并加入到level n需要Compact的文件列表中；</p>
+<p>2.1.2: 如果是n==0，把sst文件都检查一遍，如果存在重叠则加入Compact文件列表中。因为level 0中，所有的文件之间都有可能存在重叠（overlap）。</p>
+<p>​ 第2.2步：确定level n+1参与Compact的文件列表；</p>
+<p>​ 2.2.1: 计算出level n参与Compact的文件列表的所有sst文件的总和key范围的begin和end；</p>
+<p>​ 2.2.2: 根据2.2.1计算出来的begin和end，去获取根level n+1有重叠（overlap）的sst文件列表；</p>
+<p>​ 2.2.3: 计算当前的level n 和 n+1参与Compact的两个文件列表的总和，如果小于阈值kExpandedCompactionByteSizeLimit=50M，那么会继续尝试在level n中选择出合适的sst文件，考虑到不影响理解，具体细节暂时省略。</p>
+</li>
+<li>
+<p>Seek Compaction，每个文件的 seek miss 次数都有一个阈值，如果超过了这个阈值，那么认为这个文件需要Compact</p>
+<p>在levelDB中，每一个新的sst文件，都有一个 allowed_seek 的初始阈值，表示最多容忍 seek miss 多少次，每个调用 Get seek miss 的时候，就会执行减1（allowed_seek&ndash;）。其中 allowed_seek 的初始阈值的计算方式为：</p>
+<p>allowed_seeks = (sst文件的file size / 16384);  // 16348——16kb
+if ( allowed_seeks &lt; 100 )
+allowed_seeks = 100;
+LevelDB认为如果一个 sst 文件在 level i 中总是没总到，而是在 level i+1 中找到，那么当这种 seek miss 积累到一定次数之后，就考虑将其从 level i 中合并到 level i+1 中，这样可以避免不必要的 seek miss 消耗 read I/O。当然在引入布隆过滤器后，这种查找消耗的 IO 就会变小很多。</p>
+<p>执行条件
+当 allowed_seeks 递减到小于0了，那么将标记为需要Compact的文件。但是由于Size Compaction的优先级高于Seek Compaction，所以在不存在Size Compaction的时候，且触发了Compaction，那么Seek Compaction就能执行。</p>
+<p>核心过程
+计算 sst 的 allowed_seek 都是在 sst 刚开始新建的时候完成；而每次 Get（key）操作都会更新 allowed_seek，当allowed_seeks 递减到小于0了，那么将标记为需要 Compact 的文件。</p>
+</li>
+</ol>
+<h2 id="compact的具体实现">compact的具体实现<a hidden class="anchor" aria-hidden="true" href="#compact的具体实现">#</a></h2>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">
+<span style="color:#00cd00">func</span> openDB(s <span style="color:#39c">*</span>session) (<span style="color:#39c">*</span>DB, <span style="color:#00cd00">error</span>) {
+	<span style="color:#39c">...</span>
+
+	<span style="color:#cdcd00">if</span> readOnly {
+		db.SetReadOnly()
+	} <span style="color:#cdcd00">else</span> {
+		db.closeW.Add(<span style="color:#cd00cd">2</span>)
+		<span style="color:#cdcd00">go</span> db.tCompaction()
+		<span style="color:#cdcd00">go</span> db.mCompaction()
+		<span style="color:#000080">// go db.jWriter()
+</span><span style="color:#000080"></span>	}
+	<span style="color:#39c">...</span>
+}
+</code></pre></div><ol>
+<li>mCompaction对应着将immutable持久化成sstable</li>
+<li>tCompaction则是对sstable之间的compact</li>
+</ol>
+<h3 id="mcompaction">mCompaction<a hidden class="anchor" aria-hidden="true" href="#mcompaction">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (db <span style="color:#39c">*</span>DB) mCompaction() {
+	<span style="color:#39c">...</span>
+
+	<span style="color:#cdcd00">for</span> {
+		<span style="color:#cdcd00">select</span> {
+		<span style="color:#cdcd00">case</span> x = <span style="color:#39c">&lt;-</span>db.mcompCmdC:
+			<span style="color:#cdcd00">switch</span> x.(<span style="color:#00cd00">type</span>) {
+			<span style="color:#cdcd00">case</span> cAuto:
+				db.memCompaction()
+				x.ack(<span style="color:#cdcd00">nil</span>)
+				x = <span style="color:#cdcd00">nil</span>
+			<span style="color:#cdcd00">default</span>:
+				<span style="color:#cd00cd">panic</span>(<span style="color:#cd0000">&#34;leveldb: unknown command&#34;</span>)
+			}
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">&lt;-</span>db.closeC:
+			<span style="color:#cdcd00">return</span>
+		}
+	}
+}
+</code></pre></div><ol>
+<li>mCompaction工作在一个独立的协程中，接收mcompCmdC命令，执行memCompaction操作</li>
+</ol>
+<h4 id="memcompaction">memCompaction<a hidden class="anchor" aria-hidden="true" href="#memcompaction">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (db <span style="color:#39c">*</span>DB) memCompaction() {
+    <span style="color:#000080">// 拿到immutable
+</span><span style="color:#000080"></span>	mdb <span style="color:#39c">:=</span> db.getFrozenMem()
+	<span style="color:#39c">...</span>
+
+    <span style="color:#000080">// 开启一个 &#34;memdb@flush&#34; 事
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Generate tables.
+</span><span style="color:#000080"></span>	db.compactionTransactFunc(<span style="color:#cd0000">&#34;memdb@flush&#34;</span>, <span style="color:#00cd00">func</span>(cnt <span style="color:#39c">*</span>compactionTransactCounter) (err <span style="color:#00cd00">error</span>) {
+		stats.startTimer()
+        <span style="color:#000080">// 在事务中处理memdb
+</span><span style="color:#000080"></span>		flushLevel, err = db.s.flushMemdb(rec, mdb.DB, db.memdbMaxLevel)
+		stats.stopTimer()
+		<span style="color:#cdcd00">return</span>
+	}, <span style="color:#00cd00">func</span>() <span style="color:#00cd00">error</span> {
+		<span style="color:#cdcd00">for</span> _, r <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> rec.addedTables {
+			db.logf(<span style="color:#cd0000">&#34;memdb@flush revert @%d&#34;</span>, r.num)
+			<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> db.s.stor.Remove(storage.FileDesc{Type: storage.TypeTable, Num: r.num}); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+				<span style="color:#cdcd00">return</span> err
+			}
+		}
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>
+	})
+
+	<span style="color:#39c">...</span>
+}
+</code></pre></div><h4 id="compactiontransactfunc">compactionTransactFunc<a hidden class="anchor" aria-hidden="true" href="#compactiontransactfunc">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (db <span style="color:#39c">*</span>DB) compactionTransactFunc(name <span style="color:#00cd00">string</span>, run <span style="color:#00cd00">func</span>(cnt <span style="color:#39c">*</span>compactionTransactCounter) <span style="color:#00cd00">error</span>, revert <span style="color:#00cd00">func</span>() <span style="color:#00cd00">error</span>) {
+	db.compactionTransact(name, <span style="color:#39c">&amp;</span>compactionTransactFunc{run, revert})
+}
+</code></pre></div><ol>
+<li>定义了事务的执行方法run以及事务的恢复方法revert</li>
+</ol>
+<h4 id="flushmemdb">flushMemdb<a hidden class="anchor" aria-hidden="true" href="#flushmemdb">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (s <span style="color:#39c">*</span>session) flushMemdb(rec <span style="color:#39c">*</span>sessionRecord, mdb <span style="color:#39c">*</span>memdb.DB, maxLevel <span style="color:#00cd00">int</span>) (<span style="color:#00cd00">int</span>, <span style="color:#00cd00">error</span>) {
+	<span style="color:#000080">// Create sorted table.
+</span><span style="color:#000080"></span>	iter <span style="color:#39c">:=</span> mdb.NewIterator(<span style="color:#cdcd00">nil</span>)
+	<span style="color:#cdcd00">defer</span> iter.Release()
+	t, n, err <span style="color:#39c">:=</span> s.tops.createFrom(iter)
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>, err
+	}
+
+    <span style="color:#000080">// 生成的sstable需要被放入哪一层有一套判断方式
+</span><span style="color:#000080"></span>	flushLevel <span style="color:#39c">:=</span> s.pickMemdbLevel(t.imin.ukey(), t.imax.ukey(), maxLevel)
+	rec.addTableFile(flushLevel, t)
+
+	s.logf(<span style="color:#cd0000">&#34;memdb@flush created L%d@%d N·%d S·%s %q:%q&#34;</span>, flushLevel, t.fd.Num, n, shortenb(<span style="color:#cd00cd">int</span>(t.size)), t.imin, t.imax)
+	<span style="color:#cdcd00">return</span> flushLevel, <span style="color:#cdcd00">nil</span>
+}
+</code></pre></div><h4 id="pickmemdblevel">pickMemdbLevel<a hidden class="anchor" aria-hidden="true" href="#pickmemdblevel">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (v <span style="color:#39c">*</span>version) pickMemdbLevel(umin, umax []<span style="color:#00cd00">byte</span>, maxLevel <span style="color:#00cd00">int</span>) (level <span style="color:#00cd00">int</span>) {
+	<span style="color:#cdcd00">if</span> maxLevel &gt; <span style="color:#cd00cd">0</span> {
+		<span style="color:#cdcd00">if</span> <span style="color:#cd00cd">len</span>(v.levels) <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> {
+			<span style="color:#cdcd00">return</span> maxLevel
+		}
+		<span style="color:#cdcd00">if</span> !v.levels[<span style="color:#cd00cd">0</span>].overlaps(v.s.icmp, umin, umax, <span style="color:#cdcd00">true</span>) {
+			<span style="color:#00cd00">var</span> overlaps tFiles
+			<span style="color:#cdcd00">for</span> ; level &lt; maxLevel; level<span style="color:#39c">++</span> {
+				<span style="color:#cdcd00">if</span> pLevel <span style="color:#39c">:=</span> level <span style="color:#39c">+</span> <span style="color:#cd00cd">1</span>; pLevel <span style="color:#39c">&gt;=</span> <span style="color:#cd00cd">len</span>(v.levels) {
+					<span style="color:#cdcd00">return</span> maxLevel
+				} <span style="color:#cdcd00">else</span> <span style="color:#cdcd00">if</span> v.levels[pLevel].overlaps(v.s.icmp, umin, umax, <span style="color:#cdcd00">false</span>) {
+					<span style="color:#cdcd00">break</span>
+				}
+				<span style="color:#cdcd00">if</span> gpLevel <span style="color:#39c">:=</span> level <span style="color:#39c">+</span> <span style="color:#cd00cd">2</span>; gpLevel &lt; <span style="color:#cd00cd">len</span>(v.levels) {
+					overlaps = v.levels[gpLevel].getOverlaps(overlaps, v.s.icmp, umin, umax, <span style="color:#cdcd00">false</span>)
+					<span style="color:#cdcd00">if</span> overlaps.size() &gt; <span style="color:#cd00cd">int64</span>(v.s.o.GetCompactionGPOverlaps(level)) {
+						<span style="color:#cdcd00">break</span>
+					}
+				}
+			}
+		}
+	}
+	<span style="color:#cdcd00">return</span>
+}
+</code></pre></div><h3 id="tcompaction">tCompaction<a hidden class="anchor" aria-hidden="true" href="#tcompaction">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (db <span style="color:#39c">*</span>DB) tCompaction() {
+	<span style="color:#00cd00">var</span> (
+		x     cCmd
+		waitQ []cCmd
+	)
+
+	<span style="color:#39c">...</span>
+
+	<span style="color:#cdcd00">for</span> {
+		<span style="color:#39c">...</span>
+		<span style="color:#cdcd00">if</span> x <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			<span style="color:#cdcd00">switch</span> cmd <span style="color:#39c">:=</span> x.(<span style="color:#00cd00">type</span>) {
+			<span style="color:#cdcd00">case</span> cAuto:
+				<span style="color:#cdcd00">if</span> cmd.ackC <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+					<span style="color:#000080">// Check the write pause state before caching it.
+</span><span style="color:#000080"></span>					<span style="color:#cdcd00">if</span> db.resumeWrite() {
+						x.ack(<span style="color:#cdcd00">nil</span>)
+					} <span style="color:#cdcd00">else</span> {
+						waitQ = <span style="color:#cd00cd">append</span>(waitQ, x)
+					}
+				}
+			<span style="color:#cdcd00">case</span> cRange:
+				x.ack(db.tableRangeCompaction(cmd.level, cmd.min, cmd.max))
+			<span style="color:#cdcd00">default</span>:
+				<span style="color:#cd00cd">panic</span>(<span style="color:#cd0000">&#34;leveldb: unknown command&#34;</span>)
+			}
+			x = <span style="color:#cdcd00">nil</span>
+		}
+		db.tableAutoCompaction()
+	}
+}
+</code></pre></div><h4 id="tablerangecompaction">tableRangeCompaction<a hidden class="anchor" aria-hidden="true" href="#tablerangecompaction">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (db <span style="color:#39c">*</span>DB) tableRangeCompaction(level <span style="color:#00cd00">int</span>, umin, umax []<span style="color:#00cd00">byte</span>) <span style="color:#00cd00">error</span> {
+	db.logf(<span style="color:#cd0000">&#34;table@compaction range L%d %q:%q&#34;</span>, level, umin, umax)
+	<span style="color:#cdcd00">if</span> level <span style="color:#39c">&gt;=</span> <span style="color:#cd00cd">0</span> {
+		<span style="color:#cdcd00">if</span> c <span style="color:#39c">:=</span> db.s.getCompactionRange(level, umin, umax, <span style="color:#cdcd00">true</span>); c <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			db.tableCompaction(c, <span style="color:#cdcd00">true</span>)
+		}
+	} <span style="color:#cdcd00">else</span> {
+        <span style="color:#000080">// 循环直到没有内容需要合并
+</span><span style="color:#000080"></span>		<span style="color:#000080">// Retry until nothing to compact.
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">for</span> {
+			compacted <span style="color:#39c">:=</span> <span style="color:#cdcd00">false</span>
+
+			<span style="color:#000080">// Scan for maximum level with overlapped tables.
+</span><span style="color:#000080"></span>			v <span style="color:#39c">:=</span> db.s.version()
+			m <span style="color:#39c">:=</span> <span style="color:#cd00cd">1</span>
+			<span style="color:#cdcd00">for</span> i <span style="color:#39c">:=</span> m; i &lt; <span style="color:#cd00cd">len</span>(v.levels); i<span style="color:#39c">++</span> {
+				tables <span style="color:#39c">:=</span> v.levels[i]
+				<span style="color:#cdcd00">if</span> tables.overlaps(db.s.icmp, umin, umax, <span style="color:#cdcd00">false</span>) {
+					m = i
+				}
+			}
+			v.release()
+
+			<span style="color:#cdcd00">for</span> level <span style="color:#39c">:=</span> <span style="color:#cd00cd">0</span>; level &lt; m; level<span style="color:#39c">++</span> {
+				<span style="color:#cdcd00">if</span> c <span style="color:#39c">:=</span> db.s.getCompactionRange(level, umin, umax, <span style="color:#cdcd00">false</span>); c <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+					db.tableCompaction(c, <span style="color:#cdcd00">true</span>)
+					compacted = <span style="color:#cdcd00">true</span>
+				}
+			}
+
+			<span style="color:#cdcd00">if</span> !compacted {
+				<span style="color:#cdcd00">break</span>
+			}
+		}
+	}
+
+	<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>
+}
+</code></pre></div><h4 id="tablecompaction">tableCompaction<a hidden class="anchor" aria-hidden="true" href="#tablecompaction">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (db <span style="color:#39c">*</span>DB) tableCompaction(c <span style="color:#39c">*</span>compaction, noTrivial <span style="color:#00cd00">bool</span>) {
+	<span style="color:#cdcd00">defer</span> c.release()
+
+	rec <span style="color:#39c">:=</span> <span style="color:#39c">&amp;</span>sessionRecord{}
+	rec.addCompPtr(c.sourceLevel, c.imax)
+
+	<span style="color:#cdcd00">if</span> !noTrivial <span style="color:#39c">&amp;&amp;</span> c.trivial() {
+		t <span style="color:#39c">:=</span> c.levels[<span style="color:#cd00cd">0</span>][<span style="color:#cd00cd">0</span>]
+		db.logf(<span style="color:#cd0000">&#34;table@move L%d@%d -&gt; L%d&#34;</span>, c.sourceLevel, t.fd.Num, c.sourceLevel<span style="color:#39c">+</span><span style="color:#cd00cd">1</span>)
+		rec.delTable(c.sourceLevel, t.fd.Num)
+		rec.addTableFile(c.sourceLevel<span style="color:#39c">+</span><span style="color:#cd00cd">1</span>, t)
+		db.compactionCommit(<span style="color:#cd0000">&#34;table-move&#34;</span>, rec)
+		<span style="color:#cdcd00">return</span>
+	}
+
+	<span style="color:#00cd00">var</span> stats [<span style="color:#cd00cd">2</span>]cStatStaging
+	<span style="color:#cdcd00">for</span> i, tables <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> c.levels {
+		<span style="color:#cdcd00">for</span> _, t <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> tables {
+			stats[i].read <span style="color:#39c">+=</span> t.size
+			<span style="color:#000080">// Insert deleted tables into record
+</span><span style="color:#000080"></span>			rec.delTable(c.sourceLevel<span style="color:#39c">+</span>i, t.fd.Num)
+		}
+	}
+	sourceSize <span style="color:#39c">:=</span> <span style="color:#cd00cd">int</span>(stats[<span style="color:#cd00cd">0</span>].read <span style="color:#39c">+</span> stats[<span style="color:#cd00cd">1</span>].read)
+	minSeq <span style="color:#39c">:=</span> db.minSeq()
+	db.logf(<span style="color:#cd0000">&#34;table@compaction L%d·%d -&gt; L%d·%d S·%s Q·%d&#34;</span>, c.sourceLevel, <span style="color:#cd00cd">len</span>(c.levels[<span style="color:#cd00cd">0</span>]), c.sourceLevel<span style="color:#39c">+</span><span style="color:#cd00cd">1</span>, <span style="color:#cd00cd">len</span>(c.levels[<span style="color:#cd00cd">1</span>]), shortenb(sourceSize), minSeq)
+
+	b <span style="color:#39c">:=</span> <span style="color:#39c">&amp;</span>tableCompactionBuilder{
+		db:        db,
+		s:         db.s,
+		c:         c,
+		rec:       rec,
+		stat1:     <span style="color:#39c">&amp;</span>stats[<span style="color:#cd00cd">1</span>],
+		minSeq:    minSeq,
+		strict:    db.s.o.GetStrict(opt.StrictCompaction),
+		tableSize: db.s.o.GetCompactionTableSize(c.sourceLevel <span style="color:#39c">+</span> <span style="color:#cd00cd">1</span>),
+	}
+	db.compactionTransact(<span style="color:#cd0000">&#34;table@build&#34;</span>, b)
+
+	<span style="color:#000080">// Commit.
+</span><span style="color:#000080"></span>	stats[<span style="color:#cd00cd">1</span>].startTimer()
+	db.compactionCommit(<span style="color:#cd0000">&#34;table&#34;</span>, rec)
+	stats[<span style="color:#cd00cd">1</span>].stopTimer()
+
+	resultSize <span style="color:#39c">:=</span> <span style="color:#cd00cd">int</span>(stats[<span style="color:#cd00cd">1</span>].write)
+	db.logf(<span style="color:#cd0000">&#34;table@compaction committed F%s S%s Ke·%d D·%d T·%v&#34;</span>, sint(<span style="color:#cd00cd">len</span>(rec.addedTables)<span style="color:#39c">-</span><span style="color:#cd00cd">len</span>(rec.deletedTables)), sshortenb(resultSize<span style="color:#39c">-</span>sourceSize), b.kerrCnt, b.dropCnt, stats[<span style="color:#cd00cd">1</span>].duration)
+
+	<span style="color:#000080">// Save compaction stats
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">for</span> i <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> stats {
+		db.compStats.addStat(c.sourceLevel<span style="color:#39c">+</span><span style="color:#cd00cd">1</span>, <span style="color:#39c">&amp;</span>stats[i])
+	}
+	<span style="color:#cdcd00">switch</span> c.typ {
+	<span style="color:#cdcd00">case</span> level0Compaction:
+		atomic.AddUint32(<span style="color:#39c">&amp;</span>db.level0Comp, <span style="color:#cd00cd">1</span>)
+	<span style="color:#cdcd00">case</span> nonLevel0Compaction:
+		atomic.AddUint32(<span style="color:#39c">&amp;</span>db.nonLevel0Comp, <span style="color:#cd00cd">1</span>)
+	<span style="color:#cdcd00">case</span> seekCompaction:
+		atomic.AddUint32(<span style="color:#39c">&amp;</span>db.seekComp, <span style="color:#cd00cd">1</span>)
+	}
+}
+</code></pre></div>
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lambertxiao.github.io/tags/leveldb/">leveldb</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lambertxiao.github.io/posts/leveldb/doc/">
+    <span class="title">« Prev Page</span>
+    <br>
+    <span>LevelDB总览</span>
+  </a>
+  <a class="next" href="https://lambertxiao.github.io/posts/leveldb-journal/doc/">
+    <span class="title">Next Page »</span>
+    <br>
+    <span>leveldb内部实现之journal</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share leveldb内部实现之compact on twitter"
+        href="https://twitter.com/intent/tweet/?text=leveldb%e5%86%85%e9%83%a8%e5%ae%9e%e7%8e%b0%e4%b9%8bcompact&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-compaction%2fdoc%2f&amp;hashtags=leveldb">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share leveldb内部实现之compact on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-compaction%2fdoc%2f&amp;title=leveldb%e5%86%85%e9%83%a8%e5%ae%9e%e7%8e%b0%e4%b9%8bcompact&amp;summary=leveldb%e5%86%85%e9%83%a8%e5%ae%9e%e7%8e%b0%e4%b9%8bcompact&amp;source=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-compaction%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share leveldb内部实现之compact on reddit"
+        href="https://reddit.com/submit?url=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-compaction%2fdoc%2f&title=leveldb%e5%86%85%e9%83%a8%e5%ae%9e%e7%8e%b0%e4%b9%8bcompact">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share leveldb内部实现之compact on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-compaction%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share leveldb内部实现之compact on whatsapp"
+        href="https://api.whatsapp.com/send?text=leveldb%e5%86%85%e9%83%a8%e5%ae%9e%e7%8e%b0%e4%b9%8bcompact%20-%20https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-compaction%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share leveldb内部实现之compact on telegram"
+        href="https://telegram.me/share/url?text=leveldb%e5%86%85%e9%83%a8%e5%ae%9e%e7%8e%b0%e4%b9%8bcompact&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-compaction%2fdoc%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_KY25sRiRtb" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

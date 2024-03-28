@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>二分法 on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/%E4%BA%8C%E5%88%86%E6%B3%95/</link>
+    <description>Recent content in 二分法 on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Thu, 10 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/%E4%BA%8C%E5%88%86%E6%B3%95/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>算法-二分法</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%88%86%E6%B3%95/doc/</link>
+      <pubDate>Thu, 10 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%88%86%E6%B3%95/doc/</guid>
+      <description>最难不过二分，边界问题最蛋疼</description>
+    </item>
+    
+    <item>
+      <title>算法-单调栈</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8D%95%E8%B0%83%E6%A0%88/doc/</link>
+      <pubDate>Thu, 10 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8D%95%E8%B0%83%E6%A0%88/doc/</guid>
+      <description>单调栈总是能解决一些看起来很困难的题</description>
+    </item>
+    
+  </channel>
+</rss>

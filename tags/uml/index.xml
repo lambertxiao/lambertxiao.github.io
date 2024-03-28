@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>UML on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/uml/</link>
+    <description>Recent content in UML on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Fri, 11 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/uml/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>UML-类图线条</title>
+      <link>https://lambertxiao.github.io/posts/uml-%E7%B1%BB%E5%9B%BE%E7%BA%BF%E6%9D%A1/doc/</link>
+      <pubDate>Fri, 11 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/uml-%E7%B1%BB%E5%9B%BE%E7%BA%BF%E6%9D%A1/doc/</guid>
+      <description>记得住吗？记不住!</description>
+    </item>
+    
+  </channel>
+</rss>

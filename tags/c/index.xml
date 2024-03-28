@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>C on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/c/</link>
+    <description>Recent content in C on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Thu, 07 Jul 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/c/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>c-野指针和悬空指针</title>
+      <link>https://lambertxiao.github.io/posts/c-%E9%87%8E%E6%8C%87%E9%92%88%E5%92%8C%E6%82%AC%E7%A9%BA%E6%8C%87%E9%92%88/doc/</link>
+      <pubDate>Thu, 07 Jul 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/c-%E9%87%8E%E6%8C%87%E9%92%88%E5%92%8C%E6%82%AC%E7%A9%BA%E6%8C%87%E9%92%88/doc/</guid>
+      <description>野指针 看代码
+void *p; // 此时p为野指针  “野指针”可能指向任意内存段，因此它可能会损坏正常的数据，也有可能引发其他未知错误
+ 正确做法
+void *p = NULL 悬空指针 看代码
+void *p = malloc(size); free(p); // p为悬空指针了  free(p) 之后，p指针仍然指向之前分配的内存，有可能会引发不可预知的错误
+ 正确做法
+void *p = malloc(size); free(p); p = NULL </description>
+    </item>
+    
+    <item>
+      <title>C-啥是宏</title>
+      <link>https://lambertxiao.github.io/posts/c-%E5%95%A5%E6%98%AF%E5%AE%8F%E5%91%80/define%E5%AE%8F/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/c-%E5%95%A5%E6%98%AF%E5%AE%8F%E5%91%80/define%E5%AE%8F/</guid>
+      <description>宏在C中真的是无所不在了吧</description>
+    </item>
+    
+    <item>
+      <title>C-小知识</title>
+      <link>https://lambertxiao.github.io/posts/c-%E5%B0%8F%E7%9F%A5%E8%AF%86/doc/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/c-%E5%B0%8F%E7%9F%A5%E8%AF%86/doc/</guid>
+      <description>为了在存储的路上深耕，C/C++知识储备不能少</description>
+    </item>
+    
+  </channel>
+</rss>

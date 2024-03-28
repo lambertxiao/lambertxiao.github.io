@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Webpack on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/webpack/</link>
+    <description>Recent content in Webpack on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Tue, 04 Sep 2018 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/webpack/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Webpack</title>
+      <link>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/webpack/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/webpack/</guid>
+      <description>webpack 是一个模块打包器(module bundler)。打包器(bundler)帮助您取得准备用于部署的 JavaScript 和样式表，将它们转换为适合浏览器的可用格式。</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>位运算 on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/%E4%BD%8D%E8%BF%90%E7%AE%97/</link>
+    <description>Recent content in 位运算 on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Sun, 27 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/%E4%BD%8D%E8%BF%90%E7%AE%97/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>算法-只出现一次的数字</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8F%AA%E5%87%BA%E7%8E%B0%E4%B8%80%E6%AC%A1%E7%9A%84%E6%95%B0%E5%AD%97/doc/</link>
+      <pubDate>Sun, 27 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8F%AA%E5%87%BA%E7%8E%B0%E4%B8%80%E6%AC%A1%E7%9A%84%E6%95%B0%E5%AD%97/doc/</guid>
+      <description>挺恶心的位运行</description>
+    </item>
+    
+    <item>
+      <title>算法-位运算</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E4%BD%8D%E8%BF%90%E7%AE%97/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E4%BD%8D%E8%BF%90%E7%AE%97/doc/</guid>
+      <description>461. 汉明距离 461. 汉明距离 两个整数之间的 汉明距离 指的是这两个数字对应二进制位不同的位置的数目。
+给你两个整数 x 和 y，计算并返回它们之间的汉明距离。
+func hammingDistance(x int, y int) int { s := x ^ y // 汉明距离即为s中1的数量  res := 0 for s &amp;gt; 0 { // 判断最低位是不是1  res += s &amp;amp; 1 s &amp;gt;&amp;gt;= 1 } return res } 397. 整数替换 397. 整数替换
+给定一个正整数 n ，你可以做如下操作：
+如果 n 是偶数，则用 n / 2替换 n 。 如果 n 是奇数，则可以用 n + 1或n - 1替换 n 。 返回 n 变为 1 所需的 最小替换次数 。</description>
+    </item>
+    
+  </channel>
+</rss>

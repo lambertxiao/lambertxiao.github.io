@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>golang-内存管理 | Lambert&#39;s blog</title>
+<meta name="keywords" content="内存管理" />
+<meta name="description" content="空闲链表 &#43; 多规格多级别管理">
+<meta name="author" content="Lambert Xiao">
+<link rel="canonical" href="https://lambertxiao.github.io/posts/golang/golang-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D/doc/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js" integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5&#43;kdJvBz5iKbt6B5PJI="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="golang-内存管理" />
+<meta property="og:description" content="空闲链表 &#43; 多规格多级别管理" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://lambertxiao.github.io/posts/golang/golang-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D/doc/" />
+<meta property="og:image" content="https://lambertxiao.github.io/cover/golang-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.png" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-03-12T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2022-03-12T00:00:00&#43;00:00" />
+<meta property="og:see_also" content="https://lambertxiao.github.io/posts/gdb_usage/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/numa/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/uio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/vfio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/virtio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://lambertxiao.github.io/cover/golang-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.png" />
+<meta name="twitter:title" content="golang-内存管理"/>
+<meta name="twitter:description" content="空闲链表 &#43; 多规格多级别管理"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://lambertxiao.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "golang-内存管理",
+      "item": "https://lambertxiao.github.io/posts/golang/golang-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D/doc/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "golang-内存管理",
+  "name": "golang-内存管理",
+  "description": "空闲链表 + 多规格多级别管理",
+  "keywords": [
+    "内存管理"
+  ],
+  "articleBody": "空闲链表法 空闲链表法会在内部会维护一个类似链表的数据结构。当用户程序申请内存时，空闲链表分配器会依次遍历空闲的内存块，找到足够大的内存，然后申请新的资源并修改链表。\n因为不同的内存块通过指针构成了链表，所以使用这种方式的分配器可以重新利用回收的资源，但是因为分配内存时需要遍历链表，所以它的时间复杂度是 𝑂(𝑛)。\n空闲链表分配器可以选择不同的策略在链表中的内存块中进行选择，最常见的是以下四种：\n  首次适应（First-Fit）— 从链表头开始遍历，选择第一个大小大于申请内存的内存块；\n  循环首次适应（Next-Fit）— 从上次遍历的结束位置开始遍历，选择第一个大小大于申请内存的内存块；\n  最优适应（Best-Fit）— 从链表头遍历整个链表，选择最合适的内存块；\n  隔离适应（Segregated-Fit）— 将内存分割成多个链表，每个链表中的内存块大小相同，申请内存时先找到满足条件的链表，再从链表中选择合适的内存块；\n  GO语言中的优化 1. 多规格内存管理 上面说过普通的空闲链表法的时间复杂度为𝑂(𝑛)，聪明的GO工程师们在此之上又做了不少优化，Go语言的内存分配器会根据申请分配的内存大小选择不同的处理逻辑，运行时根据对象的大小将对象分成微对象、小对象和大对象三种：\n   类别 大小     微对象 (0, 16B)   小对象 [16B, 32KB]   大对象 (32KB, +∞)    为什么这么处理呢？是因为程序实际运行的过程中，绝大多数的对象大小都在32KB以下，而申请的内存大小影响 Go 语言运行时分配内存的过程和开销，所以分别处理大对象和小对象有利于提高内存分配器的性能。\n2. 多级内存管理 将内存分成不同的级别分别管理，TCMalloc 和 Go 运行时分配器都会引入线程缓存（Thread Cache）、中心缓存（Central Cache）和页堆（Page Heap）三个组件分级管理内存：\n  线程缓存使得在一个线程内分配内存无需加锁，减少锁竞争带来的性能损耗\n  当线程缓存不够用时，运行时会使用中心缓存作为补充解决小对象的内存分配，在遇到 32KB 以上的对象时，内存分配器会选择页堆直接分配大内存。\n  GO 1.10的虚拟内存布局 Go 语言程序的 1.10 版本在启动时会初始化整片虚拟内存区域，如下所示的三个区域 spans、bitmap 和 arena 分别预留了 512MB、16GB 以及 512GB 的内存空间，这些内存并不是真正存在的物理内存，而是虚拟内存\n  spans 区域存储了指向内存管理单元 runtime.mspan 的指针，每个内存单元会管理几页的内存空间，每页大小为 8KB；\n spans区域存放的只是指针，实际mspan的内容还是在arena上的\n   bitmap 用于标识 arena 区域中的那些地址保存了对象，位图中的每个字节都会表示堆区中的 32 字节是否空闲；\n 所以arena的大小除以32等于bitmap的大小\n   arena 区域是真正的堆区，运行时会将 8KB 看做一页，这些内存页中存储了所有在堆上初始化的对象；\n 对于任意一个地址，可以根据 arena 的基地址计算该地址所在的页数并通过 spans 数组获得管理该片内存的管理单元 runtime.mspan\n   GO 1.11的虚拟内存布局 整个堆内存划分成了一块块小的heap arena(每个64MB)\n 这么做的原因？是因为C和Go混合使用时，无法维护堆区的内存是连续的。使用稀疏的内存布局不仅能移除堆大小的上限，还能解决 C 和 Go 混合使用时的地址空间冲突问题。不过因为基于稀疏内存的内存管理失去了内存的连续性这一假设，这也使内存管理变得更加复杂\n 瞄一眼heap arena的结构体\ntype heapArena struct { bitmap [heapArenaBitmapBytes]byte spans [pagesPerArena]*mspan pageInUse [pagesPerArena / 8]uint8 pageMarks [pagesPerArena / 8]uint8 pageSpecials [pagesPerArena / 8]uint8 checkmarks *checkmarksMap zeroedBase uintptr }  bitmap和spans同1.10版本的类似 pageInUse zeroedBase记录了该结构体管理的内存的基地址  地址空间 因为所有的内存最终都是要从操作系统中申请的，所以 Go 语言的运行时构建了操作系统的内存管理抽象层，该抽象层将运行时管理的地址空间分成以下四种状态\n   状态 解释     None 内存没有被保留或者映射，是地址空间的默认状态   Reserved 运行时持有该地址空间，但是访问该内存会导致错误   Prepared 内存被保留，一般没有对应的物理内存访问该片内存的行为是未定义的可以快速转换到 Ready 状态   Ready 可以被安全访问    可以看出以上有好几个系统调用\n 对应代码：go/src/runtime/mem_linux.go\n    函数 作用     runtime.sysAlloc 会从操作系统中获取一大块可用的内存空间，可能为几百 KB 或者几 MB；   runtime.sysFree 会在程序发生内存不足（Out-of Memory，OOM）时调用并无条件地返回内存；   runtime.sysReserve 会保留操作系统中的一片内存区域，访问这片内存会触发异常；   runtime.sysMap 保证内存区域可以快速转换至就绪状态；   runtime.sysUsed 通知操作系统应用程序需要使用该内存区域，保证内存区域可以安全访问；   runtime.sysUnused 通知操作系统虚拟内存对应的物理内存已经不再需要，可以重用物理内存；   runtime.sysFault 将内存区域转换成保留状态，主要用于运行时的调试；    内存管理组件 所有的 Go 语言程序都会在启动时初始化如上图所示的内存布局，\n 每一个处理器P都会分配一个线程缓存 runtime.mcache 用于处理微对象和小对象的分配 mcache会持有内存管理单元runtime.mspan 每个类型的mspan都会管理特定大小的对象 当mspan中不存在空闲对象时，它们会从 runtime.mheap 持有的 134 个中心缓存 runtime.mcentral 中获取新的内存单元 中心缓存属于全局的堆结构体 runtime.mheap，它会从操作系统中申请内存。  mspan type mspan struct { startAddr uintptr // 起始地址  npages uintptr // 页数  freeindex uintptr allocBits *gcBits gcmarkBits *gcBits allocCache uint64 state mSpanStateBox spanclass spanClass ... }  startAddr 和 npages — 确定该结构体管理的多个页所在的内存，每个页的大小都是 8KB； freeindex — 扫描页中空闲对象的初始索引； allocBits 和 gcmarkBits — 分别用于标记内存的占用和回收情况； allocCache — allocBits 的补码，可以用于快速查找内存中未被使用的内存 state被GC用到了，有四种状态：mSpanDead、mSpanInUse、mSpanManual 和 mSpanFree spanclass是一个 uint8 类型的整数，它的前 7 位存储着跨度类的 ID，最后一位表示是否包含指针。从跨度类的ID可以知道mspan管理的对象的规格和个数  spanclass的种类可参见源码: /go/src/runtime/sizeclasses.go\n   当向 runtime.mspan 申请内存时，它会使用 allocCache 字段以对象为单位在管理的内存中快速查找待分配的空间\nmcache type mcache struct { ... alloc [numSpanClasses]*mspan // spans to allocate from, indexed by spanClass  ... tiny uintptr tinyoffset uintptr local_tinyallocs uintptr } runtime.mcache 是 Go 语言中的线程缓存，它会与线程上的处理器P一一绑定，主要用来缓存用户程序申请的微小对象。每一个线程缓存都持有 68 * 2 个 runtime.mspan，这些内存管理单元都存储在结构体的 alloc 字段中：\n 682的原因是sizeclass总共有68种，其中mcache持有含指针和不含指针的mspan各68个，总计就是682个\n mcache刚刚被初始化时是不包含 runtime.mspan 的，只有当用户程序申请内存时才会从上一级组件获取新的 runtime.mspan 满足内存分配的需求。\nfunc allocmcache() *mcache { var c *mcache systemstack(func() { lock(\u0026mheap_.lock) c = (*mcache)(mheap_.cachealloc.alloc()) c.flushGen = mheap_.sweepgen unlock(\u0026mheap_.lock) }) for i := range c.alloc { c.alloc[i] = \u0026emptymspan // 分配了个空的emptymspan \t} c.nextSample = nextSample() return c } runtime.mcache.refill 会为mcache获取一个指定跨度类的mspan\nfunc (c *mcache) refill(spc spanClass) { s := c.alloc[spc] s = mheap_.central[spc].mcentral.cacheSpan() // 看这里，mcache向mheap里的mcentral拿到了mspan \tc.alloc[spc] = s } 线程缓存中还包含几个用于分配微对象的字段，下面的这三个字段组成了微对象分配器，专门管理 16 字节以下的对象：\ntype mcache struct { tiny uintptr tinyoffset uintptr local_tinyallocs uintptr }  tiny 会指向堆中的一片内存 tinyOffset 是下一个空闲内存所在的偏移量 local_tinyallocs 会记录内存分配器中分配的对象个数  mcentral runtime.mcentral 是内存分配器的中心缓存，与线程缓存不同，访问中心缓存中的内存管理单元需要使用互斥锁\ntype mcentral struct { spanclass spanClass partial [2]spanSet full [2]spanSet } 每个中心缓存都会管理某个跨度类的内存管理单元，它会同时持有两个 runtime.spanSet，分别存储包含空闲对象和不包含空闲对象的内存管理单元。\n上面说过，mcache间接调用了mcentral.cacheSpan 方法获取新的内存管理单元，具体内部细节：\n 调用 mcentral.partialSwept 从清理过的、包含空闲空间的 runtime.spanSet 结构中查找可以使用的内存管理单元； 调用 mcentral.partialUnswept 从未被清理过的、有空闲对象的 runtime.spanSet 结构中查找可以使用的内存管理单元； 调用 mcentral.fullUnswept 获取未被清理的、不包含空闲空间的 runtime.spanSet 中获取内存管理单元并通过 runtime.mspan.sweep 清理它的内存空间； 调用 runtime.mcentral.grow 从堆中申请新的内存管理单元； 更新内存管理单元的 allocCache 等字段帮助快速分配内存；  mheap runtime.mheap 是内存分配的核心结构体，Go 语言程序会将其作为全局变量存储，而堆上初始化的所有对象都由该结构体统一管理，该结构体中包含两组非常重要的字段，其中一个是全局的中心缓存列表 central，另一个是管理堆区内存区域的 arenas 以及相关字段。\n页堆中包含一个长度为 136 的 runtime.mcentral 数组，其中 68 个为跨度类需要 scan 的中心缓存，另外的 68 个是 noscan 的中心缓存\n对象分配 堆上所有的对象都会通过调用 runtime.newobject 函数分配内存，该函数会调用 runtime.mallocgc 分配指定大小的内存空间，这也是用户程序向堆上申请内存空间的必经函数\n总的分配逻辑 func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer { mp := acquirem() mp.mallocing = 1 c := gomcache() var x unsafe.Pointer noscan := typ == nil || typ.ptrdata == 0 if size  maxSmallSize { if noscan \u0026\u0026 size // 微对象分配 \t} else { // 小对象分配 \t} } else { // 大对象分配 \t} publicationBarrier() mp.mallocing = 0 releasem(mp) return x } 微小对象分配逻辑 func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer { ... if size  maxSmallSize { if noscan \u0026\u0026 size := c.tinyoffset if off+size  maxTinySize \u0026\u0026 c.tiny != 0 { x = unsafe.Pointer(c.tiny + off) c.tinyoffset = off + size c.local_tinyallocs++ releasem(mp) return x } span := c.alloc[tinySpanClass] v := nextFreeFast(span) if v == 0 { v, _, _ = c.nextFree(tinySpanClass) } x = unsafe.Pointer(v) (*[2]uint64)(x)[0] = 0 (*[2]uint64)(x)[1] = 0 if size || c.tiny == 0 { c.tiny = uintptr(x) c.tinyoffset = size } size = maxTinySize ... } ... } ... }  线程缓存 runtime.mcache 中的 tiny 字段指向了 maxTinySize 大小的块，如果当前块中还包含大小合适的空闲内存，运行时会通过基地址和偏移量获取并返回这块内存 当内存块中不包含空闲的内存时，会先从线程缓存找到跨度类对应的内存管理单元 runtime.mspan，调用 runtime.nextFreeFast 获取空闲的内存；当不存在空闲内存时，我们会调用 runtime.mcache.nextFree 从中心缓存或者页堆中获取可分配的内存块  小对象分配逻辑 func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer { ... if size  maxSmallSize { ... } else { var sizeclass uint8 if size  smallSizeMax-8 { sizeclass = size_to_class8[(size+smallSizeDiv-1)/smallSizeDiv] } else { sizeclass = size_to_class128[(size-smallSizeMax+largeSizeDiv-1)/largeSizeDiv] } size = uintptr(class_to_size[sizeclass]) spc := makeSpanClass(sizeclass, noscan) span := c.alloc[spc] v := nextFreeFast(span) if v == 0 { v, span, _ = c.nextFree(spc) } x = unsafe.Pointer(v) if needzero \u0026\u0026 span.needzero != 0 { memclrNoHeapPointers(unsafe.Pointer(v), size) } } } else { ... } ... return x }  确定分配对象的大小以及跨度类 runtime.spanClass； 从线程缓存、中心缓存或者堆中获取内存管理单元并从内存管理单元找到空闲的内存空间； 调用 runtime.memclrNoHeapPointers 清空空闲内存中的所有数据；  大对象分配逻辑 func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer { ... if size  maxSmallSize { ... } else { var s *mspan span = c.allocLarge(size, needzero, noscan) span.freeindex = 1 span.allocCount = 1 x = unsafe.Pointer(span.base()) size = span.elemsize } publicationBarrier() mp.mallocing = 0 releasem(mp) return x }   运行时对于大于 32KB 的大对象会单独处理，我们不会从线程缓存或者中心缓存中获取内存管理单元，而是直接调用 runtime.mcache.allocLarge 分配大片内存\n  runtime.mcache.allocLarge 会计算分配该对象所需要的页数，它按照 8KB 的倍数在堆上申请内存\n  ",
+  "wordCount" : "749",
+  "inLanguage": "en",
+  "image":"https://lambertxiao.github.io/cover/golang-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.png","datePublished": "2022-03-12T00:00:00Z",
+  "dateModified": "2022-03-12T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "Lambert Xiao"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lambertxiao.github.io/posts/golang/golang-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D/doc/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lambert's blog",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lambertxiao.github.io/avatar.jpeg"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      golang-内存管理
+    </h1>
+    <div class="post-meta"><span title='2022-03-12 00:00:00 +0000 UTC'>March 12, 2022</span>&nbsp;·&nbsp;4 min&nbsp;·&nbsp;Lambert Xiao&nbsp;|&nbsp;<a href="https://github.com/adityatelange/hugo-PaperMod/tree/exampleSite/content/posts/golang/golang-%e5%86%85%e5%ad%98%e5%88%86%e9%85%8d/doc.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+</div>
+  </header> 
+<figure class="entry-cover"><img loading="lazy" src="https://lambertxiao.github.io/cover/golang-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.png" alt="">
+        
+</figure><div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#%e7%a9%ba%e9%97%b2%e9%93%be%e8%a1%a8%e6%b3%95" aria-label="空闲链表法">空闲链表法</a></li>
+                <li>
+                    <a href="#go%e8%af%ad%e8%a8%80%e4%b8%ad%e7%9a%84%e4%bc%98%e5%8c%96" aria-label="GO语言中的优化">GO语言中的优化</a><ul>
+                        
+                <li>
+                    <a href="#1-%e5%a4%9a%e8%a7%84%e6%a0%bc%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86" aria-label="1. 多规格内存管理">1. 多规格内存管理</a></li>
+                <li>
+                    <a href="#2-%e5%a4%9a%e7%ba%a7%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86" aria-label="2. 多级内存管理">2. 多级内存管理</a></li></ul>
+                </li>
+                <li>
+                    <a href="#go-110%e7%9a%84%e8%99%9a%e6%8b%9f%e5%86%85%e5%ad%98%e5%b8%83%e5%b1%80" aria-label="GO 1.10的虚拟内存布局">GO 1.10的虚拟内存布局</a></li>
+                <li>
+                    <a href="#go-111%e7%9a%84%e8%99%9a%e6%8b%9f%e5%86%85%e5%ad%98%e5%b8%83%e5%b1%80" aria-label="GO 1.11的虚拟内存布局">GO 1.11的虚拟内存布局</a></li>
+                <li>
+                    <a href="#%e5%9c%b0%e5%9d%80%e7%a9%ba%e9%97%b4" aria-label="地址空间">地址空间</a></li>
+                <li>
+                    <a href="#%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86%e7%bb%84%e4%bb%b6" aria-label="内存管理组件">内存管理组件</a><ul>
+                        
+                <li>
+                    <a href="#mspan" aria-label="mspan">mspan</a></li>
+                <li>
+                    <a href="#mcache" aria-label="mcache">mcache</a></li>
+                <li>
+                    <a href="#mcentral" aria-label="mcentral">mcentral</a></li>
+                <li>
+                    <a href="#mheap" aria-label="mheap">mheap</a></li>
+                <li>
+                    <a href="#%e5%af%b9%e8%b1%a1%e5%88%86%e9%85%8d" aria-label="对象分配">对象分配</a><ul>
+                        
+                <li>
+                    <a href="#%e6%80%bb%e7%9a%84%e5%88%86%e9%85%8d%e9%80%bb%e8%be%91" aria-label="总的分配逻辑">总的分配逻辑</a></li>
+                <li>
+                    <a href="#%e5%be%ae%e5%b0%8f%e5%af%b9%e8%b1%a1%e5%88%86%e9%85%8d%e9%80%bb%e8%be%91" aria-label="微小对象分配逻辑">微小对象分配逻辑</a></li>
+                <li>
+                    <a href="#%e5%b0%8f%e5%af%b9%e8%b1%a1%e5%88%86%e9%85%8d%e9%80%bb%e8%be%91" aria-label="小对象分配逻辑">小对象分配逻辑</a></li>
+                <li>
+                    <a href="#%e5%a4%a7%e5%af%b9%e8%b1%a1%e5%88%86%e9%85%8d%e9%80%bb%e8%be%91" aria-label="大对象分配逻辑">大对象分配逻辑</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h2 id="空闲链表法">空闲链表法<a hidden class="anchor" aria-hidden="true" href="#空闲链表法">#</a></h2>
+<p>空闲链表法会在内部会维护一个类似链表的数据结构。当用户程序申请内存时，空闲链表分配器会依次遍历空闲的内存块，找到足够大的内存，然后申请新的资源并修改链表。</p>
+<p>因为不同的内存块通过指针构成了链表，所以使用这种方式的分配器可以重新利用回收的资源，但是因为分配内存时需要遍历链表，所以它的时间复杂度是 𝑂(𝑛)。</p>
+<p>空闲链表分配器可以选择不同的策略在链表中的内存块中进行选择，最常见的是以下四种：</p>
+<ul>
+<li>
+<p>首次适应（First-Fit）— 从链表头开始遍历，选择第一个大小大于申请内存的内存块；</p>
+</li>
+<li>
+<p>循环首次适应（Next-Fit）— 从上次遍历的结束位置开始遍历，选择第一个大小大于申请内存的内存块；</p>
+</li>
+<li>
+<p>最优适应（Best-Fit）— 从链表头遍历整个链表，选择最合适的内存块；</p>
+</li>
+<li>
+<p>隔离适应（Segregated-Fit）— 将内存分割成多个链表，每个链表中的内存块大小相同，申请内存时先找到满足条件的链表，再从链表中选择合适的内存块；</p>
+</li>
+</ul>
+<h2 id="go语言中的优化">GO语言中的优化<a hidden class="anchor" aria-hidden="true" href="#go语言中的优化">#</a></h2>
+<h3 id="1-多规格内存管理">1. 多规格内存管理<a hidden class="anchor" aria-hidden="true" href="#1-多规格内存管理">#</a></h3>
+<p>上面说过普通的空闲链表法的时间复杂度为𝑂(𝑛)，聪明的GO工程师们在此之上又做了不少优化，Go语言的内存分配器会根据申请分配的内存大小选择不同的处理逻辑，运行时根据对象的大小将对象分成微对象、小对象和大对象三种：</p>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>大小</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>微对象</td>
+<td>(0, 16B)</td>
+</tr>
+<tr>
+<td>小对象</td>
+<td>[16B, 32KB]</td>
+</tr>
+<tr>
+<td>大对象</td>
+<td>(32KB, +∞)</td>
+</tr>
+</tbody>
+</table>
+<p>为什么这么处理呢？是因为程序实际运行的过程中，绝大多数的对象大小都在32KB以下，而申请的内存大小影响 Go 语言运行时分配内存的过程和开销，所以分别处理大对象和小对象有利于提高内存分配器的性能。</p>
+<h3 id="2-多级内存管理">2. 多级内存管理<a hidden class="anchor" aria-hidden="true" href="#2-多级内存管理">#</a></h3>
+<p>将内存分成不同的级别分别管理，TCMalloc 和 Go 运行时分配器都会引入线程缓存（Thread Cache）、中心缓存（Central Cache）和页堆（Page Heap）三个组件分级管理内存：</p>
+<p><img loading="lazy" src="../1.png" alt=""  />
+</p>
+<ol>
+<li>
+<p>线程缓存使得在一个线程内分配内存无需加锁，减少锁竞争带来的性能损耗</p>
+</li>
+<li>
+<p>当线程缓存不够用时，运行时会使用中心缓存作为补充解决小对象的内存分配，在遇到 32KB 以上的对象时，内存分配器会选择页堆直接分配大内存。</p>
+</li>
+</ol>
+<h2 id="go-110的虚拟内存布局">GO 1.10的虚拟内存布局<a hidden class="anchor" aria-hidden="true" href="#go-110的虚拟内存布局">#</a></h2>
+<p>Go 语言程序的 1.10 版本在启动时会初始化整片虚拟内存区域，如下所示的三个区域 spans、bitmap 和 arena 分别预留了 512MB、16GB 以及 512GB 的内存空间，这些内存并不是真正存在的物理内存，而是虚拟内存</p>
+<p><img loading="lazy" src="../2.png" alt=""  />
+</p>
+<ul>
+<li>
+<p>spans 区域存储了指向内存管理单元 runtime.mspan 的指针，每个内存单元会管理几页的内存空间，每页大小为 8KB；</p>
+<blockquote>
+<p>spans区域存放的只是指针，实际mspan的内容还是在arena上的</p>
+</blockquote>
+</li>
+<li>
+<p>bitmap 用于标识 arena 区域中的那些地址保存了对象，位图中的每个字节都会表示堆区中的 32 字节是否空闲；</p>
+<blockquote>
+<p>所以arena的大小除以32等于bitmap的大小</p>
+</blockquote>
+</li>
+<li>
+<p>arena 区域是真正的堆区，运行时会将 8KB 看做一页，这些内存页中存储了所有在堆上初始化的对象；</p>
+<blockquote>
+<p>对于任意一个地址，可以根据 arena 的基地址计算该地址所在的页数并通过 spans 数组获得管理该片内存的管理单元 <code>runtime.mspan</code></p>
+</blockquote>
+</li>
+</ul>
+<h2 id="go-111的虚拟内存布局">GO 1.11的虚拟内存布局<a hidden class="anchor" aria-hidden="true" href="#go-111的虚拟内存布局">#</a></h2>
+<p><img loading="lazy" src="../3.png" alt=""  />
+</p>
+<p>整个堆内存划分成了一块块小的heap arena(每个64MB)</p>
+<blockquote>
+<p>这么做的原因？是因为C和Go混合使用时，无法维护堆区的内存是连续的。使用稀疏的内存布局不仅能移除堆大小的上限，还能解决 C 和 Go 混合使用时的地址空间冲突问题。不过因为基于稀疏内存的内存管理失去了内存的连续性这一假设，这也使内存管理变得更加复杂</p>
+</blockquote>
+<p>瞄一眼heap arena的结构体</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">type</span> heapArena <span style="color:#00cd00">struct</span> {
+	bitmap       [heapArenaBitmapBytes]<span style="color:#00cd00">byte</span>
+	spans        [pagesPerArena]<span style="color:#39c">*</span>mspan
+	pageInUse    [pagesPerArena <span style="color:#39c">/</span> <span style="color:#cd00cd">8</span>]<span style="color:#00cd00">uint8</span>
+	pageMarks    [pagesPerArena <span style="color:#39c">/</span> <span style="color:#cd00cd">8</span>]<span style="color:#00cd00">uint8</span>
+	pageSpecials [pagesPerArena <span style="color:#39c">/</span> <span style="color:#cd00cd">8</span>]<span style="color:#00cd00">uint8</span>
+	checkmarks   <span style="color:#39c">*</span>checkmarksMap
+	zeroedBase   <span style="color:#00cd00">uintptr</span>
+}
+</code></pre></div><ol>
+<li>bitmap和spans同1.10版本的类似</li>
+<li>pageInUse</li>
+<li>zeroedBase记录了该结构体管理的内存的基地址</li>
+</ol>
+<h2 id="地址空间">地址空间<a hidden class="anchor" aria-hidden="true" href="#地址空间">#</a></h2>
+<p>因为所有的内存最终都是要从操作系统中申请的，所以 Go 语言的运行时构建了操作系统的内存管理抽象层，该抽象层将运行时管理的地址空间分成以下四种状态</p>
+<table>
+<thead>
+<tr>
+<th>状态</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>None</td>
+<td>内存没有被保留或者映射，是地址空间的默认状态</td>
+</tr>
+<tr>
+<td>Reserved</td>
+<td>运行时持有该地址空间，但是访问该内存会导致错误</td>
+</tr>
+<tr>
+<td>Prepared</td>
+<td>内存被保留，一般没有对应的物理内存访问该片内存的行为是未定义的可以快速转换到 Ready 状态</td>
+</tr>
+<tr>
+<td>Ready</td>
+<td>可以被安全访问</td>
+</tr>
+</tbody>
+</table>
+<p><img loading="lazy" src="../4.png" alt=""  />
+</p>
+<p>可以看出以上有好几个系统调用</p>
+<blockquote>
+<p>对应代码：go/src/runtime/mem_linux.go</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>函数</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>runtime.sysAlloc</td>
+<td>会从操作系统中获取一大块可用的内存空间，可能为几百 KB 或者几 MB；</td>
+</tr>
+<tr>
+<td>runtime.sysFree</td>
+<td>会在程序发生内存不足（Out-of Memory，OOM）时调用并无条件地返回内存；</td>
+</tr>
+<tr>
+<td>runtime.sysReserve</td>
+<td>会保留操作系统中的一片内存区域，访问这片内存会触发异常；</td>
+</tr>
+<tr>
+<td>runtime.sysMap</td>
+<td>保证内存区域可以快速转换至就绪状态；</td>
+</tr>
+<tr>
+<td>runtime.sysUsed</td>
+<td>通知操作系统应用程序需要使用该内存区域，保证内存区域可以安全访问；</td>
+</tr>
+<tr>
+<td>runtime.sysUnused</td>
+<td>通知操作系统虚拟内存对应的物理内存已经不再需要，可以重用物理内存；</td>
+</tr>
+<tr>
+<td>runtime.sysFault</td>
+<td>将内存区域转换成保留状态，主要用于运行时的调试；</td>
+</tr>
+</tbody>
+</table>
+<h2 id="内存管理组件">内存管理组件<a hidden class="anchor" aria-hidden="true" href="#内存管理组件">#</a></h2>
+<p><img loading="lazy" src="../5.png" alt=""  />
+</p>
+<p>所有的 Go 语言程序都会在启动时初始化如上图所示的内存布局，</p>
+<ol>
+<li>每一个处理器P都会分配一个线程缓存 runtime.mcache 用于处理微对象和小对象的分配</li>
+<li>mcache会持有<code>内存管理单元runtime.mspan</code></li>
+<li>每个类型的mspan都会管理特定大小的对象</li>
+<li>当mspan中不存在空闲对象时，它们会从 runtime.mheap 持有的 134 个中心缓存 runtime.mcentral 中获取新的内存单元</li>
+<li>中心缓存属于全局的堆结构体 runtime.mheap，它会从操作系统中申请内存。</li>
+</ol>
+<h3 id="mspan">mspan<a hidden class="anchor" aria-hidden="true" href="#mspan">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">type</span> mspan <span style="color:#00cd00">struct</span> {
+    startAddr <span style="color:#00cd00">uintptr</span> <span style="color:#000080">// 起始地址
+</span><span style="color:#000080"></span>    npages    <span style="color:#00cd00">uintptr</span> <span style="color:#000080">// 页数
+</span><span style="color:#000080"></span>    freeindex <span style="color:#00cd00">uintptr</span>
+    allocBits  <span style="color:#39c">*</span>gcBits
+    gcmarkBits <span style="color:#39c">*</span>gcBits
+    allocCache  <span style="color:#00cd00">uint64</span>
+    state       mSpanStateBox
+    spanclass   spanClass
+    <span style="color:#39c">...</span>
+}
+</code></pre></div><ul>
+<li>startAddr 和 npages — 确定该结构体管理的多个页所在的内存，每个页的大小都是 8KB；</li>
+<li>freeindex — 扫描页中空闲对象的初始索引；</li>
+<li>allocBits 和 gcmarkBits — 分别用于标记内存的占用和回收情况；</li>
+<li>allocCache — allocBits 的补码，可以用于快速查找内存中未被使用的内存</li>
+<li>state被GC用到了，有四种状态：mSpanDead、mSpanInUse、mSpanManual 和 mSpanFree</li>
+<li>spanclass是一个 uint8 类型的整数，它的前 7 位存储着跨度类的 ID，最后一位表示是否包含指针。从跨度类的ID可以知道mspan管理的对象的规格和个数
+<blockquote>
+<p>spanclass的种类可参见源码: /go/src/runtime/sizeclasses.go</p>
+</blockquote>
+</li>
+</ul>
+<p>当向 runtime.mspan 申请内存时，它会使用 allocCache 字段以对象为单位在管理的内存中快速查找待分配的空间</p>
+<p><img loading="lazy" src="../6.png" alt=""  />
+</p>
+<h3 id="mcache">mcache<a hidden class="anchor" aria-hidden="true" href="#mcache">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">type</span> mcache <span style="color:#00cd00">struct</span> {
+    <span style="color:#39c">...</span>
+	alloc [numSpanClasses]<span style="color:#39c">*</span>mspan <span style="color:#000080">// spans to allocate from, indexed by spanClass
+</span><span style="color:#000080"></span>    <span style="color:#39c">...</span>
+	tiny             <span style="color:#00cd00">uintptr</span>
+	tinyoffset       <span style="color:#00cd00">uintptr</span>
+	local_tinyallocs <span style="color:#00cd00">uintptr</span>
+}
+</code></pre></div><p>runtime.mcache 是 Go 语言中的线程缓存，它会与线程上的处理器P一一绑定，主要用来缓存用户程序申请的微小对象。每一个线程缓存都持有 68 * 2 个 runtime.mspan，这些内存管理单元都存储在结构体的 alloc 字段中：</p>
+<blockquote>
+<p>68<em>2的原因是sizeclass总共有68种，其中mcache持有含指针和不含指针的mspan各68个，总计就是68</em>2个</p>
+</blockquote>
+<p><img loading="lazy" src="../7.png" alt=""  />
+</p>
+<p>mcache刚刚被初始化时是不包含 runtime.mspan 的，只有当用户程序申请内存时才会从上一级组件获取新的 runtime.mspan 满足内存分配的需求。</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> allocmcache() <span style="color:#39c">*</span>mcache {
+	<span style="color:#00cd00">var</span> c <span style="color:#39c">*</span>mcache
+	systemstack(<span style="color:#00cd00">func</span>() {
+		lock(<span style="color:#39c">&amp;</span>mheap_.lock)
+		c = (<span style="color:#39c">*</span>mcache)(mheap_.cachealloc.alloc())
+		c.flushGen = mheap_.sweepgen
+		unlock(<span style="color:#39c">&amp;</span>mheap_.lock)
+	})
+	<span style="color:#cdcd00">for</span> i <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> c.alloc {
+		c.alloc[i] = <span style="color:#39c">&amp;</span>emptymspan <span style="color:#000080">// 分配了个空的emptymspan
+</span><span style="color:#000080"></span>	}
+	c.nextSample = nextSample()
+	<span style="color:#cdcd00">return</span> c
+}
+</code></pre></div><p>runtime.mcache.refill 会为mcache获取一个指定跨度类的mspan</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (c <span style="color:#39c">*</span>mcache) refill(spc spanClass) {
+	s <span style="color:#39c">:=</span> c.alloc[spc]
+	s = mheap_.central[spc].mcentral.cacheSpan() <span style="color:#000080">// 看这里，mcache向mheap里的mcentral拿到了mspan
+</span><span style="color:#000080"></span>	c.alloc[spc] = s
+}
+</code></pre></div><p>线程缓存中还包含几个用于分配微对象的字段，下面的这三个字段组成了微对象分配器，专门管理 16 字节以下的对象：</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">type</span> mcache <span style="color:#00cd00">struct</span> {
+	tiny             <span style="color:#00cd00">uintptr</span>
+	tinyoffset       <span style="color:#00cd00">uintptr</span>
+	local_tinyallocs <span style="color:#00cd00">uintptr</span>
+}
+</code></pre></div><ol>
+<li>tiny 会指向堆中的一片内存</li>
+<li>tinyOffset 是下一个空闲内存所在的偏移量</li>
+<li>local_tinyallocs 会记录内存分配器中分配的对象个数</li>
+</ol>
+<h3 id="mcentral">mcentral<a hidden class="anchor" aria-hidden="true" href="#mcentral">#</a></h3>
+<p>runtime.mcentral 是内存分配器的中心缓存，与线程缓存不同，访问中心缓存中的内存管理单元需要使用互斥锁</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">type</span> mcentral <span style="color:#00cd00">struct</span> {
+	spanclass spanClass
+	partial  [<span style="color:#cd00cd">2</span>]spanSet
+	full     [<span style="color:#cd00cd">2</span>]spanSet
+}
+</code></pre></div><p>每个中心缓存都会管理某个跨度类的内存管理单元，它会同时持有两个 runtime.spanSet，分别存储包含空闲对象和不包含空闲对象的内存管理单元。</p>
+<p>上面说过，mcache间接调用了mcentral.cacheSpan 方法获取新的内存管理单元，具体内部细节：</p>
+<ol>
+<li>调用 mcentral.partialSwept 从清理过的、包含空闲空间的 runtime.spanSet 结构中查找可以使用的内存管理单元；</li>
+<li>调用 mcentral.partialUnswept 从未被清理过的、有空闲对象的 runtime.spanSet 结构中查找可以使用的内存管理单元；</li>
+<li>调用 mcentral.fullUnswept 获取未被清理的、不包含空闲空间的 runtime.spanSet 中获取内存管理单元并通过 runtime.mspan.sweep 清理它的内存空间；</li>
+<li>调用 runtime.mcentral.grow 从堆中申请新的内存管理单元；</li>
+<li>更新内存管理单元的 allocCache 等字段帮助快速分配内存；</li>
+</ol>
+<h3 id="mheap">mheap<a hidden class="anchor" aria-hidden="true" href="#mheap">#</a></h3>
+<p>runtime.mheap 是内存分配的核心结构体，Go 语言程序会将其作为全局变量存储，而堆上初始化的所有对象都由该结构体统一管理，该结构体中包含两组非常重要的字段，其中一个是全局的中心缓存列表 central，另一个是管理堆区内存区域的 arenas 以及相关字段。</p>
+<p>页堆中包含一个长度为 136 的 runtime.mcentral 数组，其中 68 个为跨度类需要 scan 的中心缓存，另外的 68 个是 noscan 的中心缓存</p>
+<h3 id="对象分配">对象分配<a hidden class="anchor" aria-hidden="true" href="#对象分配">#</a></h3>
+<p>堆上所有的对象都会通过调用 runtime.newobject 函数分配内存，该函数会调用 runtime.mallocgc 分配指定大小的内存空间，这也是用户程序向堆上申请内存空间的必经函数</p>
+<h4 id="总的分配逻辑">总的分配逻辑<a hidden class="anchor" aria-hidden="true" href="#总的分配逻辑">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> mallocgc(size <span style="color:#00cd00">uintptr</span>, typ <span style="color:#39c">*</span>_type, needzero <span style="color:#00cd00">bool</span>) unsafe.Pointer {
+	mp <span style="color:#39c">:=</span> acquirem()
+	mp.mallocing = <span style="color:#cd00cd">1</span>
+
+	c <span style="color:#39c">:=</span> gomcache()
+	<span style="color:#00cd00">var</span> x unsafe.Pointer
+	noscan <span style="color:#39c">:=</span> typ <span style="color:#39c">==</span> <span style="color:#cdcd00">nil</span> <span style="color:#39c">||</span> typ.ptrdata <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span>
+	<span style="color:#cdcd00">if</span> size <span style="color:#39c">&lt;=</span> maxSmallSize {
+		<span style="color:#cdcd00">if</span> noscan <span style="color:#39c">&amp;&amp;</span> size &lt; maxTinySize {
+			<span style="color:#000080">// 微对象分配
+</span><span style="color:#000080"></span>		} <span style="color:#cdcd00">else</span> {
+			<span style="color:#000080">// 小对象分配
+</span><span style="color:#000080"></span>		}
+	} <span style="color:#cdcd00">else</span> {
+		<span style="color:#000080">// 大对象分配
+</span><span style="color:#000080"></span>	}
+
+	publicationBarrier()
+	mp.mallocing = <span style="color:#cd00cd">0</span>
+	releasem(mp)
+
+	<span style="color:#cdcd00">return</span> x
+}
+</code></pre></div><h4 id="微小对象分配逻辑">微小对象分配逻辑<a hidden class="anchor" aria-hidden="true" href="#微小对象分配逻辑">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> mallocgc(size <span style="color:#00cd00">uintptr</span>, typ <span style="color:#39c">*</span>_type, needzero <span style="color:#00cd00">bool</span>) unsafe.Pointer {
+  <span style="color:#39c">...</span>
+  <span style="color:#cdcd00">if</span> size <span style="color:#39c">&lt;=</span> maxSmallSize {
+    <span style="color:#cdcd00">if</span> noscan <span style="color:#39c">&amp;&amp;</span> size &lt; maxTinySize {
+      off <span style="color:#39c">:=</span> c.tinyoffset
+      <span style="color:#cdcd00">if</span> off<span style="color:#39c">+</span>size <span style="color:#39c">&lt;=</span> maxTinySize <span style="color:#39c">&amp;&amp;</span> c.tiny <span style="color:#39c">!=</span> <span style="color:#cd00cd">0</span> {
+        x = unsafe.Pointer(c.tiny <span style="color:#39c">+</span> off)
+        c.tinyoffset = off <span style="color:#39c">+</span> size
+        c.local_tinyallocs<span style="color:#39c">++</span>
+        releasem(mp)
+        <span style="color:#cdcd00">return</span> x
+      }
+      span <span style="color:#39c">:=</span> c.alloc[tinySpanClass]
+      v <span style="color:#39c">:=</span> nextFreeFast(span)
+      <span style="color:#cdcd00">if</span> v <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> {
+        v, _, _ = c.nextFree(tinySpanClass)
+      }
+
+      x = unsafe.Pointer(v)
+      (<span style="color:#39c">*</span>[<span style="color:#cd00cd">2</span>]<span style="color:#00cd00">uint64</span>)(x)[<span style="color:#cd00cd">0</span>] = <span style="color:#cd00cd">0</span>
+      (<span style="color:#39c">*</span>[<span style="color:#cd00cd">2</span>]<span style="color:#00cd00">uint64</span>)(x)[<span style="color:#cd00cd">1</span>] = <span style="color:#cd00cd">0</span>
+
+      <span style="color:#cdcd00">if</span> size &lt; c.tinyoffset <span style="color:#39c">||</span> c.tiny <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> {
+        c.tiny = <span style="color:#cd00cd">uintptr</span>(x)
+        c.tinyoffset = size
+      }
+      size = maxTinySize
+      <span style="color:#39c">...</span>
+		}
+		<span style="color:#39c">...</span>
+	}
+	<span style="color:#39c">...</span>
+}
+</code></pre></div><ol>
+<li>线程缓存 runtime.mcache 中的 tiny 字段指向了 maxTinySize 大小的块，如果当前块中还包含大小合适的空闲内存，运行时会通过基地址和偏移量获取并返回这块内存</li>
+<li>当内存块中不包含空闲的内存时，会先从线程缓存找到跨度类对应的内存管理单元 runtime.mspan，调用 runtime.nextFreeFast 获取空闲的内存；当不存在空闲内存时，我们会调用 runtime.mcache.nextFree 从中心缓存或者页堆中获取可分配的内存块</li>
+</ol>
+<h4 id="小对象分配逻辑">小对象分配逻辑<a hidden class="anchor" aria-hidden="true" href="#小对象分配逻辑">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> mallocgc(size <span style="color:#00cd00">uintptr</span>, typ <span style="color:#39c">*</span>_type, needzero <span style="color:#00cd00">bool</span>) unsafe.Pointer {
+	<span style="color:#39c">...</span>
+	<span style="color:#cdcd00">if</span> size <span style="color:#39c">&lt;=</span> maxSmallSize {
+		<span style="color:#39c">...</span>
+		} <span style="color:#cdcd00">else</span> {
+			<span style="color:#00cd00">var</span> sizeclass <span style="color:#00cd00">uint8</span>
+			<span style="color:#cdcd00">if</span> size <span style="color:#39c">&lt;=</span> smallSizeMax<span style="color:#39c">-</span><span style="color:#cd00cd">8</span> {
+				sizeclass = size_to_class8[(size<span style="color:#39c">+</span>smallSizeDiv<span style="color:#39c">-</span><span style="color:#cd00cd">1</span>)<span style="color:#39c">/</span>smallSizeDiv]
+			} <span style="color:#cdcd00">else</span> {
+				sizeclass = size_to_class128[(size<span style="color:#39c">-</span>smallSizeMax<span style="color:#39c">+</span>largeSizeDiv<span style="color:#39c">-</span><span style="color:#cd00cd">1</span>)<span style="color:#39c">/</span>largeSizeDiv]
+			}
+			size = <span style="color:#cd00cd">uintptr</span>(class_to_size[sizeclass])
+			spc <span style="color:#39c">:=</span> makeSpanClass(sizeclass, noscan)
+			span <span style="color:#39c">:=</span> c.alloc[spc]
+			v <span style="color:#39c">:=</span> nextFreeFast(span)
+			<span style="color:#cdcd00">if</span> v <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> {
+				v, span, _ = c.nextFree(spc)
+			}
+			x = unsafe.Pointer(v)
+			<span style="color:#cdcd00">if</span> needzero <span style="color:#39c">&amp;&amp;</span> span.needzero <span style="color:#39c">!=</span> <span style="color:#cd00cd">0</span> {
+				memclrNoHeapPointers(unsafe.Pointer(v), size)
+			}
+		}
+	} <span style="color:#cdcd00">else</span> {
+		<span style="color:#39c">...</span>
+	}
+	<span style="color:#39c">...</span>
+	<span style="color:#cdcd00">return</span> x
+}
+</code></pre></div><ol>
+<li>确定分配对象的大小以及跨度类 runtime.spanClass；</li>
+<li>从线程缓存、中心缓存或者堆中获取内存管理单元并从内存管理单元找到空闲的内存空间；</li>
+<li>调用 runtime.memclrNoHeapPointers 清空空闲内存中的所有数据；</li>
+</ol>
+<h4 id="大对象分配逻辑">大对象分配逻辑<a hidden class="anchor" aria-hidden="true" href="#大对象分配逻辑">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> mallocgc(size <span style="color:#00cd00">uintptr</span>, typ <span style="color:#39c">*</span>_type, needzero <span style="color:#00cd00">bool</span>) unsafe.Pointer {
+	<span style="color:#39c">...</span>
+	<span style="color:#cdcd00">if</span> size <span style="color:#39c">&lt;=</span> maxSmallSize {
+		<span style="color:#39c">...</span>
+	} <span style="color:#cdcd00">else</span> {
+		<span style="color:#00cd00">var</span> s <span style="color:#39c">*</span>mspan
+		span = c.allocLarge(size, needzero, noscan)
+		span.freeindex = <span style="color:#cd00cd">1</span>
+		span.allocCount = <span style="color:#cd00cd">1</span>
+		x = unsafe.Pointer(span.base())
+		size = span.elemsize
+	}
+
+	publicationBarrier()
+	mp.mallocing = <span style="color:#cd00cd">0</span>
+	releasem(mp)
+
+	<span style="color:#cdcd00">return</span> x
+}
+</code></pre></div><ol>
+<li>
+<p>运行时对于大于 32KB 的大对象会单独处理，我们不会从线程缓存或者中心缓存中获取内存管理单元，而是直接调用 runtime.mcache.allocLarge 分配大片内存</p>
+</li>
+<li>
+<p>runtime.mcache.allocLarge 会计算分配该对象所需要的页数，它按照 8KB 的倍数在堆上申请内存</p>
+</li>
+</ol>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lambertxiao.github.io/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/">内存管理</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E9%93%BE%E8%A1%A8/doc/">
+    <span class="title">« Prev Page</span>
+    <br>
+    <span>算法-链表</span>
+  </a>
+  <a class="next" href="https://lambertxiao.github.io/posts/golang/golang-%E5%87%BD%E6%95%B0%E6%A0%88%E5%B8%A7%E5%B8%83%E5%B1%80/doc/">
+    <span class="title">Next Page »</span>
+    <br>
+    <span>Golang-函数栈帧布局</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share golang-内存管理 on twitter"
+        href="https://twitter.com/intent/tweet/?text=golang-%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fgolang%2fgolang-%25E5%2586%2585%25E5%25AD%2598%25E5%2588%2586%25E9%2585%258D%2fdoc%2f&amp;hashtags=%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share golang-内存管理 on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fgolang%2fgolang-%25E5%2586%2585%25E5%25AD%2598%25E5%2588%2586%25E9%2585%258D%2fdoc%2f&amp;title=golang-%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86&amp;summary=golang-%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86&amp;source=https%3a%2f%2flambertxiao.github.io%2fposts%2fgolang%2fgolang-%25E5%2586%2585%25E5%25AD%2598%25E5%2588%2586%25E9%2585%258D%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share golang-内存管理 on reddit"
+        href="https://reddit.com/submit?url=https%3a%2f%2flambertxiao.github.io%2fposts%2fgolang%2fgolang-%25E5%2586%2585%25E5%25AD%2598%25E5%2588%2586%25E9%2585%258D%2fdoc%2f&title=golang-%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share golang-内存管理 on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flambertxiao.github.io%2fposts%2fgolang%2fgolang-%25E5%2586%2585%25E5%25AD%2598%25E5%2588%2586%25E9%2585%258D%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share golang-内存管理 on whatsapp"
+        href="https://api.whatsapp.com/send?text=golang-%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86%20-%20https%3a%2f%2flambertxiao.github.io%2fposts%2fgolang%2fgolang-%25E5%2586%2585%25E5%25AD%2598%25E5%2588%2586%25E9%2585%258D%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share golang-内存管理 on telegram"
+        href="https://telegram.me/share/url?text=golang-%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fgolang%2fgolang-%25E5%2586%2585%25E5%25AD%2598%25E5%2588%2586%25E9%2585%258D%2fdoc%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_KY25sRiRtb" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

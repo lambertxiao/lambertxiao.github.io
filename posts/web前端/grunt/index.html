@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Grunt | Lambert&#39;s blog</title>
+<meta name="keywords" content="Javascript, Grunt" />
+<meta name="description" content="Grunt是一个基于NodeJS，可用于自动化构建、测试、生成文档的项目管理工具。">
+<meta name="author" content="Lambert Xiao">
+<link rel="canonical" href="https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/grunt/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js" integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5&#43;kdJvBz5iKbt6B5PJI="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="Grunt" />
+<meta property="og:description" content="Grunt是一个基于NodeJS，可用于自动化构建、测试、生成文档的项目管理工具。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/grunt/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2018-09-04T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2018-09-04T00:00:00&#43;00:00" />
+<meta property="og:see_also" content="https://lambertxiao.github.io/posts/gdb_usage/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/numa/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/uio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/vfio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/virtio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="Grunt"/>
+<meta name="twitter:description" content="Grunt是一个基于NodeJS，可用于自动化构建、测试、生成文档的项目管理工具。"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://lambertxiao.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "Grunt",
+      "item": "https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/grunt/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Grunt",
+  "name": "Grunt",
+  "description": "Grunt是一个基于NodeJS，可用于自动化构建、测试、生成文档的项目管理工具。",
+  "keywords": [
+    "Javascript", "Grunt"
+  ],
+  "articleBody": "Grunt 杂记 简介 Grunt是一个基于NodeJS，可用于自动化构建、测试、生成文档的项目管理工具。\nGrunt 能做什么 Grunt可以自动化我们的整个开发流程，简单地说，就是用JavaScript去执行一些程序来完成一些任务。比如说将css、Javascript、图像等资源压缩；将Sass和Less通过预处理器编译成Css；将Coffeescript、Typescript等转化为Javascript；实时监听文件的变化，并执行自动编译任务；\n在Grunt工具箱中，按任务目标我们可以分为：\n 编译文档型：比如编译LESS、Sass、Stylus、Coffeescript等； 文件操作型：比如说合并、压缩JavaScript、CSS、图片等； 质量保障型：比如JSHint、Jasmin、Mocha等； 类库构建型：比如说Backbone.js、ember.js、angular.js等。  这些任务都依赖于给Grunt提供的插件来完成的，但很多工作依旧需要在命令终端手工输入命令来完成这些操作。为此在Grunt中可以使用watch任务来实现一些监听文件改变、自动触发构建等功能。从而减少人工去每次操作任务。\n开始使用 Grunt的使用非常简单，仅需下载相应的命令行工具，针对不同的任务下载不同的插件，即可完成整个自动化过程。\n  将grunt-cli（grunt命令行工具）作为全局模块安装\n $ npm install -g grunt-cli\n   通过npm初始化，为我们生成一份package.json文件\n $ mkdir grunt-app \u0026\u0026 cd grunt-app $ npm init\n   为项目安装grunt作为依赖\n $ npm install –save-dev grunt\n 至此grunt已经安装完毕，但它还没有特殊的功能，要使用grunt的各种功能，需要建一份Gruntfile.js文件，并为之安装相应的插件。\n  新建Gruntfile.js，并写入以下内容\nmodule.exports = function(grunt) { // 之后所有的配置都是配在传递给grunt.initConfig这个方法的对象中 grunt.initConfig({ // 将package.json文件作为一个json对象读入 pkg: grunt.file.readJSON('package.json'), }); // 加载grunt的插件，这里的 grunt-contrib-uglify 是一个例子 grunt.loadNpmTasks('grunt-contrib-uglify'); // 注册一个grunt任务，第一个参数为任务的名字，当任务的名字default时，通过grunt运行项目时，会默认执行该任务；第二个参数是一个数组，是后续所要执行任务名字的集合。 grunt.registerTask('default', ['uglify']); };   安装grunt插件 在安装grunt插件时，需要考虑自己需要哪些功能，下面罗列出开发中需要的大部分功能。并举个简单的例子，详细用法可参考 [Gruntjs][1]。\n  [grunt-contrib-uglify][2] （混淆并压缩js文件）\n 安装   $ npm install grunt-contrib-uglify –save-dev\n  配置task  grunt.initConfig({ uglify: { my_target: { files: { 'dest/output.min.js': ['src/input1.js', 'src/input2.js'] } } } }); grunt.loadNpmTasks('grunt-contrib-uglify');    2. [grunt-contrib-cssmin][3] （压缩css） * 安装  $ npm install grunt-contrib-cssmin --save-dev * 配置task ``` grunt.initConfig({ target: { files: { 'output.css': ['foo.css', 'bar.css'] } } }) grunt.loadNpmTasks('grunt-contrib-cssmin'); ``` 3. [grunt-contrib-clean][4] （清除文件和目录，一般用来清除上一次编译生成的文件） * 安装  $ npm install grunt-contrib-clean --save-dev * 配置task ``` grunt.initConfig({ clean: { build: { src: ['path/to/dir/one', 'path/to/dir/two'] } } }); grunt.loadNpmTasks('grunt-contrib-clean'); ``` 4. [grunt-contrib-watch][5] （监听文件的变化，并自动执行任务） * 安装  $ npm install grunt-contrib-watch --save-dev * 配置task ``` grunt.initConfig({ watch: { scripts: { files: ['**/*.coffee'], // 监听到文件变化后执行的task tasks: ['coffee'], options: { spawn: false, }, }, css: { files: '**/*.sass', tasks: ['sass'], options: { livereload: true, }, }, }, }); grunt.loadNpmTasks('grunt-contrib-watch'); ``` 5. [grunt-contrib-connect][6] （开启一个服务器，使我们可以通过 `ip:端口号` 的方式访问目录下的资源） * 安装  $ npm install grunt-contrib-connect --save-dev * 配置task ``` grunt.initConfig({ connect: { server: { options: { port: 9001, base: 'www-root' } } } }); grunt.loadNpmTasks('grunt-contrib-connect'); ``` 6. [grunt-contrib-less][7] （将less编译为css） * 安装  $ npm install grunt-contrib-less --save-dev * 配置task ``` grunt.initConfig({ development: { files: { 'path/to/result.css': 'path/to/source.less' } } }); grunt.loadNpmTasks('grunt-contrib-less'); ``` 7. [grunt-contrib-coffee][8] （将coffeescript编译成javascript） * 安装  $ npm install grunt-contrib-coffee --save-dev * 配置task ``` grunt.initConfig({ development: { files: { 'path/to/result.js': 'path/to/source.coffee' } } }); grunt.loadNpmTasks('grunt-contrib-coffee'); ``` [1]: https://github.com/gruntjs \"Gruntjs的github链接\" [2]: https://github.com/gruntjs/grunt-contrib-uglify \"grunt uglify\" [3]: https://github.com/gruntjs/grunt-contrib-cssmin \"grunt cssmin\" [4]: https://github.com/gruntjs/grunt-contrib-clean \"grunt clean\" [5]: https://github.com/gruntjs/grunt-contrib-watch \"grunt watch\" [6]: https://github.com/gruntjs/grunt-contrib-connect \"grunt connect\" [7]: https://github.com/gruntjs/grunt-contrib-less \"grunt less\" [8]: https://github.com/gruntjs/grunt-contrib-coffee \"grunt coffeescript\" ",
+  "wordCount" : "305",
+  "inLanguage": "en",
+  "datePublished": "2018-09-04T00:00:00Z",
+  "dateModified": "2018-09-04T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "Lambert Xiao"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/grunt/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lambert's blog",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lambertxiao.github.io/avatar.jpeg"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      Grunt
+    </h1>
+    <div class="post-meta"><span title='2018-09-04 00:00:00 +0000 UTC'>September 4, 2018</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao&nbsp;|&nbsp;<a href="https://github.com/adityatelange/hugo-PaperMod/tree/exampleSite/content/posts/web%e5%89%8d%e7%ab%af/grunt.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+</div>
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#grunt-%e6%9d%82%e8%ae%b0" aria-label="Grunt 杂记">Grunt 杂记</a><ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#%e7%ae%80%e4%bb%8b" aria-label="简介">简介</a></li>
+                <li>
+                    <a href="#grunt-%e8%83%bd%e5%81%9a%e4%bb%80%e4%b9%88" aria-label="Grunt 能做什么">Grunt 能做什么</a></li>
+                <li>
+                    <a href="#%e5%bc%80%e5%a7%8b%e4%bd%bf%e7%94%a8" aria-label="开始使用">开始使用</a></li>
+                <li>
+                    <a href="#%e5%ae%89%e8%a3%85grunt%e6%8f%92%e4%bb%b6" aria-label="安装grunt插件">安装grunt插件</a>
+                </li>
+            </ul>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h1 id="grunt-杂记">Grunt 杂记<a hidden class="anchor" aria-hidden="true" href="#grunt-杂记">#</a></h1>
+<p><img loading="lazy" src="https://img.shields.io/badge/js-grunt-brightgreen.svg" alt="grunt"  />
+</p>
+<h3 id="简介">简介<a hidden class="anchor" aria-hidden="true" href="#简介">#</a></h3>
+<p>Grunt是一个基于NodeJS，可用于自动化构建、测试、生成文档的项目管理工具。</p>
+<h3 id="grunt-能做什么">Grunt 能做什么<a hidden class="anchor" aria-hidden="true" href="#grunt-能做什么">#</a></h3>
+<p>Grunt可以自动化我们的整个开发流程，简单地说，就是用JavaScript去执行一些程序来完成一些任务。比如说将css、Javascript、图像等资源压缩；将Sass和Less通过预处理器编译成Css；将Coffeescript、Typescript等转化为Javascript；实时监听文件的变化，并执行自动编译任务；</p>
+<p>在Grunt工具箱中，按任务目标我们可以分为：</p>
+<ul>
+<li>编译文档型：比如编译LESS、Sass、Stylus、Coffeescript等；</li>
+<li>文件操作型：比如说合并、压缩JavaScript、CSS、图片等；</li>
+<li>质量保障型：比如JSHint、Jasmin、Mocha等；</li>
+<li>类库构建型：比如说Backbone.js、ember.js、angular.js等。</li>
+</ul>
+<p>这些任务都依赖于给Grunt提供的插件来完成的，但很多工作依旧需要在命令终端手工输入命令来完成这些操作。为此在Grunt中可以使用watch任务来实现一些监听文件改变、自动触发构建等功能。从而减少人工去每次操作任务。</p>
+<h3 id="开始使用">开始使用<a hidden class="anchor" aria-hidden="true" href="#开始使用">#</a></h3>
+<p>Grunt的使用非常简单，仅需下载相应的命令行工具，针对不同的任务下载不同的插件，即可完成整个自动化过程。</p>
+<ul>
+<li>
+<p>将grunt-cli（grunt命令行工具）作为全局模块安装</p>
+<blockquote>
+<p>$ npm install -g grunt-cli</p>
+</blockquote>
+</li>
+<li>
+<p>通过npm初始化，为我们生成一份package.json文件</p>
+<blockquote>
+<p>$ mkdir grunt-app &amp;&amp; cd grunt-app
+$ npm init</p>
+</blockquote>
+</li>
+<li>
+<p>为项目安装grunt作为依赖</p>
+<blockquote>
+<p>$ npm install &ndash;save-dev grunt</p>
+</blockquote>
+<p>至此grunt已经安装完毕，但它还没有特殊的功能，要使用grunt的各种功能，需要建一份Gruntfile.js文件，并为之安装相应的插件。</p>
+</li>
+<li>
+<p>新建Gruntfile.js，并写入以下内容</p>
+<pre><code>module.exports = function(grunt) {
+
+  // 之后所有的配置都是配在传递给grunt.initConfig这个方法的对象中
+  grunt.initConfig({
+    // 将package.json文件作为一个json对象读入
+    pkg: grunt.file.readJSON('package.json'),
+  });
+
+  // 加载grunt的插件，这里的 grunt-contrib-uglify 是一个例子
+  grunt.loadNpmTasks('grunt-contrib-uglify');
+
+  // 注册一个grunt任务，第一个参数为任务的名字，当任务的名字default时，通过grunt运行项目时，会默认执行该任务；第二个参数是一个数组，是后续所要执行任务名字的集合。
+  grunt.registerTask('default', ['uglify']);
+};
+</code></pre></li>
+</ul>
+<h3 id="安装grunt插件">安装grunt插件<a hidden class="anchor" aria-hidden="true" href="#安装grunt插件">#</a></h3>
+<p>在安装grunt插件时，需要考虑自己需要哪些功能，下面罗列出开发中需要的大部分功能。并举个简单的例子，详细用法可参考 [Gruntjs][1]。</p>
+<ol>
+<li>
+<p>[grunt-contrib-uglify][2] （混淆并压缩js文件）</p>
+<ul>
+<li>安装</li>
+</ul>
+<blockquote>
+<p>$ npm install grunt-contrib-uglify &ndash;save-dev</p>
+</blockquote>
+<ul>
+<li>配置task</li>
+</ul>
+<pre><code>grunt.initConfig({
+    uglify: {
+        my_target: {
+          files: {
+            'dest/output.min.js': ['src/input1.js', 'src/input2.js']
+          }
+        }
+    }
+});
+
+grunt.loadNpmTasks('grunt-contrib-uglify');
+</code></pre></li>
+</ol>
+<pre><code>
+ 2. [grunt-contrib-cssmin][3] （压缩css）
+
+    * 安装
+    &gt; $ npm install grunt-contrib-cssmin --save-dev
+
+    * 配置task
+
+        ```
+        grunt.initConfig({
+            target: {
+                files: {
+                  'output.css': ['foo.css', 'bar.css']
+                }
+            }
+        })
+
+        grunt.loadNpmTasks('grunt-contrib-cssmin');
+        ```
+
+ 3. [grunt-contrib-clean][4] （清除文件和目录，一般用来清除上一次编译生成的文件）
+
+    * 安装
+        &gt; $ npm install grunt-contrib-clean --save-dev
+
+    * 配置task
+    ```
+    grunt.initConfig({
+        clean: {
+            build: {
+                src: ['path/to/dir/one', 'path/to/dir/two']
+            }
+        }
+    });
+
+    grunt.loadNpmTasks('grunt-contrib-clean');
+    ```
+ 4. [grunt-contrib-watch][5] （监听文件的变化，并自动执行任务）
+
+    * 安装
+        &gt; $ npm install grunt-contrib-watch --save-dev
+
+    * 配置task
+    ```
+    grunt.initConfig({
+        watch: {
+            scripts: {
+                files: ['**/*.coffee'],
+                // 监听到文件变化后执行的task
+                tasks: ['coffee'],
+                options: {
+                    spawn: false,
+                },
+            },
+            css: {
+                files: '**/*.sass',
+                tasks: ['sass'],
+                options: {
+                    livereload: true,
+                },
+            },
+        },
+    });
+
+    grunt.loadNpmTasks('grunt-contrib-watch');
+    ```
+
+ 5. [grunt-contrib-connect][6] （开启一个服务器，使我们可以通过 `ip:端口号` 的方式访问目录下的资源）
+
+    * 安装
+        &gt; $ npm install grunt-contrib-connect --save-dev
+
+    * 配置task
+    ```
+    grunt.initConfig({
+        connect: {
+            server: {
+                options: {
+                    port: 9001,
+                    base: 'www-root'
+                }
+            }
+          }
+    });
+
+    grunt.loadNpmTasks('grunt-contrib-connect');
+    ```
+
+
+ 6. [grunt-contrib-less][7] （将less编译为css）
+
+    * 安装
+        &gt; $ npm install grunt-contrib-less --save-dev
+
+    * 配置task
+    ```
+    grunt.initConfig({
+        development: {
+            files: {
+                'path/to/result.css': 'path/to/source.less'
+            }
+        }
+    });
+
+    grunt.loadNpmTasks('grunt-contrib-less');
+    ```
+
+ 7. [grunt-contrib-coffee][8] （将coffeescript编译成javascript）
+
+    * 安装
+        &gt; $ npm install grunt-contrib-coffee --save-dev
+
+    * 配置task
+    ```
+    grunt.initConfig({
+        development: {
+            files: {
+                'path/to/result.js': 'path/to/source.coffee'
+            }
+        }
+    });
+
+    grunt.loadNpmTasks('grunt-contrib-coffee');
+    ```
+
+  [1]: https://github.com/gruntjs &quot;Gruntjs的github链接&quot;
+  [2]: https://github.com/gruntjs/grunt-contrib-uglify &quot;grunt uglify&quot;
+  [3]: https://github.com/gruntjs/grunt-contrib-cssmin &quot;grunt cssmin&quot;
+  [4]: https://github.com/gruntjs/grunt-contrib-clean &quot;grunt clean&quot;
+  [5]: https://github.com/gruntjs/grunt-contrib-watch &quot;grunt watch&quot;
+  [6]: https://github.com/gruntjs/grunt-contrib-connect &quot;grunt connect&quot;
+  [7]: https://github.com/gruntjs/grunt-contrib-less &quot;grunt less&quot;
+  [8]: https://github.com/gruntjs/grunt-contrib-coffee &quot;grunt coffeescript&quot;
+</code></pre>
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lambertxiao.github.io/tags/javascript/">Javascript</a></li>
+      <li><a href="https://lambertxiao.github.io/tags/grunt/">Grunt</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lambertxiao.github.io/posts/_posts/2018-10-03-pow/">
+    <span class="title">« Prev Page</span>
+    <br>
+    <span>Pow算法</span>
+  </a>
+  <a class="next" href="https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/gulp/">
+    <span class="title">Next Page »</span>
+    <br>
+    <span>Gulp</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share Grunt on twitter"
+        href="https://twitter.com/intent/tweet/?text=Grunt&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fweb%25E5%2589%258D%25E7%25AB%25AF%2fgrunt%2f&amp;hashtags=Javascript%2cGrunt">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share Grunt on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fweb%25E5%2589%258D%25E7%25AB%25AF%2fgrunt%2f&amp;title=Grunt&amp;summary=Grunt&amp;source=https%3a%2f%2flambertxiao.github.io%2fposts%2fweb%25E5%2589%258D%25E7%25AB%25AF%2fgrunt%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share Grunt on reddit"
+        href="https://reddit.com/submit?url=https%3a%2f%2flambertxiao.github.io%2fposts%2fweb%25E5%2589%258D%25E7%25AB%25AF%2fgrunt%2f&title=Grunt">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share Grunt on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flambertxiao.github.io%2fposts%2fweb%25E5%2589%258D%25E7%25AB%25AF%2fgrunt%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share Grunt on whatsapp"
+        href="https://api.whatsapp.com/send?text=Grunt%20-%20https%3a%2f%2flambertxiao.github.io%2fposts%2fweb%25E5%2589%258D%25E7%25AB%25AF%2fgrunt%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share Grunt on telegram"
+        href="https://telegram.me/share/url?text=Grunt&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fweb%25E5%2589%258D%25E7%25AB%25AF%2fgrunt%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_KY25sRiRtb" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

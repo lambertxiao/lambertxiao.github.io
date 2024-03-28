@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>automake on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/automake/</link>
+    <description>Recent content in automake on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Fri, 10 Jun 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/automake/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>CMake和Automake</title>
+      <link>https://lambertxiao.github.io/posts/cmakeautomake/doc/</link>
+      <pubDate>Fri, 10 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/cmakeautomake/doc/</guid>
+      <description>在C和C++的开源项目里没少见他俩</description>
+    </item>
+    
+  </channel>
+</rss>

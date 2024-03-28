@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>[Writing]使用libp2p来构建点对点网络 | Lambert&#39;s blog</title>
+<meta name="keywords" content="" />
+<meta name="description" content="在filecoin中发现这个库，读读源码，学习学习">
+<meta name="author" content="Lambert Xiao">
+<link rel="canonical" href="https://lambertxiao.github.io/posts/libp2p/doc/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js" integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5&#43;kdJvBz5iKbt6B5PJI="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="[Writing]使用libp2p来构建点对点网络" />
+<meta property="og:description" content="在filecoin中发现这个库，读读源码，学习学习" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://lambertxiao.github.io/posts/libp2p/doc/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-06-13T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2022-06-13T00:00:00&#43;00:00" />
+<meta property="og:see_also" content="https://lambertxiao.github.io/posts/gdb_usage/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/numa/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/uio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/vfio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/virtio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="[Writing]使用libp2p来构建点对点网络"/>
+<meta name="twitter:description" content="在filecoin中发现这个库，读读源码，学习学习"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://lambertxiao.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "[Writing]使用libp2p来构建点对点网络",
+      "item": "https://lambertxiao.github.io/posts/libp2p/doc/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "[Writing]使用libp2p来构建点对点网络",
+  "name": "[Writing]使用libp2p来构建点对点网络",
+  "description": "在filecoin中发现这个库，读读源码，学习学习",
+  "keywords": [
+    ""
+  ],
+  "articleBody": "libp2p能干嘛   网络中的节点发现\n可以用来发现p2p网络中的其他节点以及维护其他节点的状态\n  数据传输\np2p网络中节点间数据的传输，并支持多种传输层协议，如TCP、UDP、QUIC等。在传输时还有传输通道加密的功能\n  libp2p是如何支持多种传输协议的 libp2p定义了一个统一的格式，举例如下\n  /ip4/127.0.0.1/tcp/8080\n  /ip4/127.0.0.1/udp/8090\n  /ip4/192.168.0.1/tcp/8080/p2p/QmcEPrat8ShnCph8WjkREzt5CPXF2RwhYxYBALDcLC1iV6\n含义为，对方使用ip4网络，地址为192.168.0.1，tcp协议，监听在8080端口，是一个p2p节点，节点id为QmcEPrat8ShnCph8WjkREzt5CPXF2RwhYxYBALDcLC1iV6\n  libp2p如何创建一个节点 func makeRandomHost(t *testing.T, port int) (host.Host, error) { priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048) require.NoError(t, err) return New([]Option{ ListenAddrStrings(fmt.Sprintf(\"/ip4/127.0.0.1/tcp/%d\", port)), Identity(priv), DefaultTransports, DefaultMuxers, DefaultSecurity, NATPortMap(), }...) } 可以看出，构建node时，需要传递一些配置:\n 包含node的网络地址、协议、私钥 管理数据传输的transport 管理连接多路复用的muxer 管理连接传输安全的security 管理网络穿透的natManager  // DefaultTransports are the default libp2p transports. // // Use this option when you want to *extend* the set of transports used by // libp2p instead of replacing them. var DefaultTransports = ChainOptions( Transport(tcp.NewTCPTransport), Transport(quic.NewTransport), Transport(ws.New), ) 默认支持3种transport，tcp、quic、websocket\nvar DefaultMuxers = Muxer(\"/yamux/1.0.0\", yamux.DefaultTransport) 默认的连接多路复用器是yamux\n创建一个node后，libp2p做了什么 // NewNode constructs a new libp2p Host from the Config. // // This function consumes the config. Do not reuse it (really!). func (cfg *Config) NewNode() (host.Host, error) { swrm, err := cfg.makeSwarm() if err != nil { return nil, err } h, err := bhost.NewHost(swrm, \u0026bhost.HostOpts{ ConnManager: cfg.ConnManager, AddrsFactory: cfg.AddrsFactory, NATManager: cfg.NATManager, EnablePing: !cfg.DisablePing, UserAgent: cfg.UserAgent, MultiaddrResolver: cfg.MultiaddrResolver, EnableHolePunching: cfg.EnableHolePunching, HolePunchingOptions: cfg.HolePunchingOptions, EnableRelayService: cfg.EnableRelayService, RelayServiceOpts: cfg.RelayServiceOpts, }) if err != nil { swrm.Close() return nil, err } if cfg.Relay { // If we've enabled the relay, we should filter out relay \t// addresses by default. \t// \t// TODO: We shouldn't be doing this here. \toldFactory := h.AddrsFactory h.AddrsFactory = func(addrs []ma.Multiaddr) []ma.Multiaddr { return oldFactory(autorelay.Filter(addrs)) } } if err := cfg.addTransports(h); err != nil { h.Close() return nil, err } // TODO: This method succeeds if listening on one address succeeds. We \t// should probably fail if listening on *any* addr fails. \tif err := h.Network().Listen(cfg.ListenAddrs...); err != nil { h.Close() return nil, err } // Configure routing and autorelay \tvar router routing.PeerRouting if cfg.Routing != nil { router, err = cfg.Routing(h) if err != nil { h.Close() return nil, err } } // Note: h.AddrsFactory may be changed by relayFinder, but non-relay version is \t// used by AutoNAT below. \tvar ar *autorelay.AutoRelay addrF := h.AddrsFactory if cfg.EnableAutoRelay { if !cfg.Relay { h.Close() return nil, fmt.Errorf(\"cannot enable autorelay; relay is not enabled\") } ar, err = autorelay.NewAutoRelay(h, cfg.AutoRelayOpts...) if err != nil { return nil, err } } autonatOpts := []autonat.Option{ autonat.UsingAddresses(func() []ma.Multiaddr { return addrF(h.AllAddrs()) }), } if cfg.AutoNATConfig.ThrottleInterval != 0 { autonatOpts = append(autonatOpts, autonat.WithThrottling(cfg.AutoNATConfig.ThrottleGlobalLimit, cfg.AutoNATConfig.ThrottleInterval), autonat.WithPeerThrottling(cfg.AutoNATConfig.ThrottlePeerLimit)) } if cfg.AutoNATConfig.EnableService { autonatPrivKey, _, err := crypto.GenerateEd25519Key(rand.Reader) if err != nil { return nil, err } ps, err := pstoremem.NewPeerstore() if err != nil { return nil, err } // Pull out the pieces of the config that we _actually_ care about. \t// Specifically, don't setup things like autorelay, listeners, \t// identify, etc. \tautoNatCfg := Config{ Transports: cfg.Transports, Muxers: cfg.Muxers, SecurityTransports: cfg.SecurityTransports, Insecure: cfg.Insecure, PSK: cfg.PSK, ConnectionGater: cfg.ConnectionGater, Reporter: cfg.Reporter, PeerKey: autonatPrivKey, Peerstore: ps, } dialer, err := autoNatCfg.makeSwarm() if err != nil { h.Close() return nil, err } dialerHost := blankhost.NewBlankHost(dialer) if err := autoNatCfg.addTransports(dialerHost); err != nil { dialerHost.Close() h.Close() return nil, err } // NOTE: We're dropping the blank host here but that's fine. It \t// doesn't really _do_ anything and doesn't even need to be \t// closed (as long as we close the underlying network). \tautonatOpts = append(autonatOpts, autonat.EnableService(dialerHost.Network())) } if cfg.AutoNATConfig.ForceReachability != nil { autonatOpts = append(autonatOpts, autonat.WithReachability(*cfg.AutoNATConfig.ForceReachability)) } autonat, err := autonat.New(h, autonatOpts...) if err != nil { h.Close() return nil, fmt.Errorf(\"cannot enable autorelay; autonat failed to start: %v\", err) } h.SetAutoNat(autonat) // start the host background tasks \th.Start() var ho host.Host ho = h if router != nil { ho = routed.Wrap(h, router) } if ar != nil { return autorelay.NewAutoRelayHost(ho, ar), nil } return ho, nil }  创建了一个swarm对象，swarm是一个连接复用器，使用同一个channel来管理与其他节点的消息的收发 使用swarm和config对象创建了一个host，host实现了host.Host接口 调用host的network的listen方法，开启服务监听 拿到host对应的peerRouting  主要接口定义 Network // Network is the interface used to connect to the outside world. // It dials and listens for connections. it uses a Swarm to pool // connections (see swarm pkg, and peerstream.Swarm). Connections // are encrypted with a TLS-like protocol. type Network interface { Dialer io.Closer // SetStreamHandler sets the handler for new streams opened by the \t// remote side. This operation is threadsafe. \tSetStreamHandler(StreamHandler) // NewStream returns a new stream to given peer p. \t// If there is no connection to p, attempts to create one. \tNewStream(context.Context, peer.ID) (Stream, error) // Listen tells the network to start listening on given multiaddrs. \tListen(...ma.Multiaddr) error // ListenAddresses returns a list of addresses at which this network listens. \tListenAddresses() []ma.Multiaddr // InterfaceListenAddresses returns a list of addresses at which this network \t// listens. It expands \"any interface\" addresses (/ip4/0.0.0.0, /ip6/::) to \t// use the known local interfaces. \tInterfaceListenAddresses() ([]ma.Multiaddr, error) // ResourceManager returns the ResourceManager associated with this network \tResourceManager() ResourceManager } 代表一个抽象的网络层，可以开启网络监听，并使用预设好的handler处理其他node的请求\nHost type Host interface { // ID returns the (local) peer.ID associated with this Host  ID() peer.ID // Peerstore returns the Host's repository of Peer Addresses and Keys.  Peerstore() peerstore.Peerstore // Returns the listen addresses of the Host  Addrs() []ma.Multiaddr // Networks returns the Network interface of the Host  Network() network.Network // Mux returns the Mux multiplexing incoming streams to protocol handlers  Mux() protocol.Switch // Connect ensures there is a connection between this host and the peer with  // given peer.ID. Connect will absorb the addresses in pi into its internal  // peerstore. If there is not an active connection, Connect will issue a  // h.Network.Dial, and block until a connection is open, or an error is  // returned. // TODO: Relay + NAT.  Connect(ctx context.Context, pi peer.AddrInfo) error // SetStreamHandler sets the protocol handler on the Host's Mux.  // This is equivalent to:  // host.Mux().SetHandler(proto, handler)  // (Threadsafe)  SetStreamHandler(pid protocol.ID, handler network.StreamHandler) // SetStreamHandlerMatch sets the protocol handler on the Host's Mux  // using a matching function for protocol selection.  SetStreamHandlerMatch(protocol.ID, func(string) bool, network.StreamHandler) // RemoveStreamHandler removes a handler on the mux that was set by  // SetStreamHandler  RemoveStreamHandler(pid protocol.ID) // NewStream opens a new stream to given peer p, and writes a p2p/protocol  // header with given ProtocolID. If there is no connection to p, attempts  // to create one. If ProtocolID is \"\", writes no header.  // (Threadsafe)  NewStream(ctx context.Context, p peer.ID, pids ...protocol.ID) (network.Stream, error) // Close shuts down the host, its Network, and services.  Close() error // ConnManager returns this hosts connection manager  ConnManager() connmgr.ConnManager // EventBus returns the hosts eventbus  EventBus() event.Bus } PeerRouting // PeerRouting is a way to find address information about certain peers. // This can be implemented by a simple lookup table, a tracking server, // or even a DHT. type PeerRouting interface { // FindPeer searches for a peer with given ID, returns a peer.AddrInfo \t// with relevant addresses. \tFindPeer(context.Context, peer.ID) (peer.AddrInfo, error) } 可以根据peerId找到peer\nAutoNAT // AutoNAT is the interface for NAT autodiscovery type AutoNAT interface { // Status returns the current NAT status \tStatus() network.Reachability // PublicAddr returns the public dial address when NAT status is public and an \t// error otherwise \tPublicAddr() (ma.Multiaddr, error) io.Closer } ",
+  "wordCount" : "1114",
+  "inLanguage": "en",
+  "datePublished": "2022-06-13T00:00:00Z",
+  "dateModified": "2022-06-13T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "Lambert Xiao"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lambertxiao.github.io/posts/libp2p/doc/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lambert's blog",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lambertxiao.github.io/avatar.jpeg"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      [Writing]使用libp2p来构建点对点网络
+    </h1>
+    <div class="post-meta"><span title='2022-06-13 00:00:00 +0000 UTC'>June 13, 2022</span>&nbsp;·&nbsp;6 min&nbsp;·&nbsp;Lambert Xiao&nbsp;|&nbsp;<a href="https://github.com/adityatelange/hugo-PaperMod/tree/exampleSite/content/posts/libp2p/doc.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+</div>
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#libp2p%e8%83%bd%e5%b9%b2%e5%98%9b" aria-label="libp2p能干嘛">libp2p能干嘛</a></li>
+                <li>
+                    <a href="#libp2p%e6%98%af%e5%a6%82%e4%bd%95%e6%94%af%e6%8c%81%e5%a4%9a%e7%a7%8d%e4%bc%a0%e8%be%93%e5%8d%8f%e8%ae%ae%e7%9a%84" aria-label="libp2p是如何支持多种传输协议的">libp2p是如何支持多种传输协议的</a></li>
+                <li>
+                    <a href="#libp2p%e5%a6%82%e4%bd%95%e5%88%9b%e5%bb%ba%e4%b8%80%e4%b8%aa%e8%8a%82%e7%82%b9" aria-label="libp2p如何创建一个节点">libp2p如何创建一个节点</a></li>
+                <li>
+                    <a href="#%e5%88%9b%e5%bb%ba%e4%b8%80%e4%b8%aanode%e5%90%8elibp2p%e5%81%9a%e4%ba%86%e4%bb%80%e4%b9%88" aria-label="创建一个node后，libp2p做了什么">创建一个node后，libp2p做了什么</a></li>
+                <li>
+                    <a href="#%e4%b8%bb%e8%a6%81%e6%8e%a5%e5%8f%a3%e5%ae%9a%e4%b9%89" aria-label="主要接口定义">主要接口定义</a><ul>
+                        
+                <li>
+                    <a href="#network" aria-label="Network">Network</a></li>
+                <li>
+                    <a href="#host" aria-label="Host">Host</a></li>
+                <li>
+                    <a href="#peerrouting" aria-label="PeerRouting">PeerRouting</a></li>
+                <li>
+                    <a href="#autonat" aria-label="AutoNAT">AutoNAT</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h2 id="libp2p能干嘛">libp2p能干嘛<a hidden class="anchor" aria-hidden="true" href="#libp2p能干嘛">#</a></h2>
+<ol>
+<li>
+<p>网络中的节点发现</p>
+<p>可以用来发现p2p网络中的其他节点以及维护其他节点的状态</p>
+</li>
+<li>
+<p>数据传输</p>
+<p>p2p网络中节点间数据的传输，并支持多种传输层协议，如TCP、UDP、QUIC等。在传输时还有传输通道加密的功能</p>
+</li>
+</ol>
+<h2 id="libp2p是如何支持多种传输协议的">libp2p是如何支持多种传输协议的<a hidden class="anchor" aria-hidden="true" href="#libp2p是如何支持多种传输协议的">#</a></h2>
+<p>libp2p定义了一个统一的格式，举例如下</p>
+<ul>
+<li>
+<p>/ip4/127.0.0.1/tcp/8080</p>
+</li>
+<li>
+<p>/ip4/127.0.0.1/udp/8090</p>
+</li>
+<li>
+<p>/ip4/192.168.0.1/tcp/8080/p2p/QmcEPrat8ShnCph8WjkREzt5CPXF2RwhYxYBALDcLC1iV6</p>
+<p>含义为，对方使用ip4网络，地址为192.168.0.1，tcp协议，监听在8080端口，是一个p2p节点，节点id为QmcEPrat8ShnCph8WjkREzt5CPXF2RwhYxYBALDcLC1iV6</p>
+</li>
+</ul>
+<h2 id="libp2p如何创建一个节点">libp2p如何创建一个节点<a hidden class="anchor" aria-hidden="true" href="#libp2p如何创建一个节点">#</a></h2>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> makeRandomHost(t <span style="color:#39c">*</span>testing.T, port <span style="color:#00cd00">int</span>) (host.Host, <span style="color:#00cd00">error</span>) {
+	priv, _, err <span style="color:#39c">:=</span> crypto.GenerateKeyPair(crypto.RSA, <span style="color:#cd00cd">2048</span>)
+	require.NoError(t, err)
+
+	<span style="color:#cdcd00">return</span> New([]Option{
+		ListenAddrStrings(fmt.Sprintf(<span style="color:#cd0000">&#34;/ip4/127.0.0.1/tcp/%d&#34;</span>, port)),
+		Identity(priv),
+		DefaultTransports,
+		DefaultMuxers,
+		DefaultSecurity,
+		NATPortMap(),
+	}<span style="color:#39c">...</span>)
+}
+</code></pre></div><p>可以看出，构建node时，需要传递一些配置:</p>
+<ol>
+<li>包含node的网络地址、协议、私钥</li>
+<li>管理数据传输的transport</li>
+<li>管理连接多路复用的muxer</li>
+<li>管理连接传输安全的security</li>
+<li>管理网络穿透的natManager</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// DefaultTransports are the default libp2p transports.
+</span><span style="color:#000080">//
+</span><span style="color:#000080">// Use this option when you want to *extend* the set of transports used by
+</span><span style="color:#000080">// libp2p instead of replacing them.
+</span><span style="color:#000080"></span><span style="color:#00cd00">var</span> DefaultTransports = ChainOptions(
+	Transport(tcp.NewTCPTransport),
+	Transport(quic.NewTransport),
+	Transport(ws.New),
+)
+</code></pre></div><p>默认支持3种transport，tcp、quic、websocket</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">var</span> DefaultMuxers = Muxer(<span style="color:#cd0000">&#34;/yamux/1.0.0&#34;</span>, yamux.DefaultTransport)
+</code></pre></div><p>默认的连接多路复用器是yamux</p>
+<h2 id="创建一个node后libp2p做了什么">创建一个node后，libp2p做了什么<a hidden class="anchor" aria-hidden="true" href="#创建一个node后libp2p做了什么">#</a></h2>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// NewNode constructs a new libp2p Host from the Config.
+</span><span style="color:#000080">//
+</span><span style="color:#000080">// This function consumes the config. Do not reuse it (really!).
+</span><span style="color:#000080"></span><span style="color:#00cd00">func</span> (cfg <span style="color:#39c">*</span>Config) NewNode() (host.Host, <span style="color:#00cd00">error</span>) {
+	swrm, err <span style="color:#39c">:=</span> cfg.makeSwarm()
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+	}
+
+	h, err <span style="color:#39c">:=</span> bhost.NewHost(swrm, <span style="color:#39c">&amp;</span>bhost.HostOpts{
+		ConnManager:         cfg.ConnManager,
+		AddrsFactory:        cfg.AddrsFactory,
+		NATManager:          cfg.NATManager,
+		EnablePing:          !cfg.DisablePing,
+		UserAgent:           cfg.UserAgent,
+		MultiaddrResolver:   cfg.MultiaddrResolver,
+		EnableHolePunching:  cfg.EnableHolePunching,
+		HolePunchingOptions: cfg.HolePunchingOptions,
+		EnableRelayService:  cfg.EnableRelayService,
+		RelayServiceOpts:    cfg.RelayServiceOpts,
+	})
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		swrm.Close()
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+	}
+
+	<span style="color:#cdcd00">if</span> cfg.Relay {
+		<span style="color:#000080">// If we&#39;ve enabled the relay, we should filter out relay
+</span><span style="color:#000080"></span>		<span style="color:#000080">// addresses by default.
+</span><span style="color:#000080"></span>		<span style="color:#000080">//
+</span><span style="color:#000080"></span>		<span style="color:#000080">// TODO: We shouldn&#39;t be doing this here.
+</span><span style="color:#000080"></span>		oldFactory <span style="color:#39c">:=</span> h.AddrsFactory
+		h.AddrsFactory = <span style="color:#00cd00">func</span>(addrs []ma.Multiaddr) []ma.Multiaddr {
+			<span style="color:#cdcd00">return</span> oldFactory(autorelay.Filter(addrs))
+		}
+	}
+
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> cfg.addTransports(h); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		h.Close()
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+	}
+
+	<span style="color:#000080">// TODO: This method succeeds if listening on one address succeeds. We
+</span><span style="color:#000080"></span>	<span style="color:#000080">// should probably fail if listening on *any* addr fails.
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> h.Network().Listen(cfg.ListenAddrs<span style="color:#39c">...</span>); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		h.Close()
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+	}
+
+	<span style="color:#000080">// Configure routing and autorelay
+</span><span style="color:#000080"></span>	<span style="color:#00cd00">var</span> router routing.PeerRouting
+	<span style="color:#cdcd00">if</span> cfg.Routing <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		router, err = cfg.Routing(h)
+		<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			h.Close()
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+		}
+	}
+
+	<span style="color:#000080">// Note: h.AddrsFactory may be changed by relayFinder, but non-relay version is
+</span><span style="color:#000080"></span>	<span style="color:#000080">// used by AutoNAT below.
+</span><span style="color:#000080"></span>	<span style="color:#00cd00">var</span> ar <span style="color:#39c">*</span>autorelay.AutoRelay
+	addrF <span style="color:#39c">:=</span> h.AddrsFactory
+	<span style="color:#cdcd00">if</span> cfg.EnableAutoRelay {
+		<span style="color:#cdcd00">if</span> !cfg.Relay {
+			h.Close()
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, fmt.Errorf(<span style="color:#cd0000">&#34;cannot enable autorelay; relay is not enabled&#34;</span>)
+		}
+
+		ar, err = autorelay.NewAutoRelay(h, cfg.AutoRelayOpts<span style="color:#39c">...</span>)
+		<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+		}
+	}
+
+	autonatOpts <span style="color:#39c">:=</span> []autonat.Option{
+		autonat.UsingAddresses(<span style="color:#00cd00">func</span>() []ma.Multiaddr {
+			<span style="color:#cdcd00">return</span> addrF(h.AllAddrs())
+		}),
+	}
+	<span style="color:#cdcd00">if</span> cfg.AutoNATConfig.ThrottleInterval <span style="color:#39c">!=</span> <span style="color:#cd00cd">0</span> {
+		autonatOpts = <span style="color:#cd00cd">append</span>(autonatOpts,
+			autonat.WithThrottling(cfg.AutoNATConfig.ThrottleGlobalLimit, cfg.AutoNATConfig.ThrottleInterval),
+			autonat.WithPeerThrottling(cfg.AutoNATConfig.ThrottlePeerLimit))
+	}
+	<span style="color:#cdcd00">if</span> cfg.AutoNATConfig.EnableService {
+		autonatPrivKey, _, err <span style="color:#39c">:=</span> crypto.GenerateEd25519Key(rand.Reader)
+		<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+		}
+		ps, err <span style="color:#39c">:=</span> pstoremem.NewPeerstore()
+		<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+		}
+
+		<span style="color:#000080">// Pull out the pieces of the config that we _actually_ care about.
+</span><span style="color:#000080"></span>		<span style="color:#000080">// Specifically, don&#39;t setup things like autorelay, listeners,
+</span><span style="color:#000080"></span>		<span style="color:#000080">// identify, etc.
+</span><span style="color:#000080"></span>		autoNatCfg <span style="color:#39c">:=</span> Config{
+			Transports:         cfg.Transports,
+			Muxers:             cfg.Muxers,
+			SecurityTransports: cfg.SecurityTransports,
+			Insecure:           cfg.Insecure,
+			PSK:                cfg.PSK,
+			ConnectionGater:    cfg.ConnectionGater,
+			Reporter:           cfg.Reporter,
+			PeerKey:            autonatPrivKey,
+			Peerstore:          ps,
+		}
+
+		dialer, err <span style="color:#39c">:=</span> autoNatCfg.makeSwarm()
+		<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			h.Close()
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+		}
+		dialerHost <span style="color:#39c">:=</span> blankhost.NewBlankHost(dialer)
+		<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> autoNatCfg.addTransports(dialerHost); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			dialerHost.Close()
+			h.Close()
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+		}
+		<span style="color:#000080">// NOTE: We&#39;re dropping the blank host here but that&#39;s fine. It
+</span><span style="color:#000080"></span>		<span style="color:#000080">// doesn&#39;t really _do_ anything and doesn&#39;t even need to be
+</span><span style="color:#000080"></span>		<span style="color:#000080">// closed (as long as we close the underlying network).
+</span><span style="color:#000080"></span>		autonatOpts = <span style="color:#cd00cd">append</span>(autonatOpts, autonat.EnableService(dialerHost.Network()))
+	}
+	<span style="color:#cdcd00">if</span> cfg.AutoNATConfig.ForceReachability <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		autonatOpts = <span style="color:#cd00cd">append</span>(autonatOpts, autonat.WithReachability(<span style="color:#39c">*</span>cfg.AutoNATConfig.ForceReachability))
+	}
+
+	autonat, err <span style="color:#39c">:=</span> autonat.New(h, autonatOpts<span style="color:#39c">...</span>)
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		h.Close()
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, fmt.Errorf(<span style="color:#cd0000">&#34;cannot enable autorelay; autonat failed to start: %v&#34;</span>, err)
+	}
+	h.SetAutoNat(autonat)
+
+	<span style="color:#000080">// start the host background tasks
+</span><span style="color:#000080"></span>	h.Start()
+
+	<span style="color:#00cd00">var</span> ho host.Host
+	ho = h
+	<span style="color:#cdcd00">if</span> router <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		ho = routed.Wrap(h, router)
+	}
+	<span style="color:#cdcd00">if</span> ar <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> autorelay.NewAutoRelayHost(ho, ar), <span style="color:#cdcd00">nil</span>
+	}
+	<span style="color:#cdcd00">return</span> ho, <span style="color:#cdcd00">nil</span>
+}
+</code></pre></div><ol>
+<li>创建了一个swarm对象，swarm是一个连接复用器，使用同一个channel来管理与其他节点的消息的收发</li>
+<li>使用swarm和config对象创建了一个host，host实现了host.Host接口</li>
+<li>调用host的network的listen方法，开启服务监听</li>
+<li>拿到host对应的peerRouting</li>
+</ol>
+<h2 id="主要接口定义">主要接口定义<a hidden class="anchor" aria-hidden="true" href="#主要接口定义">#</a></h2>
+<h3 id="network">Network<a hidden class="anchor" aria-hidden="true" href="#network">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// Network is the interface used to connect to the outside world.
+</span><span style="color:#000080">// It dials and listens for connections. it uses a Swarm to pool
+</span><span style="color:#000080">// connections (see swarm pkg, and peerstream.Swarm). Connections
+</span><span style="color:#000080">// are encrypted with a TLS-like protocol.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> Network <span style="color:#00cd00">interface</span> {
+	Dialer
+	io.Closer
+
+	<span style="color:#000080">// SetStreamHandler sets the handler for new streams opened by the
+</span><span style="color:#000080"></span>	<span style="color:#000080">// remote side. This operation is threadsafe.
+</span><span style="color:#000080"></span>	SetStreamHandler(StreamHandler)
+
+	<span style="color:#000080">// NewStream returns a new stream to given peer p.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// If there is no connection to p, attempts to create one.
+</span><span style="color:#000080"></span>	NewStream(context.Context, peer.ID) (Stream, <span style="color:#00cd00">error</span>)
+
+	<span style="color:#000080">// Listen tells the network to start listening on given multiaddrs.
+</span><span style="color:#000080"></span>	Listen(<span style="color:#39c">...</span>ma.Multiaddr) <span style="color:#00cd00">error</span>
+
+	<span style="color:#000080">// ListenAddresses returns a list of addresses at which this network listens.
+</span><span style="color:#000080"></span>	ListenAddresses() []ma.Multiaddr
+
+	<span style="color:#000080">// InterfaceListenAddresses returns a list of addresses at which this network
+</span><span style="color:#000080"></span>	<span style="color:#000080">// listens. It expands &#34;any interface&#34; addresses (/ip4/0.0.0.0, /ip6/::) to
+</span><span style="color:#000080"></span>	<span style="color:#000080">// use the known local interfaces.
+</span><span style="color:#000080"></span>	InterfaceListenAddresses() ([]ma.Multiaddr, <span style="color:#00cd00">error</span>)
+
+	<span style="color:#000080">// ResourceManager returns the ResourceManager associated with this network
+</span><span style="color:#000080"></span>	ResourceManager() ResourceManager
+}
+</code></pre></div><p>代表一个抽象的网络层，可以开启网络监听，并使用预设好的handler处理其他node的请求</p>
+<h3 id="host">Host<a hidden class="anchor" aria-hidden="true" href="#host">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">type</span> Host <span style="color:#00cd00">interface</span> {
+    <span style="color:#000080">// ID returns the (local) peer.ID associated with this Host
+</span><span style="color:#000080"></span>    ID() peer.ID
+
+    <span style="color:#000080">// Peerstore returns the Host&#39;s repository of Peer Addresses and Keys.
+</span><span style="color:#000080"></span>    Peerstore() peerstore.Peerstore
+
+    <span style="color:#000080">// Returns the listen addresses of the Host
+</span><span style="color:#000080"></span>    Addrs() []ma.Multiaddr
+
+    <span style="color:#000080">// Networks returns the Network interface of the Host
+</span><span style="color:#000080"></span>    Network() network.Network
+
+    <span style="color:#000080">// Mux returns the Mux multiplexing incoming streams to protocol handlers
+</span><span style="color:#000080"></span>    Mux() protocol.Switch
+
+    <span style="color:#000080">// Connect ensures there is a connection between this host and the peer with
+</span><span style="color:#000080"></span>    <span style="color:#000080">// given peer.ID. Connect will absorb the addresses in pi into its internal
+</span><span style="color:#000080"></span>    <span style="color:#000080">// peerstore. If there is not an active connection, Connect will issue a
+</span><span style="color:#000080"></span>    <span style="color:#000080">// h.Network.Dial, and block until a connection is open, or an error is
+</span><span style="color:#000080"></span>    <span style="color:#000080">// returned. // TODO: Relay + NAT.
+</span><span style="color:#000080"></span>    Connect(ctx context.Context, pi peer.AddrInfo) <span style="color:#00cd00">error</span>
+
+    <span style="color:#000080">// SetStreamHandler sets the protocol handler on the Host&#39;s Mux.
+</span><span style="color:#000080"></span>    <span style="color:#000080">// This is equivalent to:
+</span><span style="color:#000080"></span>    <span style="color:#000080">//   host.Mux().SetHandler(proto, handler)
+</span><span style="color:#000080"></span>    <span style="color:#000080">// (Threadsafe)
+</span><span style="color:#000080"></span>    SetStreamHandler(pid protocol.ID, handler network.StreamHandler)
+
+    <span style="color:#000080">// SetStreamHandlerMatch sets the protocol handler on the Host&#39;s Mux
+</span><span style="color:#000080"></span>    <span style="color:#000080">// using a matching function for protocol selection.
+</span><span style="color:#000080"></span>    SetStreamHandlerMatch(protocol.ID, <span style="color:#00cd00">func</span>(<span style="color:#00cd00">string</span>) <span style="color:#00cd00">bool</span>, network.StreamHandler)
+
+    <span style="color:#000080">// RemoveStreamHandler removes a handler on the mux that was set by
+</span><span style="color:#000080"></span>    <span style="color:#000080">// SetStreamHandler
+</span><span style="color:#000080"></span>    RemoveStreamHandler(pid protocol.ID)
+
+    <span style="color:#000080">// NewStream opens a new stream to given peer p, and writes a p2p/protocol
+</span><span style="color:#000080"></span>    <span style="color:#000080">// header with given ProtocolID. If there is no connection to p, attempts
+</span><span style="color:#000080"></span>    <span style="color:#000080">// to create one. If ProtocolID is &#34;&#34;, writes no header.
+</span><span style="color:#000080"></span>    <span style="color:#000080">// (Threadsafe)
+</span><span style="color:#000080"></span>    NewStream(ctx context.Context, p peer.ID, pids <span style="color:#39c">...</span>protocol.ID) (network.Stream, <span style="color:#00cd00">error</span>)
+
+    <span style="color:#000080">// Close shuts down the host, its Network, and services.
+</span><span style="color:#000080"></span>    Close() <span style="color:#00cd00">error</span>
+
+    <span style="color:#000080">// ConnManager returns this hosts connection manager
+</span><span style="color:#000080"></span>    ConnManager() connmgr.ConnManager
+
+    <span style="color:#000080">// EventBus returns the hosts eventbus
+</span><span style="color:#000080"></span>    EventBus() event.Bus
+}
+</code></pre></div><h3 id="peerrouting">PeerRouting<a hidden class="anchor" aria-hidden="true" href="#peerrouting">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// PeerRouting is a way to find address information about certain peers.
+</span><span style="color:#000080">// This can be implemented by a simple lookup table, a tracking server,
+</span><span style="color:#000080">// or even a DHT.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> PeerRouting <span style="color:#00cd00">interface</span> {
+	<span style="color:#000080">// FindPeer searches for a peer with given ID, returns a peer.AddrInfo
+</span><span style="color:#000080"></span>	<span style="color:#000080">// with relevant addresses.
+</span><span style="color:#000080"></span>	FindPeer(context.Context, peer.ID) (peer.AddrInfo, <span style="color:#00cd00">error</span>)
+}
+</code></pre></div><p>可以根据peerId找到peer</p>
+<h3 id="autonat">AutoNAT<a hidden class="anchor" aria-hidden="true" href="#autonat">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// AutoNAT is the interface for NAT autodiscovery
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> AutoNAT <span style="color:#00cd00">interface</span> {
+	<span style="color:#000080">// Status returns the current NAT status
+</span><span style="color:#000080"></span>	Status() network.Reachability
+	<span style="color:#000080">// PublicAddr returns the public dial address when NAT status is public and an
+</span><span style="color:#000080"></span>	<span style="color:#000080">// error otherwise
+</span><span style="color:#000080"></span>	PublicAddr() (ma.Multiaddr, <span style="color:#00cd00">error</span>)
+	io.Closer
+}
+</code></pre></div>
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lambertxiao.github.io/posts/%E6%95%B0%E6%8D%AE%E5%BA%93-%E5%88%86%E5%BA%93%E7%AD%96%E7%95%A5/doc/">
+    <span class="title">« Prev Page</span>
+    <br>
+    <span>数据库分库、迁移</span>
+  </a>
+  <a class="next" href="https://lambertxiao.github.io/posts/cmakeautomake/doc/">
+    <span class="title">Next Page »</span>
+    <br>
+    <span>CMake和Automake</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share [Writing]使用libp2p来构建点对点网络 on twitter"
+        href="https://twitter.com/intent/tweet/?text=%5bWriting%5d%e4%bd%bf%e7%94%a8libp2p%e6%9d%a5%e6%9e%84%e5%bb%ba%e7%82%b9%e5%af%b9%e7%82%b9%e7%bd%91%e7%bb%9c&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2flibp2p%2fdoc%2f&amp;hashtags=">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share [Writing]使用libp2p来构建点对点网络 on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2flibp2p%2fdoc%2f&amp;title=%5bWriting%5d%e4%bd%bf%e7%94%a8libp2p%e6%9d%a5%e6%9e%84%e5%bb%ba%e7%82%b9%e5%af%b9%e7%82%b9%e7%bd%91%e7%bb%9c&amp;summary=%5bWriting%5d%e4%bd%bf%e7%94%a8libp2p%e6%9d%a5%e6%9e%84%e5%bb%ba%e7%82%b9%e5%af%b9%e7%82%b9%e7%bd%91%e7%bb%9c&amp;source=https%3a%2f%2flambertxiao.github.io%2fposts%2flibp2p%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share [Writing]使用libp2p来构建点对点网络 on reddit"
+        href="https://reddit.com/submit?url=https%3a%2f%2flambertxiao.github.io%2fposts%2flibp2p%2fdoc%2f&title=%5bWriting%5d%e4%bd%bf%e7%94%a8libp2p%e6%9d%a5%e6%9e%84%e5%bb%ba%e7%82%b9%e5%af%b9%e7%82%b9%e7%bd%91%e7%bb%9c">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share [Writing]使用libp2p来构建点对点网络 on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flambertxiao.github.io%2fposts%2flibp2p%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share [Writing]使用libp2p来构建点对点网络 on whatsapp"
+        href="https://api.whatsapp.com/send?text=%5bWriting%5d%e4%bd%bf%e7%94%a8libp2p%e6%9d%a5%e6%9e%84%e5%bb%ba%e7%82%b9%e5%af%b9%e7%82%b9%e7%bd%91%e7%bb%9c%20-%20https%3a%2f%2flambertxiao.github.io%2fposts%2flibp2p%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share [Writing]使用libp2p来构建点对点网络 on telegram"
+        href="https://telegram.me/share/url?text=%5bWriting%5d%e4%bd%bf%e7%94%a8libp2p%e6%9d%a5%e6%9e%84%e5%bb%ba%e7%82%b9%e5%af%b9%e7%82%b9%e7%bd%91%e7%bb%9c&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2flibp2p%2fdoc%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_KY25sRiRtb" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

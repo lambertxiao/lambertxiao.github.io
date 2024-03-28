@@ -1,0 +1,599 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Tags on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/</link>
+    <description>Recent content in Tags on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Thu, 15 Feb 2024 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>c&#43;&#43;</title>
+      <link>https://lambertxiao.github.io/tags/c&#43;&#43;/</link>
+      <pubDate>Thu, 15 Feb 2024 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/c&#43;&#43;/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>进程</title>
+      <link>https://lambertxiao.github.io/tags/%E8%BF%9B%E7%A8%8B/</link>
+      <pubDate>Sun, 15 Oct 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E8%BF%9B%E7%A8%8B/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Linux</title>
+      <link>https://lambertxiao.github.io/tags/linux/</link>
+      <pubDate>Thu, 13 Apr 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/linux/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>工具</title>
+      <link>https://lambertxiao.github.io/tags/%E5%B7%A5%E5%85%B7/</link>
+      <pubDate>Wed, 12 Apr 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E5%B7%A5%E5%85%B7/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>零拷贝</title>
+      <link>https://lambertxiao.github.io/tags/%E9%9B%B6%E6%8B%B7%E8%B4%9D/</link>
+      <pubDate>Sun, 09 Apr 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E9%9B%B6%E6%8B%B7%E8%B4%9D/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>cmake</title>
+      <link>https://lambertxiao.github.io/tags/cmake/</link>
+      <pubDate>Wed, 29 Mar 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/cmake/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>storage</title>
+      <link>https://lambertxiao.github.io/tags/storage/</link>
+      <pubDate>Sun, 26 Mar 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/storage/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>文件系统</title>
+      <link>https://lambertxiao.github.io/tags/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/</link>
+      <pubDate>Tue, 22 Nov 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>C</title>
+      <link>https://lambertxiao.github.io/tags/c/</link>
+      <pubDate>Thu, 07 Jul 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/c/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>网络</title>
+      <link>https://lambertxiao.github.io/tags/%E7%BD%91%E7%BB%9C/</link>
+      <pubDate>Fri, 24 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E7%BD%91%E7%BB%9C/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>算法</title>
+      <link>https://lambertxiao.github.io/tags/%E7%AE%97%E6%B3%95/</link>
+      <pubDate>Tue, 21 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E7%AE%97%E6%B3%95/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>golang</title>
+      <link>https://lambertxiao.github.io/tags/golang/</link>
+      <pubDate>Tue, 14 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/golang/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>automake</title>
+      <link>https://lambertxiao.github.io/tags/automake/</link>
+      <pubDate>Fri, 10 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/automake/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>动态规划</title>
+      <link>https://lambertxiao.github.io/tags/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92/</link>
+      <pubDate>Tue, 07 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>iptables</title>
+      <link>https://lambertxiao.github.io/tags/iptables/</link>
+      <pubDate>Mon, 16 May 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/iptables/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>mongo</title>
+      <link>https://lambertxiao.github.io/tags/mongo/</link>
+      <pubDate>Sun, 08 May 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/mongo/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>数据结构</title>
+      <link>https://lambertxiao.github.io/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/</link>
+      <pubDate>Mon, 04 Apr 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>leveldb</title>
+      <link>https://lambertxiao.github.io/tags/leveldb/</link>
+      <pubDate>Sun, 03 Apr 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/leveldb/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>位运算</title>
+      <link>https://lambertxiao.github.io/tags/%E4%BD%8D%E8%BF%90%E7%AE%97/</link>
+      <pubDate>Sun, 27 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E4%BD%8D%E8%BF%90%E7%AE%97/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>http2</title>
+      <link>https://lambertxiao.github.io/tags/http2/</link>
+      <pubDate>Fri, 25 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/http2/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>kv存储</title>
+      <link>https://lambertxiao.github.io/tags/kv%E5%AD%98%E5%82%A8/</link>
+      <pubDate>Fri, 25 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/kv%E5%AD%98%E5%82%A8/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>网络知识</title>
+      <link>https://lambertxiao.github.io/tags/%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/</link>
+      <pubDate>Fri, 25 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>epoll</title>
+      <link>https://lambertxiao.github.io/tags/epoll/</link>
+      <pubDate>Tue, 15 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/epoll/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>二叉树</title>
+      <link>https://lambertxiao.github.io/tags/%E4%BA%8C%E5%8F%89%E6%A0%91/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E4%BA%8C%E5%8F%89%E6%A0%91/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>前缀和</title>
+      <link>https://lambertxiao.github.io/tags/%E5%89%8D%E7%BC%80%E5%92%8C/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E5%89%8D%E7%BC%80%E5%92%8C/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>数组</title>
+      <link>https://lambertxiao.github.io/tags/%E6%95%B0%E7%BB%84/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E6%95%B0%E7%BB%84/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>内存管理</title>
+      <link>https://lambertxiao.github.io/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/</link>
+      <pubDate>Sat, 12 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>mysql</title>
+      <link>https://lambertxiao.github.io/tags/mysql/</link>
+      <pubDate>Fri, 11 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/mysql/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>UML</title>
+      <link>https://lambertxiao.github.io/tags/uml/</link>
+      <pubDate>Fri, 11 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/uml/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>二分法</title>
+      <link>https://lambertxiao.github.io/tags/%E4%BA%8C%E5%88%86%E6%B3%95/</link>
+      <pubDate>Thu, 10 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E4%BA%8C%E5%88%86%E6%B3%95/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>raft</title>
+      <link>https://lambertxiao.github.io/tags/raft/</link>
+      <pubDate>Mon, 07 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/raft/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>redis</title>
+      <link>https://lambertxiao.github.io/tags/redis/</link>
+      <pubDate>Mon, 07 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/redis/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>分布式</title>
+      <link>https://lambertxiao.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F/</link>
+      <pubDate>Mon, 07 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>docker</title>
+      <link>https://lambertxiao.github.io/tags/docker/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/docker/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>kafka</title>
+      <link>https://lambertxiao.github.io/tags/kafka/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/kafka/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>加密</title>
+      <link>https://lambertxiao.github.io/tags/%E5%8A%A0%E5%AF%86/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E5%8A%A0%E5%AF%86/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>抓包</title>
+      <link>https://lambertxiao.github.io/tags/%E6%8A%93%E5%8C%85/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E6%8A%93%E5%8C%85/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>操作系统</title>
+      <link>https://lambertxiao.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>数据库</title>
+      <link>https://lambertxiao.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>expect</title>
+      <link>https://lambertxiao.github.io/tags/expect/</link>
+      <pubDate>Tue, 09 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/expect/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Shell</title>
+      <link>https://lambertxiao.github.io/tags/shell/</link>
+      <pubDate>Tue, 09 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/shell/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>koa</title>
+      <link>https://lambertxiao.github.io/tags/koa/</link>
+      <pubDate>Fri, 05 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/koa/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>NodeJs</title>
+      <link>https://lambertxiao.github.io/tags/nodejs/</link>
+      <pubDate>Fri, 05 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/nodejs/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>k8s</title>
+      <link>https://lambertxiao.github.io/tags/k8s/</link>
+      <pubDate>Tue, 02 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/k8s/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Bash</title>
+      <link>https://lambertxiao.github.io/tags/bash/</link>
+      <pubDate>Fri, 29 May 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/bash/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>IO模型</title>
+      <link>https://lambertxiao.github.io/tags/io%E6%A8%A1%E5%9E%8B/</link>
+      <pubDate>Fri, 27 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/io%E6%A8%A1%E5%9E%8B/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Network</title>
+      <link>https://lambertxiao.github.io/tags/network/</link>
+      <pubDate>Tue, 10 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/network/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Http</title>
+      <link>https://lambertxiao.github.io/tags/http/</link>
+      <pubDate>Tue, 03 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/http/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Https</title>
+      <link>https://lambertxiao.github.io/tags/https/</link>
+      <pubDate>Tue, 03 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/https/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Javascript</title>
+      <link>https://lambertxiao.github.io/tags/javascript/</link>
+      <pubDate>Wed, 14 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/javascript/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Blockchain</title>
+      <link>https://lambertxiao.github.io/tags/blockchain/</link>
+      <pubDate>Sat, 06 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/blockchain/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Ethereum</title>
+      <link>https://lambertxiao.github.io/tags/ethereum/</link>
+      <pubDate>Sat, 06 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/ethereum/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Bitcoin</title>
+      <link>https://lambertxiao.github.io/tags/bitcoin/</link>
+      <pubDate>Fri, 05 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/bitcoin/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Ethereum，UTXO</title>
+      <link>https://lambertxiao.github.io/tags/ethereumutxo/</link>
+      <pubDate>Thu, 04 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/ethereumutxo/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Network，NAT</title>
+      <link>https://lambertxiao.github.io/tags/networknat/</link>
+      <pubDate>Thu, 04 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/networknat/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Ethereum，Kadamlia</title>
+      <link>https://lambertxiao.github.io/tags/ethereumkadamlia/</link>
+      <pubDate>Wed, 03 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/ethereumkadamlia/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Ethereum，pow</title>
+      <link>https://lambertxiao.github.io/tags/ethereumpow/</link>
+      <pubDate>Wed, 03 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/ethereumpow/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Grunt</title>
+      <link>https://lambertxiao.github.io/tags/grunt/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/grunt/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Gulp</title>
+      <link>https://lambertxiao.github.io/tags/gulp/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/gulp/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>TCP</title>
+      <link>https://lambertxiao.github.io/tags/tcp/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/tcp/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>UDP</title>
+      <link>https://lambertxiao.github.io/tags/udp/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/udp/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Webpack</title>
+      <link>https://lambertxiao.github.io/tags/webpack/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/webpack/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>os</title>
+      <link>https://lambertxiao.github.io/tags/os/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/os/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>java</title>
+      <link>https://lambertxiao.github.io/tags/java/</link>
+      <pubDate>Tue, 22 May 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/java/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>programming language</title>
+      <link>https://lambertxiao.github.io/tags/programming-language/</link>
+      <pubDate>Tue, 22 May 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/tags/programming-language/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>

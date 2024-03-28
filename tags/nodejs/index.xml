@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>NodeJs on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/nodejs/</link>
+    <description>Recent content in NodeJs on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Fri, 05 Jun 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/nodejs/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>koa的洋葱设计模型</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2020-06-05-koa%E7%9A%84%E6%B4%8B%E8%91%B1%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%9E%8B/</link>
+      <pubDate>Fri, 05 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2020-06-05-koa%E7%9A%84%E6%B4%8B%E8%91%B1%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%9E%8B/</guid>
+      <description>async function a(ctx, next) { console.log(&amp;#34;invoke a&amp;#34;) await next() console.log(&amp;#34;exit a&amp;#34;) } async function b(ctx, next) { console.log(&amp;#34;invoke b&amp;#34;) await next() console.log(&amp;#34;exit b&amp;#34;) } function compose(middleware) { return (ctx, next) =&amp;gt; { let index = -1 async function dispatch(i) { if (i &amp;lt;= index) { throw new Error(&amp;#39;next() called multiple times&amp;#39;) } index = i let fn = middleware[i] if (i === middleware.length) { fn = next } if (!fn) { return } return await fn(ctx, () =&amp;gt; { return dispatch(i + 1) }) } return dispatch(0) } } let func = compose([a, b]) func(&amp;#39;context&amp;#39;, () =&amp;gt; { console.</description>
+    </item>
+    
+    <item>
+      <title>NodeJS与ES6的模块化</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2019-08-14-nodejs%E4%B8%8Ees6%E7%9A%84%E6%A8%A1%E5%9D%97%E5%8C%96/</link>
+      <pubDate>Wed, 14 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2019-08-14-nodejs%E4%B8%8Ees6%E7%9A%84%E6%A8%A1%E5%9D%97%E5%8C%96/</guid>
+      <description>NodeJS的module 对于 circle.js
+// 这种导出方式，相当于将变量地址导出，会被外界修改 exports.varA = &amp;#39;varA&amp;#39; exports.func1 = () =&amp;gt; { console.log(&amp;#39;func1&amp;#39;) } module.exports.varB = &amp;#39;varB&amp;#39; // 以上写法等价于 module.exports = { varA: &amp;#39;varA&amp;#39;, varB: &amp;#39;varB&amp;#39;, func1 () { console.log(&amp;#39;func&amp;#39;) } } 在 main.js 中可以这么引入
+let math = require(&amp;#39;./utils/math&amp;#39;) console.log(math.varA) console.log(math.varB) math.func1() math.varA = &amp;#39;A&amp;#39;; math.varB = &amp;#39;B&amp;#39;; math.func1 = () =&amp;gt; { console.log(&amp;#39;another func&amp;#39;) } let math2 = require(&amp;#39;./utils/math&amp;#39;) // varA, varB 和 func1 都发生了改变，证明import进来的模块是单例的 console.log(math2.varA) console.log(math2.varB) math2.func1() ES6的module ES6 模块不是对象，而是通过export命令显式指定输出的代码，再通过import命令输入。</description>
+    </item>
+    
+    <item>
+      <title>nodejs-异步编程</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2019-08-06-nodejs-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B/</link>
+      <pubDate>Sat, 06 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2019-08-06-nodejs-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B/</guid>
+      <description>异步编程 callback瀑布级回调 Promise Generator Async 和 Await   在函数体前通过关键字async可以将函数变为async函数
+  在async函数中对需要异步执行的函数前需加await关键字
+  await后的函数必须使用Promise对象封装
+  async函数执行后返回的是一个Promise对象
+  NodeJs单线程是怎么保证效率的 </description>
+    </item>
+    
+  </channel>
+</rss>

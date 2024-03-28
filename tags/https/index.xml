@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Https on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/https/</link>
+    <description>Recent content in Https on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Tue, 03 Dec 2019 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/https/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>什么是https</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2019-12-03-%E4%BB%80%E4%B9%88%E6%98%AFhttps/</link>
+      <pubDate>Tue, 03 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2019-12-03-%E4%BB%80%E4%B9%88%E6%98%AFhttps/</guid>
+      <description>什么是https 首先, 在讲我们为什么需要https之前, 先看看以下两个流程, 描述了A和B之间想要互相通信, 又想让通信的内容安全
+流程1   A将对称秘钥发送给B
+  B使用该秘钥加密数据, 并发送给A
+  A用秘钥解开B发送的内容, AB成功通信
+  缺陷: 当中间人C截获了首次通信时, A发送给B的秘钥, 则AB后续所有的交互信息都能被C解开
+流程2   A将自己的公钥给B
+  B收到A的公钥后, 用A的公钥加密了 B自己生成对称秘钥, 并将加密后的内容回给了B
+  当A收到来自B的回复, A用自己的私钥解开了B的加密内容, 从而得到了B的对称秘钥, 后续通信使用该对称秘钥加密内容
+  缺陷:
+中间人C可在截获了A和B的首次通信后, 用自己的公钥给了B, B收到请求后,他不知道公钥是C发过来的,从而用了C的公钥加密了对称秘钥并回给了C, C拿到内容后,用自己的私钥解开内容,从而拿到了B的对称秘钥
+这个流程的缺陷主要是A和B都无法确定收到的数据是来源与对方的, 而不是来源于中间人的.
+引入证书 内容:
+  证书颁发机构
+  服务端网址
+  机构私钥加密(服务端公钥)
+  机构私钥加密(证书签名)
+  流程3 此时假设A作为服务端
+  A把自己的公钥给证书颁发机构</description>
+    </item>
+    
+  </channel>
+</rss>

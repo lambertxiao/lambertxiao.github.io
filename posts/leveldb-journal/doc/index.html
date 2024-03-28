@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>leveldb内部实现之journal | Lambert&#39;s blog</title>
+<meta name="keywords" content="leveldb" />
+<meta name="description" content="了解一下leveldb的WAL是怎么做的">
+<meta name="author" content="Lambert Xiao">
+<link rel="canonical" href="https://lambertxiao.github.io/posts/leveldb-journal/doc/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js" integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5&#43;kdJvBz5iKbt6B5PJI="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="leveldb内部实现之journal" />
+<meta property="og:description" content="了解一下leveldb的WAL是怎么做的" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://lambertxiao.github.io/posts/leveldb-journal/doc/" />
+<meta property="og:image" content="https://lambertxiao.github.io/cover/leveldb%E5%86%85%E9%83%A8%E5%AE%9E%E7%8E%B0%E4%B9%8Bmemdb.png" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-03-31T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2022-03-31T00:00:00&#43;00:00" />
+<meta property="og:see_also" content="https://lambertxiao.github.io/posts/gdb_usage/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/numa/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/uio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/vfio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/virtio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://lambertxiao.github.io/cover/leveldb%E5%86%85%E9%83%A8%E5%AE%9E%E7%8E%B0%E4%B9%8Bmemdb.png" />
+<meta name="twitter:title" content="leveldb内部实现之journal"/>
+<meta name="twitter:description" content="了解一下leveldb的WAL是怎么做的"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://lambertxiao.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "leveldb内部实现之journal",
+      "item": "https://lambertxiao.github.io/posts/leveldb-journal/doc/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "leveldb内部实现之journal",
+  "name": "leveldb内部实现之journal",
+  "description": "了解一下leveldb的WAL是怎么做的",
+  "keywords": [
+    "leveldb"
+  ],
+  "articleBody": "Journal是什么 journal是levedb中的WAL的实现，由于leveldb是将数据先写入内存中再同步到磁盘的，为了防止db异常退出导致内存丢数据，leveldb每次在写入key之前，会利用顺序写文件的方式记录journal。 因此一个journal会记录下一次写入操作的数据。\n 以下代码分析基于go版本的leveldb https://github.com/syndtr/goleveldb\n journal的写入时机 Put写入数据时，最终会走到的writeLocked方法里的以下代码块\n// ourBatch is batch that we can modify. func (db *DB) writeLocked(batch, ourBatch *Batch, merge, sync bool) error { ... // Seq number. \tseq := db.seq + 1 // 在这先写日志 \t// Write journal. \tif err := db.writeJournal(batches, seq, sync); err != nil { db.unlockWrite(overflow, merged, err) return err } // Put batches. \tfor _, batch := range batches { if err := batch.putMem(seq, mdb.DB); err != nil { panic(err) } seq += uint64(batch.Len()) } ... return nil } journal的结构 先分析下journal的实现，在DB结构体中，journal的类型为 *journal.Writer\ntype DB struct { ... journal *journal.Writer // journalWriter storage.Writer \t// journalFd storage.FileDesc \t... } // Writer writes journals to an underlying io.Writer. type Writer struct { // w is the underlying writer. \tw io.Writer // seq is the sequence number of the current journal. \tseq int // f is w as a flusher. \tf flusher // buf[i:j] is the bytes that will become the current chunk. \t// The low bound, i, includes the chunk header. \ti, j int // buf[:written] has already been written to w. \t// written is zero unless Flush has been called. \twritten int // first is whether the current chunk is the first chunk of the journal. \tfirst bool // pending is whether a chunk is buffered but not yet written. \tpending bool // err is any accumulated error. \terr error // buf is the buffer. \tbuf [blockSize]byte }   成员变量w实际上会在打开DB时被传入一个文件，见以下代码，可以看出写入的journal文件实际是 ${dbpath}/%06d.log\nfunc (fs *fileStorage) Create(fd FileDesc) (Writer, error) { ... of, err := os.OpenFile(filepath.Join(fs.path, fsGenName(fd)), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644) if err != nil { return nil, err } fs.open++ return \u0026fileWrap{File: of, fs: fs, fd: fd}, nil } func fsGenName(fd FileDesc) string { switch fd.Type { case TypeManifest: return fmt.Sprintf(\"MANIFEST-%06d\", fd.Num) case TypeJournal: return fmt.Sprintf(\"%06d.log\", fd.Num) case TypeTable: return fmt.Sprintf(\"%06d.ldb\", fd.Num) case TypeTemp: return fmt.Sprintf(\"%06d.tmp\", fd.Num) default: panic(\"invalid file type\") } } func OpenFile(path string, readOnly bool) (Storage, error) { ... fs := \u0026fileStorage{ path: path, readOnly: readOnly, flock: flock, logw: logw, logSize: logSize, } ... }   每个journal都有一个序列号seq\n  buf存放着journal的数据\n  一个journal可以拆分为多个chunk, i和j标记当前写入的chunk的左右边界\n  first标记当前写入的chunk是否是第一个chunk\n  pending表示当前的chunk是否还没被写入磁盘\n  journal的写入 writeJournal func (db *DB) writeJournal(batches []*Batch, seq uint64, sync bool) error { // 拿到本次负责写入的writer \twr, err := db.journal.Next() if err != nil { return err } // 将数据写入writer，此时数据还在内存缓冲区中 \tif err := writeBatchesWithHeader(wr, batches, seq); err != nil { return err } // 将journal内的数据刷入磁盘 \tif err := db.journal.Flush(); err != nil { return err } if sync { return db.journalWriter.Sync() } return nil }  通过journal.Next拿到一个writer writeBatchesWithHeader将batches写入writer中  journal.Next const ( blockSize = 32 * 1024 headerSize = 7 ) // Next returns a writer for the next journal. The writer returned becomes stale // after the next Close, Flush or Next call, and should no longer be used. func (w *Writer) Next() (io.Writer, error) { w.seq++ if w.err != nil { return nil, w.err } if w.pending { w.fillHeader(true) } w.i = w.j w.j = w.j + headerSize // Check if there is room in the block for the header. \tif w.j  blockSize { // Fill in the rest of the block with zeroes. \tfor k := w.i; k ++ { w.buf[k] = 0 } w.writeBlock() if w.err != nil { return nil, w.err } } w.first = true w.pending = true return singleWriter{w, w.seq}, nil } func (x singleWriter) Write(p []byte) (int, error) { w := x.w if w.seq != x.seq { return 0, errors.New(\"leveldb/journal: stale writer\") } if w.err != nil { return 0, w.err } n0 := len(p) for len(p)  0 { // Write a block, if it is full. \tif w.j == blockSize { w.fillHeader(false) w.writeBlock() if w.err != nil { return 0, w.err } w.first = false } // Copy bytes into the buffer. \tn := copy(w.buf[w.j:], p) w.j += n p = p[n:] } return n0, nil }  当next调用的时候，检查journal里上一个写入的chunk是否处于pending状态，如果是，则fillHeader往buf写入该chunk的header信息 更新当前写入chunk的左右边界i，j 如果因为本次写入导致buf里的数据已经大于32KB了，则需要将buf里的数据写入到文件里 由此可见，journal写入block的时机实际上是在每次写入的过程中判断的 buf[i:i+6] 这块位置用来存放chunk的header，buf[i:j] 用来存放数据，buf[:written]是实际已经写入的数据  fillHeader const ( fullChunkType = 1 // 整个buf里只有一个chunk \tfirstChunkType = 2 // 第一块chunk \tmiddleChunkType = 3 // 位于中间的chunk \tlastChunkType = 4 // 最后一块chunk ) // fillHeader fills in the header for the pending chunk. func (w *Writer) fillHeader(last bool) { if w.i+headerSize  w.j || w.j  blockSize { panic(\"leveldb/journal: bad writer state\") } if last { if w.first { w.buf[w.i+6] = fullChunkType } else { w.buf[w.i+6] = lastChunkType } } else { if w.first { w.buf[w.i+6] = firstChunkType } else { w.buf[w.i+6] = middleChunkType } } // 存入crc校验码 \tbinary.LittleEndian.PutUint32(w.buf[w.i+0:w.i+4], util.NewCRC(w.buf[w.i+6:w.j]).Value()) // 存入chunk的大小 \tbinary.LittleEndian.PutUint16(w.buf[w.i+4:w.i+6], uint16(w.j-w.i-headerSize)) }  chunk有header，header里记录里chunk的类型 chunk存放着数据部分的CRC校验码，用于检查数据是否完整 chunk里存放这数据大小 对于buf, 索引0-3存放chunk数据的crc，索引4-5存放chunk数据的大小，索引6存放着chunk的类型  writeBlock // writeBlock writes the buffered block to the underlying writer, and reserves // space for the next chunk's header. func (w *Writer) writeBlock() { _, w.err = w.w.Write(w.buf[w.written:]) w.i = 0 w.j = headerSize w.written = 0 } writeBatchesWithHeader func writeBatchesWithHeader(wr io.Writer, batches []*Batch, seq uint64) error { if _, err := wr.Write(encodeBatchHeader(nil, seq, batchesLen(batches))); err != nil { return err } for _, batch := range batches { if _, err := wr.Write(batch.data); err != nil { return err } } return nil } const ( batchHeaderLen = 8 + 4 ) func encodeBatchHeader(dst []byte, seq uint64, batchLen int) []byte { dst = ensureBuffer(dst, batchHeaderLen) binary.LittleEndian.PutUint64(dst, seq) binary.LittleEndian.PutUint32(dst[8:], uint32(batchLen)) return dst } func ensureBuffer(b []byte, n int) []byte { if cap(b) return make([]byte, n) } return b[:n] }  开辟了一个长度为12的buff, 前8位写入seq, 后4位写入batch的长度。并将该buff写入磁盘 将每一个batch的数据写入磁盘  journal.Flush // Flush finishes the current journal, writes to the underlying writer, and // flushes it if that writer implements interface{ Flush() error }. func (w *Writer) Flush() error { w.seq++ w.writePending() if w.err != nil { return w.err } if w.f != nil { w.err = w.f.Flush() return w.err } return nil }  当前journal写入完成了, seq自增 检查是否还有pending的chunk，有的话则写入磁盘  writePending // writePending finishes the current journal and writes the buffer to the // underlying writer. func (w *Writer) writePending() { if w.err != nil { return } if w.pending { w.fillHeader(true) w.pending = false } _, w.err = w.w.Write(w.buf[w.written:w.j]) w.written = w.j } journal的读取时机 我们知道，journal是用于恢复内存数据的，因此在服务宕机重启时会恢复jounal\nfunc (db *DB) recoverJournal() error { // 读取journal文件并排序 \t// Get all journals and sort it by file number. \trawFds, err := db.s.stor.List(storage.TypeJournal) if err != nil { return err } sortFds(rawFds) // 准备好需要恢复的journal \t// Journals that will be recovered. \tvar fds []storage.FileDesc for _, fd := range rawFds { if fd.Num = db.s.stJournalNum || fd.Num == db.s.stPrevJournalNum { fds = append(fds, fd) } } var ( ofd storage.FileDesc // Obsolete file. \trec = \u0026sessionRecord{} ) // Recover journals. \tif len(fds)  0 { db.logf(\"journal@recovery F·%d\", len(fds)) // Mark file number as used. \tdb.s.markFileNum(fds[len(fds)-1].Num) var ( // Options. \tstrict = db.s.o.GetStrict(opt.StrictJournal) checksum = db.s.o.GetStrict(opt.StrictJournalChecksum) writeBuffer = db.s.o.GetWriteBuffer() jr *journal.Reader mdb = memdb.New(db.s.icmp, writeBuffer) buf = \u0026util.Buffer{} batchSeq uint64 batchLen int ) for _, fd := range fds { db.logf(\"journal@recovery recovering @%d\", fd.Num) fr, err := db.s.stor.Open(fd) if err != nil { return err } // Create or reset journal reader instance. \tif jr == nil { jr = journal.NewReader(fr, dropper{db.s, fd}, strict, checksum) } else { jr.Reset(fr, dropper{db.s, fd}, strict, checksum) } // Flush memdb and remove obsolete journal file. \tif !ofd.Zero() { if mdb.Len()  0 { if _, err := db.s.flushMemdb(rec, mdb, 0); err != nil { fr.Close() return err } } rec.setJournalNum(fd.Num) rec.setSeqNum(db.seq) if err := db.s.commit(rec, false); err != nil { fr.Close() return err } rec.resetAddedTables() db.s.stor.Remove(ofd) ofd = storage.FileDesc{} } // 将journal的内容回放到memdb \t// Replay journal to memdb. \tmdb.Reset() for { r, err := jr.Next() if err != nil { if err == io.EOF { break } fr.Close() return errors.SetFd(err, fd) } buf.Reset() if _, err := buf.ReadFrom(r); err != nil { if err == io.ErrUnexpectedEOF { // This is error returned due to corruption, with strict == false. \tcontinue } fr.Close() return errors.SetFd(err, fd) } batchSeq, batchLen, err = decodeBatchToMem(buf.Bytes(), db.seq, mdb) if err != nil { if !strict \u0026\u0026 errors.IsCorrupted(err) { db.s.logf(\"journal error: %v (skipped)\", err) // We won't apply sequence number as it might be corrupted. \tcontinue } fr.Close() return errors.SetFd(err, fd) } // Save sequence number. \tdb.seq = batchSeq + uint64(batchLen) // Flush it if large enough. \tif mdb.Size() = writeBuffer { if _, err := db.s.flushMemdb(rec, mdb, 0); err != nil { fr.Close() return err } mdb.Reset() } } fr.Close() ofd = fd } // Flush the last memdb. \tif mdb.Len()  0 { if _, err := db.s.flushMemdb(rec, mdb, 0); err != nil { return err } } } // Create a new journal. \tif _, err := db.newMem(0); err != nil { return err } // Commit. \trec.setJournalNum(db.journalFd.Num) rec.setSeqNum(db.seq) if err := db.s.commit(rec, false); err != nil { // Close journal on error. \tif db.journal != nil { db.journal.Close() db.journalWriter.Close() } return err } // Remove the last obsolete journal file. \tif !ofd.Zero() { db.s.stor.Remove(ofd) } return nil } singleReader.Read type singleReader struct { r *Reader seq int err error } func (x *singleReader) Read(p []byte) (int, error) { r := x.r if r.seq != x.seq { return 0, errors.New(\"leveldb/journal: stale reader\") } if x.err != nil { return 0, x.err } if r.err != nil { return 0, r.err } for r.i == r.j { if r.last { return 0, io.EOF } x.err = r.nextChunk(false) if x.err != nil { if x.err == errSkip { x.err = io.ErrUnexpectedEOF } return 0, x.err } } n := copy(p, r.buf[r.i:r.j]) r.i += n return n, nil } nextChunk // nextChunk sets r.buf[r.i:r.j] to hold the next chunk's payload, reading the // next block into the buffer if necessary. func (r *Reader) nextChunk(first bool) error { for { if r.j+headerSize  r.n { checksum := binary.LittleEndian.Uint32(r.buf[r.j+0 : r.j+4]) length := binary.LittleEndian.Uint16(r.buf[r.j+4 : r.j+6]) chunkType := r.buf[r.j+6] unprocBlock := r.n - r.j if checksum == 0 \u0026\u0026 length == 0 \u0026\u0026 chunkType == 0 { // Drop entire block. \tr.i = r.n r.j = r.n return r.corrupt(unprocBlock, \"zero header\", false) } if chunkType || chunkType  lastChunkType { // Drop entire block. \tr.i = r.n r.j = r.n return r.corrupt(unprocBlock, fmt.Sprintf(\"invalid chunk type %#x\", chunkType), false) } r.i = r.j + headerSize r.j = r.j + headerSize + int(length) if r.j  r.n { // Drop entire block. \tr.i = r.n r.j = r.n return r.corrupt(unprocBlock, \"chunk length overflows block\", false) } else if r.checksum \u0026\u0026 checksum != util.NewCRC(r.buf[r.i-1:r.j]).Value() { // Drop entire block. \tr.i = r.n r.j = r.n return r.corrupt(unprocBlock, \"checksum mismatch\", false) } if first \u0026\u0026 chunkType != fullChunkType \u0026\u0026 chunkType != firstChunkType { chunkLength := (r.j - r.i) + headerSize r.i = r.j // Report the error, but skip it. \treturn r.corrupt(chunkLength, \"orphan chunk\", true) } r.last = chunkType == fullChunkType || chunkType == lastChunkType return nil } // The last block. \tif r.n \u0026\u0026 r.n  0 { if !first { return r.corrupt(0, \"missing chunk part\", false) } r.err = io.EOF return r.err } // Read block. \tn, err := io.ReadFull(r.r, r.buf[:]) if err != nil \u0026\u0026 err != io.EOF \u0026\u0026 err != io.ErrUnexpectedEOF { return err } if n == 0 { if !first { return r.corrupt(0, \"missing chunk part\", false) } r.err = io.EOF return r.err } r.i, r.j, r.n = 0, 0, n } } ",
+  "wordCount" : "1823",
+  "inLanguage": "en",
+  "image":"https://lambertxiao.github.io/cover/leveldb%E5%86%85%E9%83%A8%E5%AE%9E%E7%8E%B0%E4%B9%8Bmemdb.png","datePublished": "2022-03-31T00:00:00Z",
+  "dateModified": "2022-03-31T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "Lambert Xiao"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lambertxiao.github.io/posts/leveldb-journal/doc/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lambert's blog",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lambertxiao.github.io/avatar.jpeg"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      leveldb内部实现之journal
+    </h1>
+    <div class="post-meta"><span title='2022-03-31 00:00:00 +0000 UTC'>March 31, 2022</span>&nbsp;·&nbsp;9 min&nbsp;·&nbsp;Lambert Xiao&nbsp;|&nbsp;<a href="https://github.com/adityatelange/hugo-PaperMod/tree/exampleSite/content/posts/leveldb-journal/doc.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+</div>
+  </header> 
+<figure class="entry-cover"><img loading="lazy" src="https://lambertxiao.github.io/cover/leveldb%E5%86%85%E9%83%A8%E5%AE%9E%E7%8E%B0%E4%B9%8Bmemdb.png" alt="">
+        
+</figure><div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#journal%e6%98%af%e4%bb%80%e4%b9%88" aria-label="Journal是什么">Journal是什么</a></li>
+                <li>
+                    <a href="#journal%e7%9a%84%e5%86%99%e5%85%a5%e6%97%b6%e6%9c%ba" aria-label="journal的写入时机">journal的写入时机</a><ul>
+                        
+                <li>
+                    <a href="#journal%e7%9a%84%e7%bb%93%e6%9e%84" aria-label="journal的结构">journal的结构</a></li>
+                <li>
+                    <a href="#journal%e7%9a%84%e5%86%99%e5%85%a5" aria-label="journal的写入">journal的写入</a><ul>
+                        
+                <li>
+                    <a href="#writejournal" aria-label="writeJournal">writeJournal</a><ul>
+                        
+                <li>
+                    <a href="#journalnext" aria-label="journal.Next">journal.Next</a><ul>
+                        
+                <li>
+                    <a href="#fillheader" aria-label="fillHeader">fillHeader</a></li>
+                <li>
+                    <a href="#writeblock" aria-label="writeBlock">writeBlock</a></li></ul>
+                </li>
+                <li>
+                    <a href="#writebatcheswithheader" aria-label="writeBatchesWithHeader">writeBatchesWithHeader</a></li>
+                <li>
+                    <a href="#journalflush" aria-label="journal.Flush">journal.Flush</a><ul>
+                        
+                <li>
+                    <a href="#writepending" aria-label="writePending">writePending</a></li></ul>
+                </li></ul>
+                </li></ul>
+                </li></ul>
+                </li>
+                <li>
+                    <a href="#journal%e7%9a%84%e8%af%bb%e5%8f%96%e6%97%b6%e6%9c%ba" aria-label="journal的读取时机">journal的读取时机</a><ul>
+                        
+                <li>
+                    <a href="#singlereaderread" aria-label="singleReader.Read">singleReader.Read</a><ul>
+                        
+                <li>
+                    <a href="#nextchunk" aria-label="nextChunk">nextChunk</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h2 id="journal是什么">Journal是什么<a hidden class="anchor" aria-hidden="true" href="#journal是什么">#</a></h2>
+<p>journal是levedb中的WAL的实现，由于leveldb是将数据先写入内存中再同步到磁盘的，为了防止db异常退出导致内存丢数据，leveldb每次在写入key之前，会利用顺序写文件的方式记录journal。
+因此一个journal会记录下一次写入操作的数据。</p>
+<blockquote>
+<p>以下代码分析基于go版本的leveldb <code>https://github.com/syndtr/goleveldb</code></p>
+</blockquote>
+<p><img loading="lazy" src="../1.png" alt=""  />
+
+<img loading="lazy" src="../2.png" alt=""  />
+</p>
+<h2 id="journal的写入时机">journal的写入时机<a hidden class="anchor" aria-hidden="true" href="#journal的写入时机">#</a></h2>
+<p>Put写入数据时，最终会走到的writeLocked方法里的以下代码块</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// ourBatch is batch that we can modify.
+</span><span style="color:#000080"></span><span style="color:#00cd00">func</span> (db <span style="color:#39c">*</span>DB) writeLocked(batch, ourBatch <span style="color:#39c">*</span>Batch, merge, sync <span style="color:#00cd00">bool</span>) <span style="color:#00cd00">error</span> {
+	<span style="color:#39c">...</span>
+
+	<span style="color:#000080">// Seq number.
+</span><span style="color:#000080"></span>	seq <span style="color:#39c">:=</span> db.seq <span style="color:#39c">+</span> <span style="color:#cd00cd">1</span>
+
+    <span style="color:#000080">// 在这先写日志
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Write journal.
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> db.writeJournal(batches, seq, sync); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		db.unlockWrite(overflow, merged, err)
+		<span style="color:#cdcd00">return</span> err
+	}
+
+	<span style="color:#000080">// Put batches.
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">for</span> _, batch <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> batches {
+		<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> batch.putMem(seq, mdb.DB); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			<span style="color:#cd00cd">panic</span>(err)
+		}
+		seq <span style="color:#39c">+=</span> <span style="color:#cd00cd">uint64</span>(batch.Len())
+	}
+
+	<span style="color:#39c">...</span>
+	<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>
+}
+</code></pre></div><h3 id="journal的结构">journal的结构<a hidden class="anchor" aria-hidden="true" href="#journal的结构">#</a></h3>
+<p>先分析下journal的实现，在DB结构体中，journal的类型为 <code>*journal.Writer</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">type</span> DB <span style="color:#00cd00">struct</span> {
+    <span style="color:#39c">...</span>
+	journal         <span style="color:#39c">*</span>journal.Writer
+	<span style="color:#000080">// journalWriter   storage.Writer
+</span><span style="color:#000080"></span>	<span style="color:#000080">// journalFd       storage.FileDesc
+</span><span style="color:#000080"></span>	<span style="color:#39c">...</span>
+}
+
+<span style="color:#000080">// Writer writes journals to an underlying io.Writer.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> Writer <span style="color:#00cd00">struct</span> {
+	<span style="color:#000080">// w is the underlying writer.
+</span><span style="color:#000080"></span>	w io.Writer
+	<span style="color:#000080">// seq is the sequence number of the current journal.
+</span><span style="color:#000080"></span>	seq <span style="color:#00cd00">int</span>
+	<span style="color:#000080">// f is w as a flusher.
+</span><span style="color:#000080"></span>	f flusher
+	<span style="color:#000080">// buf[i:j] is the bytes that will become the current chunk.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// The low bound, i, includes the chunk header.
+</span><span style="color:#000080"></span>	i, j <span style="color:#00cd00">int</span>
+	<span style="color:#000080">// buf[:written] has already been written to w.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// written is zero unless Flush has been called.
+</span><span style="color:#000080"></span>	written <span style="color:#00cd00">int</span>
+	<span style="color:#000080">// first is whether the current chunk is the first chunk of the journal.
+</span><span style="color:#000080"></span>	first <span style="color:#00cd00">bool</span>
+	<span style="color:#000080">// pending is whether a chunk is buffered but not yet written.
+</span><span style="color:#000080"></span>	pending <span style="color:#00cd00">bool</span>
+	<span style="color:#000080">// err is any accumulated error.
+</span><span style="color:#000080"></span>	err <span style="color:#00cd00">error</span>
+	<span style="color:#000080">// buf is the buffer.
+</span><span style="color:#000080"></span>	buf [blockSize]<span style="color:#00cd00">byte</span>
+}
+</code></pre></div><ol>
+<li>
+<p>成员变量w实际上会在打开DB时被传入一个文件，见以下代码，可以看出写入的journal文件实际是 <code>${dbpath}/%06d.log</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">
+<span style="color:#00cd00">func</span> (fs <span style="color:#39c">*</span>fileStorage) Create(fd FileDesc) (Writer, <span style="color:#00cd00">error</span>) {
+    <span style="color:#39c">...</span>
+    of, err <span style="color:#39c">:=</span> os.OpenFile(filepath.Join(fs.path, fsGenName(fd)), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, <span style="color:#cd00cd">0644</span>)
+    <span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+        <span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+    }
+    fs.open<span style="color:#39c">++</span>
+    <span style="color:#cdcd00">return</span> <span style="color:#39c">&amp;</span>fileWrap{File: of, fs: fs, fd: fd}, <span style="color:#cdcd00">nil</span>
+}
+
+<span style="color:#00cd00">func</span> fsGenName(fd FileDesc) <span style="color:#00cd00">string</span> {
+    <span style="color:#cdcd00">switch</span> fd.Type {
+    <span style="color:#cdcd00">case</span> TypeManifest:
+        <span style="color:#cdcd00">return</span> fmt.Sprintf(<span style="color:#cd0000">&#34;MANIFEST-%06d&#34;</span>, fd.Num)
+    <span style="color:#cdcd00">case</span> TypeJournal:
+        <span style="color:#cdcd00">return</span> fmt.Sprintf(<span style="color:#cd0000">&#34;%06d.log&#34;</span>, fd.Num)
+    <span style="color:#cdcd00">case</span> TypeTable:
+        <span style="color:#cdcd00">return</span> fmt.Sprintf(<span style="color:#cd0000">&#34;%06d.ldb&#34;</span>, fd.Num)
+    <span style="color:#cdcd00">case</span> TypeTemp:
+        <span style="color:#cdcd00">return</span> fmt.Sprintf(<span style="color:#cd0000">&#34;%06d.tmp&#34;</span>, fd.Num)
+    <span style="color:#cdcd00">default</span>:
+        <span style="color:#cd00cd">panic</span>(<span style="color:#cd0000">&#34;invalid file type&#34;</span>)
+    }
+}
+
+<span style="color:#00cd00">func</span> OpenFile(path <span style="color:#00cd00">string</span>, readOnly <span style="color:#00cd00">bool</span>) (Storage, <span style="color:#00cd00">error</span>) {
+    <span style="color:#39c">...</span>
+
+    fs <span style="color:#39c">:=</span> <span style="color:#39c">&amp;</span>fileStorage{
+        path:     path,
+        readOnly: readOnly,
+        flock:    flock,
+        logw:     logw,
+        logSize:  logSize,
+    }
+    <span style="color:#39c">...</span>
+}
+</code></pre></div></li>
+<li>
+<p>每个journal都有一个序列号seq</p>
+</li>
+<li>
+<p>buf存放着journal的数据</p>
+</li>
+<li>
+<p>一个journal可以拆分为多个chunk, i和j标记当前写入的chunk的左右边界</p>
+</li>
+<li>
+<p>first标记当前写入的chunk是否是第一个chunk</p>
+</li>
+<li>
+<p>pending表示当前的chunk是否还没被写入磁盘</p>
+</li>
+</ol>
+<h3 id="journal的写入">journal的写入<a hidden class="anchor" aria-hidden="true" href="#journal的写入">#</a></h3>
+<h4 id="writejournal">writeJournal<a hidden class="anchor" aria-hidden="true" href="#writejournal">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (db <span style="color:#39c">*</span>DB) writeJournal(batches []<span style="color:#39c">*</span>Batch, seq <span style="color:#00cd00">uint64</span>, sync <span style="color:#00cd00">bool</span>) <span style="color:#00cd00">error</span> {
+    <span style="color:#000080">// 拿到本次负责写入的writer
+</span><span style="color:#000080"></span>	wr, err <span style="color:#39c">:=</span> db.journal.Next()
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> err
+	}
+
+    <span style="color:#000080">// 将数据写入writer，此时数据还在内存缓冲区中
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> writeBatchesWithHeader(wr, batches, seq); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> err
+	}
+
+    <span style="color:#000080">// 将journal内的数据刷入磁盘
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> db.journal.Flush(); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> err
+	}
+	<span style="color:#cdcd00">if</span> sync {
+		<span style="color:#cdcd00">return</span> db.journalWriter.Sync()
+	}
+	<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>
+}
+</code></pre></div><ol>
+<li>通过journal.Next拿到一个writer</li>
+<li>writeBatchesWithHeader将batches写入writer中</li>
+</ol>
+<h5 id="journalnext">journal.Next<a hidden class="anchor" aria-hidden="true" href="#journalnext">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">const</span> (
+	blockSize  = <span style="color:#cd00cd">32</span> <span style="color:#39c">*</span> <span style="color:#cd00cd">1024</span>
+	headerSize = <span style="color:#cd00cd">7</span>
+)
+
+<span style="color:#000080">// Next returns a writer for the next journal. The writer returned becomes stale
+</span><span style="color:#000080">// after the next Close, Flush or Next call, and should no longer be used.
+</span><span style="color:#000080"></span><span style="color:#00cd00">func</span> (w <span style="color:#39c">*</span>Writer) Next() (io.Writer, <span style="color:#00cd00">error</span>) {
+	w.seq<span style="color:#39c">++</span>
+	<span style="color:#cdcd00">if</span> w.err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, w.err
+	}
+	<span style="color:#cdcd00">if</span> w.pending {
+		w.fillHeader(<span style="color:#cdcd00">true</span>)
+	}
+	w.i = w.j
+	w.j = w.j <span style="color:#39c">+</span> headerSize
+	<span style="color:#000080">// Check if there is room in the block for the header.
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> w.j &gt; blockSize {
+		<span style="color:#000080">// Fill in the rest of the block with zeroes.
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">for</span> k <span style="color:#39c">:=</span> w.i; k &lt; blockSize; k<span style="color:#39c">++</span> {
+			w.buf[k] = <span style="color:#cd00cd">0</span>
+		}
+		w.writeBlock()
+		<span style="color:#cdcd00">if</span> w.err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, w.err
+		}
+	}
+	w.first = <span style="color:#cdcd00">true</span>
+	w.pending = <span style="color:#cdcd00">true</span>
+	<span style="color:#cdcd00">return</span> singleWriter{w, w.seq}, <span style="color:#cdcd00">nil</span>
+}
+
+
+<span style="color:#00cd00">func</span> (x singleWriter) Write(p []<span style="color:#00cd00">byte</span>) (<span style="color:#00cd00">int</span>, <span style="color:#00cd00">error</span>) {
+	w <span style="color:#39c">:=</span> x.w
+	<span style="color:#cdcd00">if</span> w.seq <span style="color:#39c">!=</span> x.seq {
+		<span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>, errors.New(<span style="color:#cd0000">&#34;leveldb/journal: stale writer&#34;</span>)
+	}
+	<span style="color:#cdcd00">if</span> w.err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>, w.err
+	}
+	n0 <span style="color:#39c">:=</span> <span style="color:#cd00cd">len</span>(p)
+	<span style="color:#cdcd00">for</span> <span style="color:#cd00cd">len</span>(p) &gt; <span style="color:#cd00cd">0</span> {
+		<span style="color:#000080">// Write a block, if it is full.
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">if</span> w.j <span style="color:#39c">==</span> blockSize {
+			w.fillHeader(<span style="color:#cdcd00">false</span>)
+			w.writeBlock()
+			<span style="color:#cdcd00">if</span> w.err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+				<span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>, w.err
+			}
+			w.first = <span style="color:#cdcd00">false</span>
+		}
+		<span style="color:#000080">// Copy bytes into the buffer.
+</span><span style="color:#000080"></span>		n <span style="color:#39c">:=</span> <span style="color:#cd00cd">copy</span>(w.buf[w.j:], p)
+		w.j <span style="color:#39c">+=</span> n
+		p = p[n:]
+	}
+	<span style="color:#cdcd00">return</span> n0, <span style="color:#cdcd00">nil</span>
+}
+</code></pre></div><ol>
+<li>当next调用的时候，检查journal里上一个写入的chunk是否处于pending状态，如果是，则fillHeader往buf写入该chunk的header信息</li>
+<li>更新当前写入chunk的左右边界i，j</li>
+<li>如果因为本次写入导致buf里的数据已经大于32KB了，则需要将buf里的数据写入到文件里</li>
+<li>由此可见，journal写入block的时机实际上是在每次写入的过程中判断的</li>
+<li><code>buf[i:i+6]</code> 这块位置用来存放chunk的header，<code>buf[i:j]</code> 用来存放数据，<code>buf[:written]</code>是实际已经写入的数据</li>
+</ol>
+<h6 id="fillheader">fillHeader<a hidden class="anchor" aria-hidden="true" href="#fillheader">#</a></h6>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">const</span> (
+	fullChunkType   = <span style="color:#cd00cd">1</span> <span style="color:#000080">// 整个buf里只有一个chunk
+</span><span style="color:#000080"></span>	firstChunkType  = <span style="color:#cd00cd">2</span> <span style="color:#000080">// 第一块chunk
+</span><span style="color:#000080"></span>	middleChunkType = <span style="color:#cd00cd">3</span> <span style="color:#000080">// 位于中间的chunk
+</span><span style="color:#000080"></span>	lastChunkType   = <span style="color:#cd00cd">4</span> <span style="color:#000080">// 最后一块chunk
+</span><span style="color:#000080"></span>)
+
+<span style="color:#000080">// fillHeader fills in the header for the pending chunk.
+</span><span style="color:#000080"></span><span style="color:#00cd00">func</span> (w <span style="color:#39c">*</span>Writer) fillHeader(last <span style="color:#00cd00">bool</span>) {
+	<span style="color:#cdcd00">if</span> w.i<span style="color:#39c">+</span>headerSize &gt; w.j <span style="color:#39c">||</span> w.j &gt; blockSize {
+		<span style="color:#cd00cd">panic</span>(<span style="color:#cd0000">&#34;leveldb/journal: bad writer state&#34;</span>)
+	}
+	<span style="color:#cdcd00">if</span> last {
+		<span style="color:#cdcd00">if</span> w.first {
+			w.buf[w.i<span style="color:#39c">+</span><span style="color:#cd00cd">6</span>] = fullChunkType
+		} <span style="color:#cdcd00">else</span> {
+			w.buf[w.i<span style="color:#39c">+</span><span style="color:#cd00cd">6</span>] = lastChunkType
+		}
+	} <span style="color:#cdcd00">else</span> {
+		<span style="color:#cdcd00">if</span> w.first {
+			w.buf[w.i<span style="color:#39c">+</span><span style="color:#cd00cd">6</span>] = firstChunkType
+		} <span style="color:#cdcd00">else</span> {
+			w.buf[w.i<span style="color:#39c">+</span><span style="color:#cd00cd">6</span>] = middleChunkType
+		}
+	}
+    <span style="color:#000080">// 存入crc校验码
+</span><span style="color:#000080"></span>	binary.LittleEndian.PutUint32(w.buf[w.i<span style="color:#39c">+</span><span style="color:#cd00cd">0</span>:w.i<span style="color:#39c">+</span><span style="color:#cd00cd">4</span>], util.NewCRC(w.buf[w.i<span style="color:#39c">+</span><span style="color:#cd00cd">6</span>:w.j]).Value())
+    <span style="color:#000080">// 存入chunk的大小
+</span><span style="color:#000080"></span>	binary.LittleEndian.PutUint16(w.buf[w.i<span style="color:#39c">+</span><span style="color:#cd00cd">4</span>:w.i<span style="color:#39c">+</span><span style="color:#cd00cd">6</span>], <span style="color:#cd00cd">uint16</span>(w.j<span style="color:#39c">-</span>w.i<span style="color:#39c">-</span>headerSize))
+}
+</code></pre></div><ol>
+<li>chunk有header，header里记录里chunk的类型</li>
+<li>chunk存放着数据部分的CRC校验码，用于检查数据是否完整</li>
+<li>chunk里存放这数据大小</li>
+<li>对于buf, 索引0-3存放chunk数据的crc，索引4-5存放chunk数据的大小，索引6存放着chunk的类型</li>
+</ol>
+<h6 id="writeblock">writeBlock<a hidden class="anchor" aria-hidden="true" href="#writeblock">#</a></h6>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// writeBlock writes the buffered block to the underlying writer, and reserves
+</span><span style="color:#000080">// space for the next chunk&#39;s header.
+</span><span style="color:#000080"></span><span style="color:#00cd00">func</span> (w <span style="color:#39c">*</span>Writer) writeBlock() {
+	_, w.err = w.w.Write(w.buf[w.written:])
+	w.i = <span style="color:#cd00cd">0</span>
+	w.j = headerSize
+	w.written = <span style="color:#cd00cd">0</span>
+}
+</code></pre></div><h5 id="writebatcheswithheader">writeBatchesWithHeader<a hidden class="anchor" aria-hidden="true" href="#writebatcheswithheader">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> writeBatchesWithHeader(wr io.Writer, batches []<span style="color:#39c">*</span>Batch, seq <span style="color:#00cd00">uint64</span>) <span style="color:#00cd00">error</span> {
+	<span style="color:#cdcd00">if</span> _, err <span style="color:#39c">:=</span> wr.Write(encodeBatchHeader(<span style="color:#cdcd00">nil</span>, seq, batchesLen(batches))); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> err
+	}
+	<span style="color:#cdcd00">for</span> _, batch <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> batches {
+		<span style="color:#cdcd00">if</span> _, err <span style="color:#39c">:=</span> wr.Write(batch.data); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			<span style="color:#cdcd00">return</span> err
+		}
+	}
+	<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>
+}
+
+<span style="color:#00cd00">const</span> (
+	batchHeaderLen = <span style="color:#cd00cd">8</span> <span style="color:#39c">+</span> <span style="color:#cd00cd">4</span>
+)
+
+<span style="color:#00cd00">func</span> encodeBatchHeader(dst []<span style="color:#00cd00">byte</span>, seq <span style="color:#00cd00">uint64</span>, batchLen <span style="color:#00cd00">int</span>) []<span style="color:#00cd00">byte</span> {
+	dst = ensureBuffer(dst, batchHeaderLen)
+	binary.LittleEndian.PutUint64(dst, seq)
+	binary.LittleEndian.PutUint32(dst[<span style="color:#cd00cd">8</span>:], <span style="color:#cd00cd">uint32</span>(batchLen))
+	<span style="color:#cdcd00">return</span> dst
+}
+
+<span style="color:#00cd00">func</span> ensureBuffer(b []<span style="color:#00cd00">byte</span>, n <span style="color:#00cd00">int</span>) []<span style="color:#00cd00">byte</span> {
+	<span style="color:#cdcd00">if</span> <span style="color:#cd00cd">cap</span>(b) &lt; n {
+		<span style="color:#cdcd00">return</span> <span style="color:#cd00cd">make</span>([]<span style="color:#00cd00">byte</span>, n)
+	}
+	<span style="color:#cdcd00">return</span> b[:n]
+}
+</code></pre></div><ol>
+<li>开辟了一个长度为12的buff, 前8位写入seq, 后4位写入batch的长度。并将该buff写入磁盘</li>
+<li>将每一个batch的数据写入磁盘</li>
+</ol>
+<h5 id="journalflush">journal.Flush<a hidden class="anchor" aria-hidden="true" href="#journalflush">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// Flush finishes the current journal, writes to the underlying writer, and
+</span><span style="color:#000080">// flushes it if that writer implements interface{ Flush() error }.
+</span><span style="color:#000080"></span><span style="color:#00cd00">func</span> (w <span style="color:#39c">*</span>Writer) Flush() <span style="color:#00cd00">error</span> {
+	w.seq<span style="color:#39c">++</span>
+	w.writePending()
+	<span style="color:#cdcd00">if</span> w.err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> w.err
+	}
+	<span style="color:#cdcd00">if</span> w.f <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		w.err = w.f.Flush()
+		<span style="color:#cdcd00">return</span> w.err
+	}
+	<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>
+}
+</code></pre></div><ol>
+<li>当前journal写入完成了, seq自增</li>
+<li>检查是否还有pending的chunk，有的话则写入磁盘</li>
+</ol>
+<h6 id="writepending">writePending<a hidden class="anchor" aria-hidden="true" href="#writepending">#</a></h6>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// writePending finishes the current journal and writes the buffer to the
+</span><span style="color:#000080">// underlying writer.
+</span><span style="color:#000080"></span><span style="color:#00cd00">func</span> (w <span style="color:#39c">*</span>Writer) writePending() {
+	<span style="color:#cdcd00">if</span> w.err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span>
+	}
+	<span style="color:#cdcd00">if</span> w.pending {
+		w.fillHeader(<span style="color:#cdcd00">true</span>)
+		w.pending = <span style="color:#cdcd00">false</span>
+	}
+	_, w.err = w.w.Write(w.buf[w.written:w.j])
+	w.written = w.j
+}
+</code></pre></div><h2 id="journal的读取时机">journal的读取时机<a hidden class="anchor" aria-hidden="true" href="#journal的读取时机">#</a></h2>
+<p>我们知道，journal是用于恢复内存数据的，因此在服务宕机重启时会恢复jounal</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">
+<span style="color:#00cd00">func</span> (db <span style="color:#39c">*</span>DB) recoverJournal() <span style="color:#00cd00">error</span> {
+	<span style="color:#000080">// 读取journal文件并排序
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Get all journals and sort it by file number.
+</span><span style="color:#000080"></span>	rawFds, err <span style="color:#39c">:=</span> db.s.stor.List(storage.TypeJournal)
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> err
+	}
+	sortFds(rawFds)
+
+	<span style="color:#000080">// 准备好需要恢复的journal
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Journals that will be recovered.
+</span><span style="color:#000080"></span>	<span style="color:#00cd00">var</span> fds []storage.FileDesc
+	<span style="color:#cdcd00">for</span> _, fd <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> rawFds {
+		<span style="color:#cdcd00">if</span> fd.Num <span style="color:#39c">&gt;=</span> db.s.stJournalNum <span style="color:#39c">||</span> fd.Num <span style="color:#39c">==</span> db.s.stPrevJournalNum {
+			fds = <span style="color:#cd00cd">append</span>(fds, fd)
+		}
+	}
+
+	<span style="color:#00cd00">var</span> (
+		ofd storage.FileDesc <span style="color:#000080">// Obsolete file.
+</span><span style="color:#000080"></span>		rec = <span style="color:#39c">&amp;</span>sessionRecord{}
+	)
+
+	<span style="color:#000080">// Recover journals.
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> <span style="color:#cd00cd">len</span>(fds) &gt; <span style="color:#cd00cd">0</span> {
+		db.logf(<span style="color:#cd0000">&#34;journal@recovery F·%d&#34;</span>, <span style="color:#cd00cd">len</span>(fds))
+
+		<span style="color:#000080">// Mark file number as used.
+</span><span style="color:#000080"></span>		db.s.markFileNum(fds[<span style="color:#cd00cd">len</span>(fds)<span style="color:#39c">-</span><span style="color:#cd00cd">1</span>].Num)
+
+		<span style="color:#00cd00">var</span> (
+			<span style="color:#000080">// Options.
+</span><span style="color:#000080"></span>			strict      = db.s.o.GetStrict(opt.StrictJournal)
+			checksum    = db.s.o.GetStrict(opt.StrictJournalChecksum)
+			writeBuffer = db.s.o.GetWriteBuffer()
+
+			jr       <span style="color:#39c">*</span>journal.Reader
+			mdb      = memdb.New(db.s.icmp, writeBuffer)
+			buf      = <span style="color:#39c">&amp;</span>util.Buffer{}
+			batchSeq <span style="color:#00cd00">uint64</span>
+			batchLen <span style="color:#00cd00">int</span>
+		)
+
+		<span style="color:#cdcd00">for</span> _, fd <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> fds {
+			db.logf(<span style="color:#cd0000">&#34;journal@recovery recovering @%d&#34;</span>, fd.Num)
+
+			fr, err <span style="color:#39c">:=</span> db.s.stor.Open(fd)
+			<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+				<span style="color:#cdcd00">return</span> err
+			}
+
+			<span style="color:#000080">// Create or reset journal reader instance.
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">if</span> jr <span style="color:#39c">==</span> <span style="color:#cdcd00">nil</span> {
+				jr = journal.NewReader(fr, dropper{db.s, fd}, strict, checksum)
+			} <span style="color:#cdcd00">else</span> {
+				jr.Reset(fr, dropper{db.s, fd}, strict, checksum)
+			}
+
+			<span style="color:#000080">// Flush memdb and remove obsolete journal file.
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">if</span> !ofd.Zero() {
+				<span style="color:#cdcd00">if</span> mdb.Len() &gt; <span style="color:#cd00cd">0</span> {
+					<span style="color:#cdcd00">if</span> _, err <span style="color:#39c">:=</span> db.s.flushMemdb(rec, mdb, <span style="color:#cd00cd">0</span>); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+						fr.Close()
+						<span style="color:#cdcd00">return</span> err
+					}
+				}
+
+				rec.setJournalNum(fd.Num)
+				rec.setSeqNum(db.seq)
+				<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> db.s.commit(rec, <span style="color:#cdcd00">false</span>); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+					fr.Close()
+					<span style="color:#cdcd00">return</span> err
+				}
+				rec.resetAddedTables()
+
+				db.s.stor.Remove(ofd)
+				ofd = storage.FileDesc{}
+			}
+
+			<span style="color:#000080">// 将journal的内容回放到memdb
+</span><span style="color:#000080"></span>			<span style="color:#000080">// Replay journal to memdb.
+</span><span style="color:#000080"></span>			mdb.Reset()
+			<span style="color:#cdcd00">for</span> {
+				r, err <span style="color:#39c">:=</span> jr.Next()
+				<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+					<span style="color:#cdcd00">if</span> err <span style="color:#39c">==</span> io.EOF {
+						<span style="color:#cdcd00">break</span>
+					}
+
+					fr.Close()
+					<span style="color:#cdcd00">return</span> errors.SetFd(err, fd)
+				}
+
+				buf.Reset()
+				<span style="color:#cdcd00">if</span> _, err <span style="color:#39c">:=</span> buf.ReadFrom(r); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+					<span style="color:#cdcd00">if</span> err <span style="color:#39c">==</span> io.ErrUnexpectedEOF {
+						<span style="color:#000080">// This is error returned due to corruption, with strict == false.
+</span><span style="color:#000080"></span>						<span style="color:#cdcd00">continue</span>
+					}
+
+					fr.Close()
+					<span style="color:#cdcd00">return</span> errors.SetFd(err, fd)
+				}
+				batchSeq, batchLen, err = decodeBatchToMem(buf.Bytes(), db.seq, mdb)
+				<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+					<span style="color:#cdcd00">if</span> !strict <span style="color:#39c">&amp;&amp;</span> errors.IsCorrupted(err) {
+						db.s.logf(<span style="color:#cd0000">&#34;journal error: %v (skipped)&#34;</span>, err)
+						<span style="color:#000080">// We won&#39;t apply sequence number as it might be corrupted.
+</span><span style="color:#000080"></span>						<span style="color:#cdcd00">continue</span>
+					}
+
+					fr.Close()
+					<span style="color:#cdcd00">return</span> errors.SetFd(err, fd)
+				}
+
+				<span style="color:#000080">// Save sequence number.
+</span><span style="color:#000080"></span>				db.seq = batchSeq <span style="color:#39c">+</span> <span style="color:#cd00cd">uint64</span>(batchLen)
+
+				<span style="color:#000080">// Flush it if large enough.
+</span><span style="color:#000080"></span>				<span style="color:#cdcd00">if</span> mdb.Size() <span style="color:#39c">&gt;=</span> writeBuffer {
+					<span style="color:#cdcd00">if</span> _, err <span style="color:#39c">:=</span> db.s.flushMemdb(rec, mdb, <span style="color:#cd00cd">0</span>); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+						fr.Close()
+						<span style="color:#cdcd00">return</span> err
+					}
+
+					mdb.Reset()
+				}
+			}
+
+			fr.Close()
+			ofd = fd
+		}
+
+		<span style="color:#000080">// Flush the last memdb.
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">if</span> mdb.Len() &gt; <span style="color:#cd00cd">0</span> {
+			<span style="color:#cdcd00">if</span> _, err <span style="color:#39c">:=</span> db.s.flushMemdb(rec, mdb, <span style="color:#cd00cd">0</span>); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+				<span style="color:#cdcd00">return</span> err
+			}
+		}
+	}
+
+	<span style="color:#000080">// Create a new journal.
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> _, err <span style="color:#39c">:=</span> db.newMem(<span style="color:#cd00cd">0</span>); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> err
+	}
+
+	<span style="color:#000080">// Commit.
+</span><span style="color:#000080"></span>	rec.setJournalNum(db.journalFd.Num)
+	rec.setSeqNum(db.seq)
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> db.s.commit(rec, <span style="color:#cdcd00">false</span>); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#000080">// Close journal on error.
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">if</span> db.journal <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			db.journal.Close()
+			db.journalWriter.Close()
+		}
+		<span style="color:#cdcd00">return</span> err
+	}
+
+	<span style="color:#000080">// Remove the last obsolete journal file.
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> !ofd.Zero() {
+		db.s.stor.Remove(ofd)
+	}
+
+	<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>
+}
+</code></pre></div><h3 id="singlereaderread">singleReader.Read<a hidden class="anchor" aria-hidden="true" href="#singlereaderread">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">type</span> singleReader <span style="color:#00cd00">struct</span> {
+	r   <span style="color:#39c">*</span>Reader
+	seq <span style="color:#00cd00">int</span>
+	err <span style="color:#00cd00">error</span>
+}
+
+<span style="color:#00cd00">func</span> (x <span style="color:#39c">*</span>singleReader) Read(p []<span style="color:#00cd00">byte</span>) (<span style="color:#00cd00">int</span>, <span style="color:#00cd00">error</span>) {
+	r <span style="color:#39c">:=</span> x.r
+	<span style="color:#cdcd00">if</span> r.seq <span style="color:#39c">!=</span> x.seq {
+		<span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>, errors.New(<span style="color:#cd0000">&#34;leveldb/journal: stale reader&#34;</span>)
+	}
+	<span style="color:#cdcd00">if</span> x.err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>, x.err
+	}
+	<span style="color:#cdcd00">if</span> r.err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>, r.err
+	}
+	<span style="color:#cdcd00">for</span> r.i <span style="color:#39c">==</span> r.j {
+		<span style="color:#cdcd00">if</span> r.last {
+			<span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>, io.EOF
+		}
+		x.err = r.nextChunk(<span style="color:#cdcd00">false</span>)
+		<span style="color:#cdcd00">if</span> x.err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			<span style="color:#cdcd00">if</span> x.err <span style="color:#39c">==</span> errSkip {
+				x.err = io.ErrUnexpectedEOF
+			}
+			<span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>, x.err
+		}
+	}
+	n <span style="color:#39c">:=</span> <span style="color:#cd00cd">copy</span>(p, r.buf[r.i:r.j])
+	r.i <span style="color:#39c">+=</span> n
+	<span style="color:#cdcd00">return</span> n, <span style="color:#cdcd00">nil</span>
+}
+</code></pre></div><h4 id="nextchunk">nextChunk<a hidden class="anchor" aria-hidden="true" href="#nextchunk">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">
+<span style="color:#000080">// nextChunk sets r.buf[r.i:r.j] to hold the next chunk&#39;s payload, reading the
+</span><span style="color:#000080">// next block into the buffer if necessary.
+</span><span style="color:#000080"></span><span style="color:#00cd00">func</span> (r <span style="color:#39c">*</span>Reader) nextChunk(first <span style="color:#00cd00">bool</span>) <span style="color:#00cd00">error</span> {
+	<span style="color:#cdcd00">for</span> {
+		<span style="color:#cdcd00">if</span> r.j<span style="color:#39c">+</span>headerSize <span style="color:#39c">&lt;=</span> r.n {
+			checksum <span style="color:#39c">:=</span> binary.LittleEndian.Uint32(r.buf[r.j<span style="color:#39c">+</span><span style="color:#cd00cd">0</span> : r.j<span style="color:#39c">+</span><span style="color:#cd00cd">4</span>])
+			length <span style="color:#39c">:=</span> binary.LittleEndian.Uint16(r.buf[r.j<span style="color:#39c">+</span><span style="color:#cd00cd">4</span> : r.j<span style="color:#39c">+</span><span style="color:#cd00cd">6</span>])
+			chunkType <span style="color:#39c">:=</span> r.buf[r.j<span style="color:#39c">+</span><span style="color:#cd00cd">6</span>]
+			unprocBlock <span style="color:#39c">:=</span> r.n <span style="color:#39c">-</span> r.j
+			<span style="color:#cdcd00">if</span> checksum <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> <span style="color:#39c">&amp;&amp;</span> length <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> <span style="color:#39c">&amp;&amp;</span> chunkType <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> {
+				<span style="color:#000080">// Drop entire block.
+</span><span style="color:#000080"></span>				r.i = r.n
+				r.j = r.n
+				<span style="color:#cdcd00">return</span> r.corrupt(unprocBlock, <span style="color:#cd0000">&#34;zero header&#34;</span>, <span style="color:#cdcd00">false</span>)
+			}
+			<span style="color:#cdcd00">if</span> chunkType &lt; fullChunkType <span style="color:#39c">||</span> chunkType &gt; lastChunkType {
+				<span style="color:#000080">// Drop entire block.
+</span><span style="color:#000080"></span>				r.i = r.n
+				r.j = r.n
+				<span style="color:#cdcd00">return</span> r.corrupt(unprocBlock, fmt.Sprintf(<span style="color:#cd0000">&#34;invalid chunk type %#x&#34;</span>, chunkType), <span style="color:#cdcd00">false</span>)
+			}
+			r.i = r.j <span style="color:#39c">+</span> headerSize
+			r.j = r.j <span style="color:#39c">+</span> headerSize <span style="color:#39c">+</span> <span style="color:#cd00cd">int</span>(length)
+			<span style="color:#cdcd00">if</span> r.j &gt; r.n {
+				<span style="color:#000080">// Drop entire block.
+</span><span style="color:#000080"></span>				r.i = r.n
+				r.j = r.n
+				<span style="color:#cdcd00">return</span> r.corrupt(unprocBlock, <span style="color:#cd0000">&#34;chunk length overflows block&#34;</span>, <span style="color:#cdcd00">false</span>)
+			} <span style="color:#cdcd00">else</span> <span style="color:#cdcd00">if</span> r.checksum <span style="color:#39c">&amp;&amp;</span> checksum <span style="color:#39c">!=</span> util.NewCRC(r.buf[r.i<span style="color:#39c">-</span><span style="color:#cd00cd">1</span>:r.j]).Value() {
+				<span style="color:#000080">// Drop entire block.
+</span><span style="color:#000080"></span>				r.i = r.n
+				r.j = r.n
+				<span style="color:#cdcd00">return</span> r.corrupt(unprocBlock, <span style="color:#cd0000">&#34;checksum mismatch&#34;</span>, <span style="color:#cdcd00">false</span>)
+			}
+			<span style="color:#cdcd00">if</span> first <span style="color:#39c">&amp;&amp;</span> chunkType <span style="color:#39c">!=</span> fullChunkType <span style="color:#39c">&amp;&amp;</span> chunkType <span style="color:#39c">!=</span> firstChunkType {
+				chunkLength <span style="color:#39c">:=</span> (r.j <span style="color:#39c">-</span> r.i) <span style="color:#39c">+</span> headerSize
+				r.i = r.j
+				<span style="color:#000080">// Report the error, but skip it.
+</span><span style="color:#000080"></span>				<span style="color:#cdcd00">return</span> r.corrupt(chunkLength, <span style="color:#cd0000">&#34;orphan chunk&#34;</span>, <span style="color:#cdcd00">true</span>)
+			}
+			r.last = chunkType <span style="color:#39c">==</span> fullChunkType <span style="color:#39c">||</span> chunkType <span style="color:#39c">==</span> lastChunkType
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>
+		}
+
+		<span style="color:#000080">// The last block.
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">if</span> r.n &lt; blockSize <span style="color:#39c">&amp;&amp;</span> r.n &gt; <span style="color:#cd00cd">0</span> {
+			<span style="color:#cdcd00">if</span> !first {
+				<span style="color:#cdcd00">return</span> r.corrupt(<span style="color:#cd00cd">0</span>, <span style="color:#cd0000">&#34;missing chunk part&#34;</span>, <span style="color:#cdcd00">false</span>)
+			}
+			r.err = io.EOF
+			<span style="color:#cdcd00">return</span> r.err
+		}
+
+		<span style="color:#000080">// Read block.
+</span><span style="color:#000080"></span>		n, err <span style="color:#39c">:=</span> io.ReadFull(r.r, r.buf[:])
+		<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> <span style="color:#39c">&amp;&amp;</span> err <span style="color:#39c">!=</span> io.EOF <span style="color:#39c">&amp;&amp;</span> err <span style="color:#39c">!=</span> io.ErrUnexpectedEOF {
+			<span style="color:#cdcd00">return</span> err
+		}
+		<span style="color:#cdcd00">if</span> n <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> {
+			<span style="color:#cdcd00">if</span> !first {
+				<span style="color:#cdcd00">return</span> r.corrupt(<span style="color:#cd00cd">0</span>, <span style="color:#cd0000">&#34;missing chunk part&#34;</span>, <span style="color:#cdcd00">false</span>)
+			}
+			r.err = io.EOF
+			<span style="color:#cdcd00">return</span> r.err
+		}
+		r.i, r.j, r.n = <span style="color:#cd00cd">0</span>, <span style="color:#cd00cd">0</span>, n
+	}
+}
+</code></pre></div>
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lambertxiao.github.io/tags/leveldb/">leveldb</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lambertxiao.github.io/posts/leveldb-compaction/doc/">
+    <span class="title">« Prev Page</span>
+    <br>
+    <span>leveldb内部实现之compact</span>
+  </a>
+  <a class="next" href="https://lambertxiao.github.io/posts/leveldb-memdb/doc/">
+    <span class="title">Next Page »</span>
+    <br>
+    <span>leveldb内部实现之memdb</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share leveldb内部实现之journal on twitter"
+        href="https://twitter.com/intent/tweet/?text=leveldb%e5%86%85%e9%83%a8%e5%ae%9e%e7%8e%b0%e4%b9%8bjournal&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-journal%2fdoc%2f&amp;hashtags=leveldb">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share leveldb内部实现之journal on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-journal%2fdoc%2f&amp;title=leveldb%e5%86%85%e9%83%a8%e5%ae%9e%e7%8e%b0%e4%b9%8bjournal&amp;summary=leveldb%e5%86%85%e9%83%a8%e5%ae%9e%e7%8e%b0%e4%b9%8bjournal&amp;source=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-journal%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share leveldb内部实现之journal on reddit"
+        href="https://reddit.com/submit?url=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-journal%2fdoc%2f&title=leveldb%e5%86%85%e9%83%a8%e5%ae%9e%e7%8e%b0%e4%b9%8bjournal">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share leveldb内部实现之journal on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-journal%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share leveldb内部实现之journal on whatsapp"
+        href="https://api.whatsapp.com/send?text=leveldb%e5%86%85%e9%83%a8%e5%ae%9e%e7%8e%b0%e4%b9%8bjournal%20-%20https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-journal%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share leveldb内部实现之journal on telegram"
+        href="https://telegram.me/share/url?text=leveldb%e5%86%85%e9%83%a8%e5%ae%9e%e7%8e%b0%e4%b9%8bjournal&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-journal%2fdoc%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_KY25sRiRtb" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

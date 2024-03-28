@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Ethereum，Kadamlia on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/ethereumkadamlia/</link>
+    <description>Recent content in Ethereum，Kadamlia on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Wed, 03 Oct 2018 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/ethereumkadamlia/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Kadamlia</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-10-03-kadamlia/</link>
+      <pubDate>Wed, 03 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-10-03-kadamlia/</guid>
+      <description>简介 Kademlia算法是区块链底层实现点对点通信时所用的算法，它通过对节点之间的数学操作，获得逻辑上的节点距离，并用这个距离构建一个不同层次的路由表。通过对该路由表的查询，更新等操作，使节点与节点之间能够相互发现。
+主要概念 NodeID Kadamlia算法使用160bit（20字节）的哈希值作为节点的唯一标识，当一个节点新加入网络时，会被分配这个NodeID
+距离 节点与节点之间的距离，是将两个节点的NodeID进行XOR操作后得到值，一般将得到的二进制数转化为十进制数后的值作为距离，例如对于NodeID分别为 0011 和 1011 的节点，异或之后得到的值为1000（二进制），即距离为4（十进制）
+公共前缀长度 Common Prefix Length（CPL） 举个列子，假设NodeID为3位，那么对于节点 110，它与周围节点的CPL分别为
+   CPL 所含节点     0 000 001 010 011   1 100 101   2 111   3 110（自身）    可以看出，节点间CPL越大，则节点XOR之后的值越小，即两节点的逻辑距离越小
+二叉前缀树 一个完整的网络空间可以被表示成为一颗二叉树，树的叶子节点代表网络节点 K-Bucket K-Bucket又称为K桶，Bucket里存的是一组CLP的长度一样的节点 路由表 一个由K-Bucket构成的链表
+分裂 某些Kadamlia算法的实现是一开始仅有一个Bucket，当Bucket的容量超过限制时，将最小的cpl的节点和其他节点分裂开的操作
+仍以上面的例子为例，如果一开始仅有一个Bucket，那么 000 ～ 111 的 8 个节点都存在一个Bucket中，假设此时Bucket的容量K为1，即现有的8个节点超过了容量，需要将之分裂
+第一次分裂
+Old Bucket = （000 001 010 011） New Bucket = （100 101 111）</description>
+    </item>
+    
+  </channel>
+</rss>

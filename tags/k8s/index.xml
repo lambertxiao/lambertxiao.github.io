@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>k8s on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/k8s/</link>
+    <description>Recent content in k8s on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Tue, 02 Jun 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/k8s/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>docker踩坑集锦</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2020-06-02-docker%E8%B8%A9%E5%9D%91%E9%9B%86%E9%94%A6/</link>
+      <pubDate>Tue, 02 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2020-06-02-docker%E8%B8%A9%E5%9D%91%E9%9B%86%E9%94%A6/</guid>
+      <description>踩坑集锦 此篇文章用来记录维护k8s过程中的一系列问题
+ 容器端口被占用 Bind for 0.0.0.0:9876 failed: port is already allocated.  找到端口占用的进程  sudo lsof -i -P -n | grep 9000  杀掉进程
+  重启docker
+   kubectl logs 超时 错误类似：
+Error from server: Get https://172.31.27.3:10250/containerLogs/prod-sfox/a-group-miner-2hshz/miner-idx-1?follow=true&amp;amp;tailLines=20: dial tcp 172.31.27.3:10250: connect: connection timed out   该操作走内网ip，节点间内网不同
+  10250端口未打开
+   DNS解析失败 具体错误信息一般如下：
+panic: dial tcp: lookup mysql on 10.96.0.10:53: no such host   查看coredns的日志，判断集群内的dns解析是否成功</description>
+    </item>
+    
+  </channel>
+</rss>

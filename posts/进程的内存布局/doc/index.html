@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>进程的内存是怎么布局的 | Lambert&#39;s blog</title>
+<meta name="keywords" content="进程" />
+<meta name="description" content="今天来探讨一下 linux 环境下进程的内存布局">
+<meta name="author" content="Lambert Xiao">
+<link rel="canonical" href="https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js" integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5&#43;kdJvBz5iKbt6B5PJI="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="进程的内存是怎么布局的" />
+<meta property="og:description" content="今天来探讨一下 linux 环境下进程的内存布局" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-10-15T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2023-10-15T00:00:00&#43;00:00" />
+<meta property="og:see_also" content="https://lambertxiao.github.io/posts/gdb_usage/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/numa/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/uio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/vfio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/virtio/doc/" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="进程的内存是怎么布局的"/>
+<meta name="twitter:description" content="今天来探讨一下 linux 环境下进程的内存布局"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://lambertxiao.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "进程的内存是怎么布局的",
+      "item": "https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "进程的内存是怎么布局的",
+  "name": "进程的内存是怎么布局的",
+  "description": "今天来探讨一下 linux 环境下进程的内存布局",
+  "keywords": [
+    "进程"
+  ],
+  "articleBody": "今天来探讨一下 linux 环境下进程的内存布局，这次探讨包括以下内容\n 一个 C 程序启动后，它的内存使用情况 一些工具的使用  objdump readelf strace    程序的内存布局长啥样呢 一般的，当你在网上查阅文章、书籍、ChatGPT 的时候，都会告诉你内存的布局基本就长下图这样\n首先，我们将程序的内存理解成一段逻辑上连续的空间，这里为什么强调是逻辑上连续呢，因为实际上这里的内存指的是虚拟内存，而虚拟内存到物理内存之间有一层映射，一块连续的虚拟内存可能在物理内存上是映射到不连续的内存上的。\n其次，如上图，当程序运行起来时，它所占用的内存会被按功能拆分，分为了多个区，从低地址到高地址来看，分别是代码区，数据区（包含 BSS 和 Data），内存映射区，堆区和栈区。\n但纸上得来终觉浅，接下来我们通过一个 C 程序来实际看一下它的内存布局和上图里的布局是不是一样的。\n#include #include  int main () { char * addr; printf(\"curr process id: %d\\n\", getpid()); printf(\"Before malloc in the main thread\\n\"); getchar(); addr = (char *) malloc(1000); printf(\"After malloc and before free in main thread\\n\"); getchar(); free(addr); printf(\"After free in main thread\\n\"); getchar(); return 0; } 这是一个很简单的 C 程序，在整个 main 函数里，我们打印了当前的进程 id，并多次使用了getchar() 让进程能在我们希望的地方停下来，方便我们来观察它的内存。\n将该代码保存到main.c文件中，我们编译并运行它，gcc main.c -o main \u0026\u0026 ./main, 我们会得到一个如下的输出\n[root@lambertx memory_layout]# gcc main.c -o main \u0026\u0026 ./main curr process id: 4070 Before malloc in the main thread 此时会发现程序符合我们预期的 hang 住了，接下来我们需要通过某种方式看到 4070 这个进程的内存布局；我们都知道，在 linux 系统中，有一句很有名的就是“一切皆文件”，其实进程的内存布局也不意外，它存在一个虚拟的文件中。下面我们需要另起一个 terminal，并通过 cat 命令查看一下这个文件的内容\ncat /proc/4070/maps 一般的，我们会看到类似如下的输出\n[root@lambertx]# cat /proc/4070/maps 00400000-00401000 r-xp 00000000 fd:01 51061371 /root/workspace/cpp-test/memory_layout/main 00600000-00601000 r--p 00000000 fd:01 51061371 /root/workspace/cpp-test/memory_layout/main 00601000-00602000 rw-p 00001000 fd:01 51061371 /root/workspace/cpp-test/memory_layout/main 7f3220378000-7f322051a000 r-xp 00000000 fd:01 50354460 /usr/lib64/libc-2.18.so 7f322051a000-7f322071a000 ---p 001a2000 fd:01 50354460 /usr/lib64/libc-2.18.so 7f322071a000-7f322071e000 r--p 001a2000 fd:01 50354460 /usr/lib64/libc-2.18.so 7f322071e000-7f3220720000 rw-p 001a6000 fd:01 50354460 /usr/lib64/libc-2.18.so 7f3220720000-7f3220724000 rw-p 00000000 00:00 0 7f3220724000-7f3220744000 r-xp 00000000 fd:01 50354459 /usr/lib64/ld-2.18.so 7f3220935000-7f3220938000 rw-p 00000000 00:00 0 7f3220941000-7f3220944000 rw-p 00000000 00:00 0 7f3220944000-7f3220945000 r--p 00020000 fd:01 50354459 /usr/lib64/ld-2.18.so 7f3220945000-7f3220946000 rw-p 00021000 fd:01 50354459 /usr/lib64/ld-2.18.so 7f3220946000-7f3220947000 rw-p 00000000 00:00 0 7ffecf289000-7ffecf2aa000 rw-p 00000000 00:00 0 [stack] 7ffecf38c000-7ffecf38f000 r--p 00000000 00:00 0 [vvar] 7ffecf38f000-7ffecf391000 r-xp 00000000 00:00 0 [vdso] ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0 [vsyscall] 首先，让我们来理解一下这个文件的格式，/proc/$PID/maps的每一行描述了进程中一段连续的虚拟内存区域\n 第一列 address 是一个地址范围，描述了该区域在进程地址空间中的起始和结束地址 第二列 pem 是一个访问权限设置，其中 s 表示私有或共享页面。如果一个进程试图访问不允许的内存，就会发生分段错误（segmentation fault） 第三列 offset 是一个偏移值，与 mmap 有关，如果该区域是通过使用 mmap 映射到文件的，那么这个偏移量就是文件中映射开始的偏移量。 第四列 dev 是一个设备描述符，如果该区域是从文件映射的，那么这是文件所在位置的主设备和次设备号（十六进制），主设备号指向设备驱动程序，次设备号由设备驱动程序解释，或者对于特定设备驱动程序来说是特定设备，例如多个软盘驱动器。 第五列 inode 是一个文件编号，如果该区域是从文件映射的，那么这是文件编号。 第六列 pathname 是一个文件路径，如果该区域是从文件映射的，那么这是文件的名称。有特殊区域的名称如[heap]，[stack]和[vdso]，[vdso]代表虚拟动态共享对象，其被系统调用用来切换到内核模式。  仔细观察上面的输出可以发现，有部分行似乎在 pathname 列上没有任何值，这些区域被称为匿名区域。匿名区域是通过 mmap 创建的，但不附加到任何文件，它们用于各种不同的用途，比如共享内存、不在堆上的缓冲区，以及 pthread 库把匿名映射区域用作新线程的堆栈。\n如果你多次运行这个程序时，观察/proc/$PID/maps可以发现，部分行的 address 区域每次都会有不同的地址。这意味着对于某些内存区域，地址不是静态分配的。这实际上是由于一种安全特性，通过随机化某些区域的地址空间，使攻击者更难以获取他们感兴趣的特定内存块。但是，有些区域始终是固定的，因为你需要它们是固定的，这样你才能让内核知道如何加载程序。\n可以查看一下这一行输出，每次执行都是一样的，\nffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0 [vsyscall] ffffffffff600000-ffffffffff601000这段内存总是与 vsyscall 绑定。\n实际上，还有一种被称为 PIE(位置无关的可执行文件）的可执行文件。PIE 会使程序数据和可执行内存也随机化。有兴趣的可以自行 google。\n为什么内存不是从地址 0x00 开始 让我们回到 cat /proc/4070/maps 这个命令的输出，先关注一下前三行\n00400000-00401000 r-xp 00000000 fd:01 51061371 /root/workspace/cpp-test/memory_layout/main 00600000-00601000 r--p 00000000 fd:01 51061371 /root/workspace/cpp-test/memory_layout/main 00601000-00602000 rw-p 00001000 fd:01 51061371 /root/workspace/cpp-test/memory_layout/main 你有没有发现一件奇怪的事，第一行的内存地址是从00400000-00401000开始的，那再往前的内存0-00400000呢？\n#include  int main () { void * addr = (void *) 0x0; printf(\"0x%x\\n\", ((char *) addr)[0]); // prints 0x0  printf(\"0x%x\\n\", ((char *) addr)[1]); // prints 0x1  printf(\"0x%x\\n\", ((char *) addr)[2]); // prints 0x2 } 我们用一个简单的代码去访问一下进程的 0x0, 0x1, 0x0，毫无意外的，程序会Segmentation fault (core dumped)，\n为什么会有这约 4MiB 的间隙？为什么不是从 0 地址开始分配内存呢？\n参考这里的讨论，https://stackoverflow.com/questions/14314021/why-linux-gnu-linker-chose-address-0x400000\n其实这个问题很简单，这个间隙的存在主要是由 malloc 和链接器实现者的任意选择造成的。他们在实现的时候，对于 64 位 ELF 可执行文件，非 PIE（位置无关可执行文件）的入口点应该位于 0x400000；而对于 32 位 ELF 可执行文件，入口点则位于 0x08048000。如果你生成了一个位置无关的可执行文件，起始地址则会变为 0x0。\n仅此而已，没有什么特殊的理由了，某一天当你成为了编译器的实现者，你可以将内存的起始位置放到 0 地址 :)\n代码段 我们来看 maps 文件的第一行\n00400000-00401000 r-xp 00000000 fd:01 51061371 /root/workspace/cpp-test/memory_layout/main 这一行所描述的区域就是代码区；该区存储了程序的二进制代码。这是我们编译后的程序的主要部分。执行程序时，CPU 从这个区域读取指令（即 EIP 寄存器总是指向这个区域的某一个命令）。\nELF 格式及程序的元信息 那么问题来了，既然我们编写的代码经过编译链接后都存在了代码段里，那么 CPU 怎么知道要从这个区域的哪里开始读取并执行指令呢？\n这就要提到一个叫 ELF 的玩意了；ELF (Executable and Linkable Format) 是一种用于表示可执行文件、目标代码、共享库和核心转储的标准文件格式，常见于 Unix 和 Unix-like 的操作系统中。ELF 格式会规定一些文件头，这些文件头里会存放着程序的元信息，诸如程序入口点，魔数，版本，机器等信息。\n这里我们凭借一个叫 readelf 的工具，来读取一下我们的./main文件，看看这个文件里的都记录了哪些元信息。\n readelf 是一个用于读取和显示 ELF (Executable and Linkable Format) 文件的工具。\n [root@lambertx memory_layout]# readelf --file-header ./main ELF Header: Magic: 7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00 Class: ELF64 Data: 2's complement, little endian Version: 1 (current) OS/ABI: UNIX - System V ABI Version: 0 Type: EXEC (Executable file) Machine: Advanced Micro Devices X86-64 Version: 0x1 Entry point address: 0x4005a0 Start of program headers: 64 (bytes into file) Start of section headers: 6712 (bytes into file) Flags: 0x0 Size of this header: 64 (bytes) Size of program headers: 56 (bytes) Number of program headers: 9 Size of section headers: 64 (bytes) Number of section headers: 31 Section header string table index: 30 通过输出我们可以观察到 main 这个文件的元信息，注意到有一行 Entry point address: 0x4005a0，这就是程序的入口位置，CPU 也是从这个位置开始执行我们的代码的。\nreadelf 工具的原理很简单，就是从可执行文件的代码段起始地址 0x400000 读取了两个结构体，感兴趣的可以看下面的代码模拟实现\n#include #include  // from: http://rpm5.org/docs/api/readelf_8h-source.html  typedef uint64_t Elf64_Addr; typedef uint64_t Elf64_Off; typedef uint64_t Elf64_Xword; typedef uint32_t Elf64_Word; typedef uint16_t Elf64_Half; typedef uint8_t Elf64_Char; #define EI_NIDENT 16  // this struct is exactly 64 bytes // this means it goes from 0x400000 - 0x400040 typedef struct { Elf64_Char e_ident[EI_NIDENT]; // 16 B  Elf64_Half e_type; // 2 B  Elf64_Half e_machine; // 2 B  Elf64_Word e_version; // 4 B  Elf64_Addr e_entry; // 8 B  Elf64_Off e_phoff; // 8 B  Elf64_Off e_shoff; // 8 B  Elf64_Word e_flags; // 4 B  Elf64_Half e_ehsize; // 2 B  Elf64_Half e_phentsize; // 2 B  Elf64_Half e_phnum; // 2 B  Elf64_Half e_shentsize; // 2 B  Elf64_Half e_shnum; // 2 B  Elf64_Half e_shstrndx; // 2 B } Elf64_Ehdr; // this struct is exactly 56 bytes // this means it goes from 0x400040 - 0x400078 typedef struct { Elf64_Word p_type; // 4 B  Elf64_Word p_flags; // 4 B  Elf64_Off p_offset; // 8 B  Elf64_Addr p_vaddr; // 8 B  Elf64_Addr p_paddr; // 8 B  Elf64_Xword p_filesz; // 8 B  Elf64_Xword p_memsz; // 8 B  Elf64_Xword p_align; // 8 B } Elf64_Phdr; int main(int argc, char *argv[]){ // from examination of objdump and /proc/ID/maps, we can see that this is the first thing loaded into memory  // earliest in the virtual memory address space, for a 64 bit ELF executable  // %lx is required for 64 bit hex, while %x is just for 32 bit hex  Elf64_Ehdr * ehdr_addr = (Elf64_Ehdr *) 0x400000; printf(\"Magic: 0x\"); for (unsigned int i = 0; i  EI_NIDENT; ++i) { printf(\"%x\", ehdr_addr-e_ident[i]); } printf(\"\\n\"); printf(\"Type: 0x%x\\n\", ehdr_addr-e_type); printf(\"Machine: 0x%x\\n\", ehdr_addr-e_machine); printf(\"Version: 0x%x\\n\", ehdr_addr-e_version); printf(\"Entry: %p\\n\", (void *) ehdr_addr-e_entry); printf(\"Phdr Offset: 0x%lx\\n\", ehdr_addr-e_phoff); printf(\"Section Offset: 0x%lx\\n\", ehdr_addr-e_shoff); printf(\"Flags: 0x%x\\n\", ehdr_addr-e_flags); printf(\"ELF Header Size: 0x%x\\n\", ehdr_addr-e_ehsize); printf(\"Phdr Header Size: 0x%x\\n\", ehdr_addr-e_phentsize); printf(\"Phdr Entry Count: 0x%x\\n\", ehdr_addr-e_phnum); printf(\"Section Header Size: 0x%x\\n\", ehdr_addr-e_shentsize); printf(\"Section Header Count: 0x%x\\n\", ehdr_addr-e_shnum); printf(\"Section Header Table Index: 0x%x\\n\", ehdr_addr-e_shstrndx); Elf64_Phdr * phdr_addr = (Elf64_Phdr *) 0x400040; printf(\"Type: %u\\n\", phdr_addr-p_type); // 6 - PT_PHDR - segment type  printf(\"Flags: %u\\n\", phdr_addr-p_flags); // 5 - PF_R + PF_X - r-x permissions equal to chmod binary 101  printf(\"Offset: 0x%lx\\n\", phdr_addr-p_offset); // 0x40 - byte offset from the beginning of the file at which the first segment is located  printf(\"Program Virtual Address: %p\\n\", (void *) phdr_addr-p_vaddr); // 0x400040 - virtual address at which the first segment is located in memory  printf(\"Program Physical Address: %p\\n\", (void *) phdr_addr-p_paddr); // 0x400040 - physical address at which the first segment is located in memory (irrelevant on Linux)  printf(\"Loaded file size: 0x%lx\\n\", phdr_addr-p_filesz); // 504 - bytes loaded from the file for the PHDR  printf(\"Loaded mem size: 0x%lx\\n\", phdr_addr-p_memsz); // 504 - bytes loaded into memory for the PHDR  printf(\"Alignment: %lu\\n\", phdr_addr-p_align); // 8 - alignment using modular arithmetic (mod p_vaddr palign) === (mod p_offset p_align)  return 0; } 总结一下，从 0x400000 开始，它包含了所有 ELF 可执行文件头，这些头告诉操作系统如何使用这个程序，以及一些元数据信息（魔数，程序的入口点等）。具体请参阅：http://www.ouah.org/RevEng/x430.htm\nobjdump 好，现在我们通过 maps 文件知道了地址 00400000-00401000 存放的是我们编译后的代码，那么有没有什么工具可以让我们看一下这段代码里做了啥事吗？\n我们可以用 objdump 工具\n objdump 是一款常用的二进制文件分析工具，它可以从可执行文件或目标文件中提取出各种信息，如汇编代码、符号表、重定位表、段信息等。objdump 可以反汇编二进制文件，显示二进制指令，符号表，调试信息等，为程序员和系统开发者提供了深入分析和调试的能力。\n 执行命令\nobjdump --disassemble-all --start-address=0x400000 --stop-address=0x401000 main 会得到类似的输出（以下输出直截取了部分）\n[root@lambertx memory_layout]# objdump --disassemble-all --start-address=0x400000 --stop-address=0x401000 main main: file format elf64-x86-64 Disassembly of section .interp: 0000000000400238 : 400238:\t2f (bad) 400239:\t6c insb (%dx),%es:(%rdi) 40023a:\t69 62 36 34 2f 6c 64 imul $0x646c2f34,0x36(%rdx),%esp 400241:\t2d 6c 69 6e 75 sub $0x756e696c,%eax 400246:\t78 2d js 400275  400248:\t78 38 js 400282  40024a:\t36 2d 36 34 2e 73 ss sub $0x732e3436,%eax 400250:\t6f outsl %ds:(%rsi),(%dx) 400251:\t2e 32 00 ... 事实上，我们会看到一段反汇编出来的代码，注意到代码的位置是从地址 0000000000400238 开始，而并非从 0x400000开始的，为啥呢？还记得前面讲过的 ELF 吗，其实是0x400000-0x400238之间存的是 ELF 的元数据，而非程序的代码。\n数据段 回到 maps 文件的第二行和第三行，其中第二行描述了 Data 段的信息，第三行描述了 BSS 段的信息。\n00600000-00601000 r--p 00000000 fd:01 51061371 /root/workspace/cpp-test/memory_layout/main 00601000-00602000 rw-p 00001000 fd:01 51061371 /root/workspace/cpp-test/memory_layout/main Data 段存储的是初始化的全局变量和静态变量。在程序开始执行之前，操作系统会为这些变量分配内存，并将它们的值设置为程序中的初始值。例如，static char * foo = “bar”; 就会在这个段中分配内存，字符串 “bar” 会被存储在这个内存区域。\nBSS 段存储的是未初始化的全局变量和静态变量。在程序开始执行之前，操作系统也会为这些变量分配内存，但它们会被填充为 0。例如，static char * username; 就会在这个段中分配内存，但默认值会是 0。\n我们用同样用 objdump 来看看，这两行的内容，执行命令\nobjdump --disassemble-all --start-address=0x600000 --stop-address=0x602000 main 会得到类似的输出（同样省略了部分输出）\n[root@lambertx memory_layout]# objdump --disassemble-all --start-address=0x600000 --stop-address=0x601000 main main: file format elf64-x86-64 Disassembly of section .init_array: 0000000000600e10 : 600e10:\t60 (bad) 600e11:\t06 (bad) 600e12:\t40 00 00 add %al,(%rax) 600e15:\t00 00 add %al,(%rax) ... Disassembly of section .fini_array: 0000000000600e18 : 600e18:\t40 06 rex (bad) 600e1a:\t40 00 00 add %al,(%rax) 600e1d:\t00 00 add %al,(%rax) ... Disassembly of section .jcr: 0000000000600e20 : ... Disassembly of section .dynamic: ...(此处忽略大段输出) Disassembly of section .got: 0000000000600ff8 : ... Disassembly of section .got.plt: ...(此处忽略大段输出) Disassembly of section .data: 0000000000601050 : 601050:\t00 00 add %al,(%rax) ... Disassembly of section .bss: 0000000000601054 : 601054:\t00 00 add %al,(%rax) 可以发现，实际上 data 段实际是从0x601050开始的，然后 bss 段是从0x601054开始的，并且 data 段前面还包含了许多我们暂时还不认识的段。所有的段依次是是\n .init_array .fini_array .jcr .dynamic .got .got.plt .data .bss  从名称上看，除了.data 和.bss 外的段，应该是跟初始化、析构、动态链接相关，有机会再开一篇文章独立讲讲。\n 我们发现这三个段目前通过 address 范围算出来的大小都是 4KB，为什么呢？其实是由于我们现在的程序还太过于简单（没有静态变量也没有全局变量），而 4KB 是 linux 上默认的内存 page 的大小，因此这三个段此时的大小都是 4KB。\n 堆区 仍然回到 maps 文件的输出\n00400000-00401000 r-xp 00000000 fd:01 51061371 /root/workspace/cpp-test/memory_layout/main 00600000-00601000 r--p 00000000 fd:01 51061371 /root/workspace/cpp-test/memory_layout/main 00601000-00602000 rw-p 00001000 fd:01 51061371 /root/workspace/cpp-test/memory_layout/main // 内存去哪了？ 7f3220378000-7f322051a000 r-xp 00000000 fd:01 50354460 /usr/lib64/libc-2.18.so 7f322051a000-7f322071a000 ---p 001a2000 fd:01 50354460 /usr/lib64/libc-2.18.so ... (省略) 重点看一下第三行的结束地址第四行和开始地址，好家伙，直接从地址 00602000 到了 7f3220378000，中间大概 127TB 的空间，来了一个超级大跳跃，那么中间的这段内存去哪了呢？\n你可以已经猜到了，这么庞大的一段内存其实就是我们平时提到的堆内存，用来存放我们程序里动态分配的内存，由于是动态分配的，那么需要的内存大小就是不可预期的，所以这一段虚拟的范围特别的大；堆内存从低地址往高地址的方向增长。\n还记得我们的进程还停留在 getchar() 上吗，此时的进程还没有向堆区申请过内存，接下来我们在终端上输入一个字符然后按回车，让程序继续往下走并执行 addr = (char *) malloc(1000)\n此时查看 maps 文件会发现，多了一行堆区的描述\n011f0000-01211000 rw-p 00000000 00:00 0 [heap] 此时堆的大小是 132KB ，那么这个时候一定就有小伙伴有疑问了，明明我们分配的只有 100B，为啥实际是 132KB？\n这里先补充一个知识点\n glibc 中的 malloc 通过内部调用 brk 或 mmap 调用来从操作系统获取内存，brk 系统调用通常用于增加堆的大小，而 mmap 将用于加载共享库、为线程创建新区域等其他用途。当请求的内存量大于 MMAP_THRESHOLD（通常默认值是 128KB）时，它实际上会切换到使用 mmap 而不是 brk。\n ok，由于我们 malloc 的大小是 100B，因此实际是通过 brk 的方式申请的内存，而 brk 去申请时是带有一个填充大小（padded size）的，简而言之，就是 brk 每次需要跟系统申请内存的时候都会多申请一点，从而减少系统调用的次数和上下文切换的次数。这些多申请出的内存会在后续的 malloc 调用中被使用。\n空口无凭，我们通过 strace 命令来验证一下当 malloc(1000)时，是不是真的走的是 brk，通过下面的程序\ncheck_brk.c\n#include  int main () { char * addr = (char *) malloc(1000); free(addr); return 0; } 以及 check_mmap.c\n#include  int main () { char * addr = (char *) malloc(1024 * 128); free(addr); return 0; } 编译并生成可执行文件后，分别用 strace 命令运行，可以看到 strace 输出的结果确实是符合预期\n简单总结下 brk 和 mmap\n brk 适用于小块内存的分配，所有通过 brk 分配出来的内存在堆上都是连续的。并且回收的时候需要从堆顶开始回收，因此不灵活。 mmap 适用于较大内存的分配，分配出来的内存会落在内存映射区，也不要求内存是连续分配的且可以独立回收，因此它更灵活。  内存映射区 在堆下面，就是内存映射区，除了上一节里提到的 mmap 方式申请的内存会落在这个区域外，共享库的内存段和匿名缓冲区也在这里\n7f3220378000-7f322051a000 r-xp 00000000 fd:01 50354460 /usr/lib64/libc-2.18.so 7f322051a000-7f322071a000 ---p 001a2000 fd:01 50354460 /usr/lib64/libc-2.18.so 7f322071a000-7f322071e000 r--p 001a2000 fd:01 50354460 /usr/lib64/libc-2.18.so 7f322071e000-7f3220720000 rw-p 001a6000 fd:01 50354460 /usr/lib64/libc-2.18.so 7f3220720000-7f3220724000 rw-p 00000000 00:00 0 7f3220724000-7f3220744000 r-xp 00000000 fd:01 50354459 /usr/lib64/ld-2.18.so 7f3220935000-7f3220938000 rw-p 00000000 00:00 0 7f3220941000-7f3220944000 rw-p 00000000 00:00 0 7f3220944000-7f3220945000 r--p 00020000 fd:01 50354459 /usr/lib64/ld-2.18.so 7f3220945000-7f3220946000 rw-p 00021000 fd:01 50354459 /usr/lib64/ld-2.18.so 7f3220946000-7f3220947000 rw-p 00000000 00:00 0 当我们的程序需要依赖一些动态链接库，这些库就会在程序启动时被加载到这个内存映射区。\n作为一个 C 程序员，你一定也用过 ldd 命令吧，事实上，ldd 命令就是通过读取 maps 文件，从而拿到一个可执行文件所依赖的外部库的信息的。\n举个例子\n[root@lambertx memory_layout]# ldd main linux-vdso.so.1 (0x00007ffdde795000) libc.so.6 = /lib64/libc.so.6 (0x00007f8bf795a000) /lib64/ld-linux-x86-64.so.2 (0x00007f8bf7d06000) [root@lambertx memory_layout]# [root@lambertx memory_layout]# ldd main linux-vdso.so.1 (0x00007ffff25e3000) libc.so.6 = /lib64/libc.so.6 (0x00007fcb49bd3000) /lib64/ld-linux-x86-64.so.2 (0x00007fcb49f7f000) [root@lambertx memory_layout]# [root@lambertx memory_layout]# ldd main linux-vdso.so.1 (0x00007ffcf3fd1000) libc.so.6 = /lib64/libc.so.6 (0x00007f44ea0f7000) /lib64/ld-linux-x86-64.so.2 (0x00007f44ea4a3000) 上面执行了三次 ldd 命令，ldd 会将 main 这个可执行文件的依赖库输出，同时我们注意到每次输出结果里，依赖库的被加载到的内存位置都是不一样的，这其实是 linux 的一个安全机制。同样的，当你多次运行同一个程序，查看/proc/$PID/maps 也会看到不同的地址。\n栈区 7ffecf289000-7ffecf2aa000 rw-p 00000000 00:00 0 [stack] 这段空间就是平常我们说的栈区里，当我们程序运行的时候，局部变量，函数参数，函数返回值，函数返回地址等数据就会存放在这块区域；数据写入的时候叫做入栈，数据不要了则叫出栈（通过改变 ESP 寄存器的指向）；栈的空间分配方向由高地址往低地址。\n同时也可以看出，这里栈空间的大小是 132KB，在程序的运行错误里有一个很经典的错误叫 stackoverflow，就是指的这个栈区写满了。\n最后的区域 7ffecf38c000-7ffecf38f000 r--p 00000000 00:00 0 [vvar] 7ffecf38f000-7ffecf391000 r-xp 00000000 00:00 0 [vdso] ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0 [vsyscall] 关于 vvar，vdso 和 vsyscall，这三个玩意可以归于为了提升系统调用性能而提出来的奇巧淫技了；vsyscall 出现得最早，比如读取时间 gettimeofday ，内核会把时间数据和 gettimeofday 的实现映射到这块区域，用户空间可以直接调用，不需要从用户空间切换到内核空间。 但是 vsyscall 区域太小了，而且映射区域固定，有安全问题。 后来又造出了 vdso，之所以 vsyscall 保留是为了兼容已有程序。 vdso 相当于加载一个 linux-vd.so 库文件一样，也就是把一些函数实现映射到这个区域，而 vvar 也就是存放数据的地方了，那么用户可以通过调用 vdso 里的函数，使用 vvar 里的数据，来获得自己想要的信息。\n总结 经过上面的分析，我们可以得到更新过后的内存布局示意图了\n本文所有的分析都是基于 centos7 系统，以及默认的 gcc 编译配置，因此如果你经过相同的实验并发现结果和本文的结果不同，也是合理的。\n参考文档  https://github.com/torvalds/linux/blob/v6.0/Documentation/x86/x86_64/mm.rst https://gist.github.com/CMCDragonkai/10ab53654b2aa6ce55c11cfc5b2432a4#understanding-the-memory-layout-of-linux-executables https://cboard.cprogramming.com/linux-programming/101090-what-differences-between-brk-mmap.html  ",
+  "wordCount" : "1626",
+  "inLanguage": "en",
+  "datePublished": "2023-10-15T00:00:00Z",
+  "dateModified": "2023-10-15T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "Lambert Xiao"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lambert's blog",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lambertxiao.github.io/avatar.jpeg"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      进程的内存是怎么布局的
+    </h1>
+    <div class="post-meta"><span title='2023-10-15 00:00:00 +0000 UTC'>October 15, 2023</span>&nbsp;·&nbsp;8 min&nbsp;·&nbsp;Lambert Xiao&nbsp;|&nbsp;<a href="https://github.com/adityatelange/hugo-PaperMod/tree/exampleSite/content/posts/%e8%bf%9b%e7%a8%8b%e7%9a%84%e5%86%85%e5%ad%98%e5%b8%83%e5%b1%80/doc.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+</div>
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#%e7%a8%8b%e5%ba%8f%e7%9a%84%e5%86%85%e5%ad%98%e5%b8%83%e5%b1%80%e9%95%bf%e5%95%a5%e6%a0%b7%e5%91%a2" aria-label="程序的内存布局长啥样呢">程序的内存布局长啥样呢</a><ul>
+                        
+                <li>
+                    <a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e5%86%85%e5%ad%98%e4%b8%8d%e6%98%af%e4%bb%8e%e5%9c%b0%e5%9d%80-0x00-%e5%bc%80%e5%a7%8b" aria-label="为什么内存不是从地址 0x00 开始">为什么内存不是从地址 0x00 开始</a></li>
+                <li>
+                    <a href="#%e4%bb%a3%e7%a0%81%e6%ae%b5" aria-label="代码段">代码段</a><ul>
+                        
+                <li>
+                    <a href="#elf-%e6%a0%bc%e5%bc%8f%e5%8f%8a%e7%a8%8b%e5%ba%8f%e7%9a%84%e5%85%83%e4%bf%a1%e6%81%af" aria-label="ELF 格式及程序的元信息">ELF 格式及程序的元信息</a></li>
+                <li>
+                    <a href="#objdump" aria-label="objdump">objdump</a></li></ul>
+                </li>
+                <li>
+                    <a href="#%e6%95%b0%e6%8d%ae%e6%ae%b5" aria-label="数据段">数据段</a></li>
+                <li>
+                    <a href="#%e5%a0%86%e5%8c%ba" aria-label="堆区">堆区</a></li>
+                <li>
+                    <a href="#%e5%86%85%e5%ad%98%e6%98%a0%e5%b0%84%e5%8c%ba" aria-label="内存映射区">内存映射区</a></li>
+                <li>
+                    <a href="#%e6%a0%88%e5%8c%ba" aria-label="栈区">栈区</a></li>
+                <li>
+                    <a href="#%e6%9c%80%e5%90%8e%e7%9a%84%e5%8c%ba%e5%9f%9f" aria-label="最后的区域">最后的区域</a></li></ul>
+                </li>
+                <li>
+                    <a href="#%e6%80%bb%e7%bb%93" aria-label="总结">总结</a></li>
+                <li>
+                    <a href="#%e5%8f%82%e8%80%83%e6%96%87%e6%a1%a3" aria-label="参考文档">参考文档</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><p>今天来探讨一下 linux 环境下进程的内存布局，这次探讨包括以下内容</p>
+<ul>
+<li>一个 C 程序启动后，它的内存使用情况</li>
+<li>一些工具的使用
+<ul>
+<li>objdump</li>
+<li>readelf</li>
+<li>strace</li>
+</ul>
+</li>
+</ul>
+<h2 id="程序的内存布局长啥样呢">程序的内存布局长啥样呢<a hidden class="anchor" aria-hidden="true" href="#程序的内存布局长啥样呢">#</a></h2>
+<p>一般的，当你在网上查阅文章、书籍、ChatGPT 的时候，都会告诉你内存的布局基本就长下图这样</p>
+<p><img loading="lazy" src="../i/46be4654-590e-4f93-b23c-d62d71c65c61.jpg" alt=""  />
+</p>
+<p>首先，我们将程序的内存理解成一段<strong>逻辑</strong>上连续的空间，这里为什么强调是逻辑上连续呢，因为实际上这里的内存指的是虚拟内存，而虚拟内存到物理内存之间有一层映射，一块连续的虚拟内存可能在物理内存上是映射到不连续的内存上的。</p>
+<p>其次，如上图，当程序运行起来时，它所占用的内存会被按功能拆分，分为了多个区，从低地址到高地址来看，分别是代码区，数据区（包含 BSS 和 Data），内存映射区，堆区和栈区。</p>
+<p>但纸上得来终觉浅，接下来我们通过一个 C 程序来实际看一下它的内存布局和上图里的布局是不是一样的。</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#000080">#include</span> <span style="color:#000080">&lt;stdio.h&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&lt;stdlib.h&gt;</span><span style="color:#000080">
+</span><span style="color:#000080"></span>
+<span style="color:#00cd00">int</span> main () {
+    <span style="color:#00cd00">char</span> <span style="color:#39c">*</span> addr;
+    printf(<span style="color:#cd0000">&#34;curr process id: %d</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, getpid());
+    printf(<span style="color:#cd0000">&#34;Before malloc in the main thread</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>);
+    getchar();
+    addr <span style="color:#39c">=</span> (<span style="color:#00cd00">char</span> <span style="color:#39c">*</span>) malloc(<span style="color:#cd00cd">1000</span>);
+    printf(<span style="color:#cd0000">&#34;After malloc and before free in main thread</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>);
+    getchar();
+    free(addr);
+    printf(<span style="color:#cd0000">&#34;After free in main thread</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>);
+    getchar();
+    <span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>;
+}
+</code></pre></div><p>这是一个很简单的 C 程序，在整个 main 函数里，我们打印了当前的进程 id，并多次使用了<code>getchar()</code> 让进程能在我们希望的地方停下来，方便我们来观察它的内存。</p>
+<p>将该代码保存到<code>main.c</code>文件中，我们编译并运行它，<code>gcc main.c -o main &amp;&amp; ./main</code>, 我们会得到一个如下的输出</p>
+<pre><code>[root@lambertx memory_layout]# gcc main.c -o main &amp;&amp; ./main
+curr process id: 4070
+Before malloc in the main thread
+</code></pre><p>此时会发现程序符合我们预期的 hang 住了，接下来我们需要通过某种方式看到 <code>4070</code> 这个进程的内存布局；我们都知道，在 linux 系统中，有一句很有名的就是“一切皆文件”，其实进程的内存布局也不意外，它存在一个虚拟的文件中。下面我们需要另起一个 terminal，并通过 cat 命令查看一下这个文件的内容</p>
+<pre><code>cat /proc/4070/maps
+</code></pre><p>一般的，我们会看到类似如下的输出</p>
+<pre><code>[root@lambertx]# cat /proc/4070/maps
+00400000-00401000 r-xp 00000000 fd:01 51061371                           /root/workspace/cpp-test/memory_layout/main
+00600000-00601000 r--p 00000000 fd:01 51061371                           /root/workspace/cpp-test/memory_layout/main
+00601000-00602000 rw-p 00001000 fd:01 51061371                           /root/workspace/cpp-test/memory_layout/main
+7f3220378000-7f322051a000 r-xp 00000000 fd:01 50354460                   /usr/lib64/libc-2.18.so
+7f322051a000-7f322071a000 ---p 001a2000 fd:01 50354460                   /usr/lib64/libc-2.18.so
+7f322071a000-7f322071e000 r--p 001a2000 fd:01 50354460                   /usr/lib64/libc-2.18.so
+7f322071e000-7f3220720000 rw-p 001a6000 fd:01 50354460                   /usr/lib64/libc-2.18.so
+7f3220720000-7f3220724000 rw-p 00000000 00:00 0
+7f3220724000-7f3220744000 r-xp 00000000 fd:01 50354459                   /usr/lib64/ld-2.18.so
+7f3220935000-7f3220938000 rw-p 00000000 00:00 0
+7f3220941000-7f3220944000 rw-p 00000000 00:00 0
+7f3220944000-7f3220945000 r--p 00020000 fd:01 50354459                   /usr/lib64/ld-2.18.so
+7f3220945000-7f3220946000 rw-p 00021000 fd:01 50354459                   /usr/lib64/ld-2.18.so
+7f3220946000-7f3220947000 rw-p 00000000 00:00 0
+7ffecf289000-7ffecf2aa000 rw-p 00000000 00:00 0                          [stack]
+7ffecf38c000-7ffecf38f000 r--p 00000000 00:00 0                          [vvar]
+7ffecf38f000-7ffecf391000 r-xp 00000000 00:00 0                          [vdso]
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
+</code></pre><p>首先，让我们来理解一下这个文件的格式，<code>/proc/$PID/maps</code>的每一行描述了进程中一段连续的虚拟内存区域</p>
+<ul>
+<li>第一列 address 是一个地址范围，描述了该区域在进程地址空间中的起始和结束地址</li>
+<li>第二列 pem 是一个访问权限设置，其中 s 表示私有或共享页面。如果一个进程试图访问不允许的内存，就会发生分段错误（segmentation fault）</li>
+<li>第三列 offset 是一个偏移值，与 mmap 有关，如果该区域是通过使用 mmap 映射到文件的，那么这个偏移量就是文件中映射开始的偏移量。</li>
+<li>第四列 dev 是一个设备描述符，如果该区域是从文件映射的，那么这是文件所在位置的主设备和次设备号（十六进制），主设备号指向设备驱动程序，次设备号由设备驱动程序解释，或者对于特定设备驱动程序来说是特定设备，例如多个软盘驱动器。</li>
+<li>第五列 inode 是一个文件编号，如果该区域是从文件映射的，那么这是文件编号。</li>
+<li>第六列 pathname 是一个文件路径，如果该区域是从文件映射的，那么这是文件的名称。有特殊区域的名称如[heap]，[stack]和[vdso]，[vdso]代表虚拟动态共享对象，其被系统调用用来切换到内核模式。</li>
+</ul>
+<p>仔细观察上面的输出可以发现，有部分行似乎在 pathname 列上没有任何值，这些区域被称为匿名区域。匿名区域是通过 mmap 创建的，但不附加到任何文件，它们用于各种不同的用途，比如共享内存、不在堆上的缓冲区，以及 pthread 库把匿名映射区域用作新线程的堆栈。</p>
+<p>如果你多次运行这个程序时，观察<code>/proc/$PID/maps</code>可以发现，部分行的 address 区域每次都会有不同的地址。这意味着对于某些内存区域，地址不是静态分配的。这实际上是由于一种安全特性，通过随机化某些区域的地址空间，使攻击者更难以获取他们感兴趣的特定内存块。但是，有些区域始终是固定的，因为你需要它们是固定的，这样你才能让内核知道如何加载程序。</p>
+<p>可以查看一下这一行输出，每次执行都是一样的，</p>
+<pre><code>ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
+</code></pre><p><code>ffffffffff600000-ffffffffff601000</code>这段内存总是与 vsyscall 绑定。</p>
+<p>实际上，还有一种被称为 PIE(位置无关的可执行文件）的可执行文件。PIE 会使程序数据和可执行内存也随机化。有兴趣的可以自行 google。</p>
+<h3 id="为什么内存不是从地址-0x00-开始">为什么内存不是从地址 0x00 开始<a hidden class="anchor" aria-hidden="true" href="#为什么内存不是从地址-0x00-开始">#</a></h3>
+<p>让我们回到 <code>cat /proc/4070/maps</code> 这个命令的输出，先关注一下前三行</p>
+<pre><code>00400000-00401000 r-xp 00000000 fd:01 51061371                           /root/workspace/cpp-test/memory_layout/main
+00600000-00601000 r--p 00000000 fd:01 51061371                           /root/workspace/cpp-test/memory_layout/main
+00601000-00602000 rw-p 00001000 fd:01 51061371                           /root/workspace/cpp-test/memory_layout/main
+</code></pre><p>你有没有发现一件奇怪的事，第一行的内存地址是从<code>00400000-00401000</code>开始的，那再往前的内存<code>0-00400000</code>呢？</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#000080">#include</span> <span style="color:#000080">&lt;stdio.h&gt;</span><span style="color:#000080">
+</span><span style="color:#000080"></span>
+<span style="color:#00cd00">int</span> main () {
+  <span style="color:#00cd00">void</span> <span style="color:#39c">*</span> addr <span style="color:#39c">=</span> (<span style="color:#00cd00">void</span> <span style="color:#39c">*</span>) <span style="color:#cd00cd">0x0</span>;
+  printf(<span style="color:#cd0000">&#34;0x%x</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ((<span style="color:#00cd00">char</span> <span style="color:#39c">*</span>) addr)[<span style="color:#cd00cd">0</span>]); <span style="color:#000080">// prints 0x0
+</span><span style="color:#000080"></span>  printf(<span style="color:#cd0000">&#34;0x%x</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ((<span style="color:#00cd00">char</span> <span style="color:#39c">*</span>) addr)[<span style="color:#cd00cd">1</span>]); <span style="color:#000080">// prints 0x1
+</span><span style="color:#000080"></span>  printf(<span style="color:#cd0000">&#34;0x%x</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ((<span style="color:#00cd00">char</span> <span style="color:#39c">*</span>) addr)[<span style="color:#cd00cd">2</span>]); <span style="color:#000080">// prints 0x2
+</span><span style="color:#000080"></span>}
+</code></pre></div><p>我们用一个简单的代码去访问一下进程的 0x0, 0x1, 0x0，毫无意外的，程序会<code>Segmentation fault (core dumped)</code>，</p>
+<p>为什么会有这约 4MiB 的间隙？为什么不是从 0 地址开始分配内存呢？</p>
+<p>参考这里的讨论，https://stackoverflow.com/questions/14314021/why-linux-gnu-linker-chose-address-0x400000</p>
+<p>其实这个问题很简单，这个间隙的存在主要是由 malloc 和链接器实现者的任意选择造成的。他们在实现的时候，对于 64 位 ELF 可执行文件，非 PIE（位置无关可执行文件）的入口点应该位于 0x400000；而对于 32 位 ELF 可执行文件，入口点则位于 0x08048000。如果你生成了一个位置无关的可执行文件，起始地址则会变为 0x0。</p>
+<p>仅此而已，没有什么特殊的理由了，某一天当你成为了编译器的实现者，你可以将内存的起始位置放到 0 地址 :)</p>
+<h3 id="代码段">代码段<a hidden class="anchor" aria-hidden="true" href="#代码段">#</a></h3>
+<p>我们来看 maps 文件的第一行</p>
+<pre><code>00400000-00401000 r-xp 00000000 fd:01 51061371                           /root/workspace/cpp-test/memory_layout/main
+</code></pre><p>这一行所描述的区域就是代码区；该区存储了程序的二进制代码。这是我们编译后的程序的主要部分。执行程序时，CPU 从这个区域读取指令（即 EIP 寄存器总是指向这个区域的某一个命令）。</p>
+<h4 id="elf-格式及程序的元信息">ELF 格式及程序的元信息<a hidden class="anchor" aria-hidden="true" href="#elf-格式及程序的元信息">#</a></h4>
+<p>那么问题来了，既然我们编写的代码经过编译链接后都存在了代码段里，那么 CPU 怎么知道要从这个区域的哪里开始读取并执行指令呢？</p>
+<p>这就要提到一个叫 ELF 的玩意了；ELF (Executable and Linkable Format) 是一种用于表示可执行文件、目标代码、共享库和核心转储的标准文件格式，常见于 Unix 和 Unix-like 的操作系统中。ELF 格式会规定一些文件头，这些文件头里会存放着程序的元信息，诸如程序入口点，魔数，版本，机器等信息。</p>
+<p>这里我们凭借一个叫 readelf 的工具，来读取一下我们的<code>./main</code>文件，看看这个文件里的都记录了哪些元信息。</p>
+<blockquote>
+<p>readelf 是一个用于读取和显示 ELF (Executable and Linkable Format) 文件的工具。</p>
+</blockquote>
+<pre><code>[root@lambertx memory_layout]#  readelf --file-header ./main
+ELF Header:
+  Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
+  Class:                             ELF64
+  Data:                              2's complement, little endian
+  Version:                           1 (current)
+  OS/ABI:                            UNIX - System V
+  ABI Version:                       0
+  Type:                              EXEC (Executable file)
+  Machine:                           Advanced Micro Devices X86-64
+  Version:                           0x1
+  Entry point address:               0x4005a0
+  Start of program headers:          64 (bytes into file)
+  Start of section headers:          6712 (bytes into file)
+  Flags:                             0x0
+  Size of this header:               64 (bytes)
+  Size of program headers:           56 (bytes)
+  Number of program headers:         9
+  Size of section headers:           64 (bytes)
+  Number of section headers:         31
+  Section header string table index: 30
+</code></pre><p>通过输出我们可以观察到 main 这个文件的元信息，注意到有一行 <code>Entry point address: 0x4005a0</code>，这就是程序的入口位置，CPU 也是从这个位置开始执行我们的代码的。</p>
+<p>readelf 工具的原理很简单，就是从可执行文件的代码段起始地址 <code>0x400000</code> 读取了两个结构体，感兴趣的可以看下面的代码模拟实现</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#000080">#include</span> <span style="color:#000080">&lt;stdio.h&gt;</span><span style="color:#000080">
+</span><span style="color:#000080">#include</span> <span style="color:#000080">&lt;stdint.h&gt;</span><span style="color:#000080">
+</span><span style="color:#000080"></span>
+<span style="color:#000080">// from: http://rpm5.org/docs/api/readelf_8h-source.html
+</span><span style="color:#000080"></span>
+<span style="color:#cdcd00">typedef</span> <span style="color:#00cd00">uint64_t</span> Elf64_Addr;
+<span style="color:#cdcd00">typedef</span> <span style="color:#00cd00">uint64_t</span> Elf64_Off;
+<span style="color:#cdcd00">typedef</span> <span style="color:#00cd00">uint64_t</span> Elf64_Xword;
+<span style="color:#cdcd00">typedef</span> <span style="color:#00cd00">uint32_t</span> Elf64_Word;
+<span style="color:#cdcd00">typedef</span> <span style="color:#00cd00">uint16_t</span> Elf64_Half;
+<span style="color:#cdcd00">typedef</span> <span style="color:#00cd00">uint8_t</span>  Elf64_Char;
+
+<span style="color:#000080">#define EI_NIDENT 16
+</span><span style="color:#000080"></span>
+<span style="color:#000080">// this struct is exactly 64 bytes
+</span><span style="color:#000080">// this means it goes from 0x400000 - 0x400040
+</span><span style="color:#000080"></span><span style="color:#cdcd00">typedef</span> <span style="color:#cdcd00">struct</span> {
+    Elf64_Char  e_ident[EI_NIDENT]; <span style="color:#000080">// 16 B
+</span><span style="color:#000080"></span>    Elf64_Half  e_type;             <span style="color:#000080">// 2 B
+</span><span style="color:#000080"></span>    Elf64_Half  e_machine;          <span style="color:#000080">// 2 B
+</span><span style="color:#000080"></span>    Elf64_Word  e_version;          <span style="color:#000080">// 4 B
+</span><span style="color:#000080"></span>    Elf64_Addr  e_entry;            <span style="color:#000080">// 8 B
+</span><span style="color:#000080"></span>    Elf64_Off   e_phoff;            <span style="color:#000080">// 8 B
+</span><span style="color:#000080"></span>    Elf64_Off   e_shoff;            <span style="color:#000080">// 8 B
+</span><span style="color:#000080"></span>    Elf64_Word  e_flags;            <span style="color:#000080">// 4 B
+</span><span style="color:#000080"></span>    Elf64_Half  e_ehsize;           <span style="color:#000080">// 2 B
+</span><span style="color:#000080"></span>    Elf64_Half  e_phentsize;        <span style="color:#000080">// 2 B
+</span><span style="color:#000080"></span>    Elf64_Half  e_phnum;            <span style="color:#000080">// 2 B
+</span><span style="color:#000080"></span>    Elf64_Half  e_shentsize;        <span style="color:#000080">// 2 B
+</span><span style="color:#000080"></span>    Elf64_Half  e_shnum;            <span style="color:#000080">// 2 B
+</span><span style="color:#000080"></span>    Elf64_Half  e_shstrndx;         <span style="color:#000080">// 2 B
+</span><span style="color:#000080"></span>} Elf64_Ehdr;
+
+<span style="color:#000080">// this struct is exactly 56 bytes
+</span><span style="color:#000080">// this means it goes from 0x400040 - 0x400078
+</span><span style="color:#000080"></span><span style="color:#cdcd00">typedef</span> <span style="color:#cdcd00">struct</span> {
+     Elf64_Word  p_type;   <span style="color:#000080">// 4 B
+</span><span style="color:#000080"></span>     Elf64_Word  p_flags;  <span style="color:#000080">// 4 B
+</span><span style="color:#000080"></span>     Elf64_Off   p_offset; <span style="color:#000080">// 8 B
+</span><span style="color:#000080"></span>     Elf64_Addr  p_vaddr;  <span style="color:#000080">// 8 B
+</span><span style="color:#000080"></span>     Elf64_Addr  p_paddr;  <span style="color:#000080">// 8 B
+</span><span style="color:#000080"></span>     Elf64_Xword p_filesz; <span style="color:#000080">// 8 B
+</span><span style="color:#000080"></span>     Elf64_Xword p_memsz;  <span style="color:#000080">// 8 B
+</span><span style="color:#000080"></span>     Elf64_Xword p_align;  <span style="color:#000080">// 8 B
+</span><span style="color:#000080"></span>} Elf64_Phdr;
+
+<span style="color:#00cd00">int</span> main(<span style="color:#00cd00">int</span> argc, <span style="color:#00cd00">char</span> <span style="color:#39c">*</span>argv[]){
+
+    <span style="color:#000080">// from examination of objdump and /proc/ID/maps, we can see that this is the first thing loaded into memory
+</span><span style="color:#000080"></span>    <span style="color:#000080">// earliest in the virtual memory address space, for a 64 bit ELF executable
+</span><span style="color:#000080"></span>    <span style="color:#000080">// %lx is required for 64 bit hex, while %x is just for 32 bit hex
+</span><span style="color:#000080"></span>
+    Elf64_Ehdr <span style="color:#39c">*</span> ehdr_addr <span style="color:#39c">=</span> (Elf64_Ehdr <span style="color:#39c">*</span>) <span style="color:#cd00cd">0x400000</span>;
+
+    printf(<span style="color:#cd0000">&#34;Magic:                      0x&#34;</span>);
+    <span style="color:#cdcd00">for</span> (<span style="color:#00cd00">unsigned</span> <span style="color:#00cd00">int</span> i <span style="color:#39c">=</span> <span style="color:#cd00cd">0</span>; i <span style="color:#39c">&lt;</span> EI_NIDENT; <span style="color:#39c">++</span>i) {
+        printf(<span style="color:#cd0000">&#34;%x&#34;</span>, ehdr_addr<span style="color:#39c">-&gt;</span>e_ident[i]);
+    }
+    printf(<span style="color:#cd0000">&#34;</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>);
+    printf(<span style="color:#cd0000">&#34;Type:                       0x%x</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ehdr_addr<span style="color:#39c">-&gt;</span>e_type);
+    printf(<span style="color:#cd0000">&#34;Machine:                    0x%x</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ehdr_addr<span style="color:#39c">-&gt;</span>e_machine);
+    printf(<span style="color:#cd0000">&#34;Version:                    0x%x</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ehdr_addr<span style="color:#39c">-&gt;</span>e_version);
+    printf(<span style="color:#cd0000">&#34;Entry:                      %p</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, (<span style="color:#00cd00">void</span> <span style="color:#39c">*</span>) ehdr_addr<span style="color:#39c">-&gt;</span>e_entry);
+    printf(<span style="color:#cd0000">&#34;Phdr Offset:                0x%lx</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ehdr_addr<span style="color:#39c">-&gt;</span>e_phoff);
+    printf(<span style="color:#cd0000">&#34;Section Offset:             0x%lx</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ehdr_addr<span style="color:#39c">-&gt;</span>e_shoff);
+    printf(<span style="color:#cd0000">&#34;Flags:                      0x%x</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ehdr_addr<span style="color:#39c">-&gt;</span>e_flags);
+    printf(<span style="color:#cd0000">&#34;ELF Header Size:            0x%x</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ehdr_addr<span style="color:#39c">-&gt;</span>e_ehsize);
+    printf(<span style="color:#cd0000">&#34;Phdr Header Size:           0x%x</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ehdr_addr<span style="color:#39c">-&gt;</span>e_phentsize);
+    printf(<span style="color:#cd0000">&#34;Phdr Entry Count:           0x%x</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ehdr_addr<span style="color:#39c">-&gt;</span>e_phnum);
+    printf(<span style="color:#cd0000">&#34;Section Header Size:        0x%x</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ehdr_addr<span style="color:#39c">-&gt;</span>e_shentsize);
+    printf(<span style="color:#cd0000">&#34;Section Header Count:       0x%x</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ehdr_addr<span style="color:#39c">-&gt;</span>e_shnum);
+    printf(<span style="color:#cd0000">&#34;Section Header Table Index: 0x%x</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, ehdr_addr<span style="color:#39c">-&gt;</span>e_shstrndx);
+
+    Elf64_Phdr <span style="color:#39c">*</span> phdr_addr <span style="color:#39c">=</span> (Elf64_Phdr <span style="color:#39c">*</span>) <span style="color:#cd00cd">0x400040</span>;
+
+    printf(<span style="color:#cd0000">&#34;Type:                     %u</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, phdr_addr<span style="color:#39c">-&gt;</span>p_type); <span style="color:#000080">// 6 - PT_PHDR - segment type
+</span><span style="color:#000080"></span>    printf(<span style="color:#cd0000">&#34;Flags:                    %u</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, phdr_addr<span style="color:#39c">-&gt;</span>p_flags); <span style="color:#000080">// 5 - PF_R + PF_X - r-x permissions equal to chmod binary 101
+</span><span style="color:#000080"></span>    printf(<span style="color:#cd0000">&#34;Offset:                   0x%lx</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, phdr_addr<span style="color:#39c">-&gt;</span>p_offset); <span style="color:#000080">// 0x40 - byte offset from the beginning of the file at which the first segment is located
+</span><span style="color:#000080"></span>    printf(<span style="color:#cd0000">&#34;Program Virtual Address:  %p</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, (<span style="color:#00cd00">void</span> <span style="color:#39c">*</span>) phdr_addr<span style="color:#39c">-&gt;</span>p_vaddr); <span style="color:#000080">// 0x400040 - virtual address at which the first segment is located in memory
+</span><span style="color:#000080"></span>    printf(<span style="color:#cd0000">&#34;Program Physical Address: %p</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, (<span style="color:#00cd00">void</span> <span style="color:#39c">*</span>) phdr_addr<span style="color:#39c">-&gt;</span>p_paddr); <span style="color:#000080">// 0x400040 - physical address at which the first segment is located in memory (irrelevant on Linux)
+</span><span style="color:#000080"></span>    printf(<span style="color:#cd0000">&#34;Loaded file size:         0x%lx</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, phdr_addr<span style="color:#39c">-&gt;</span>p_filesz); <span style="color:#000080">// 504 - bytes loaded from the file for the PHDR
+</span><span style="color:#000080"></span>    printf(<span style="color:#cd0000">&#34;Loaded mem size:          0x%lx</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, phdr_addr<span style="color:#39c">-&gt;</span>p_memsz); <span style="color:#000080">// 504 - bytes loaded into memory for the PHDR
+</span><span style="color:#000080"></span>    printf(<span style="color:#cd0000">&#34;Alignment:                %lu</span><span style="color:#cd0000">\n</span><span style="color:#cd0000">&#34;</span>, phdr_addr<span style="color:#39c">-&gt;</span>p_align); <span style="color:#000080">// 8 - alignment using modular arithmetic (mod p_vaddr palign)  === (mod p_offset p_align)
+</span><span style="color:#000080"></span>
+    <span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>;
+}
+</code></pre></div><p>总结一下，从 0x400000 开始，它包含了所有 ELF 可执行文件头，这些头告诉操作系统如何使用这个程序，以及一些元数据信息（魔数，程序的入口点等）。具体请参阅：http://www.ouah.org/RevEng/x430.htm</p>
+<h4 id="objdump">objdump<a hidden class="anchor" aria-hidden="true" href="#objdump">#</a></h4>
+<p>好，现在我们通过 maps 文件知道了地址 <code>00400000-00401000</code> 存放的是我们编译后的代码，那么有没有什么工具可以让我们看一下这段代码里做了啥事吗？</p>
+<p>我们可以用 objdump 工具</p>
+<blockquote>
+<p>objdump 是一款常用的二进制文件分析工具，它可以从可执行文件或目标文件中提取出各种信息，如汇编代码、符号表、重定位表、段信息等。objdump 可以反汇编二进制文件，显示二进制指令，符号表，调试信息等，为程序员和系统开发者提供了深入分析和调试的能力。</p>
+</blockquote>
+<p>执行命令</p>
+<pre><code>objdump --disassemble-all --start-address=0x400000 --stop-address=0x401000 main
+</code></pre><p>会得到类似的输出（以下输出直截取了部分）</p>
+<pre><code>[root@lambertx memory_layout]# objdump --disassemble-all --start-address=0x400000 --stop-address=0x401000 main
+
+main:     file format elf64-x86-64
+
+
+Disassembly of section .interp:
+
+0000000000400238 &lt;.interp&gt;:
+  400238:	2f                   	(bad)
+  400239:	6c                   	insb   (%dx),%es:(%rdi)
+  40023a:	69 62 36 34 2f 6c 64 	imul   $0x646c2f34,0x36(%rdx),%esp
+  400241:	2d 6c 69 6e 75       	sub    $0x756e696c,%eax
+  400246:	78 2d                	js     400275 &lt;_init-0x273&gt;
+  400248:	78 38                	js     400282 &lt;_init-0x266&gt;
+  40024a:	36 2d 36 34 2e 73    	ss sub $0x732e3436,%eax
+  400250:	6f                   	outsl  %ds:(%rsi),(%dx)
+  400251:	2e 32 00
+ ...
+</code></pre><p>事实上，我们会看到一段反汇编出来的代码，注意到代码的位置是从地址 <code>0000000000400238</code> 开始，而并非从 <code>0x400000</code>开始的，为啥呢？还记得前面讲过的 ELF 吗，其实是<code>0x400000-0x400238</code>之间存的是 ELF 的元数据，而非程序的代码。</p>
+<h3 id="数据段">数据段<a hidden class="anchor" aria-hidden="true" href="#数据段">#</a></h3>
+<p>回到 maps 文件的第二行和第三行，其中第二行描述了 Data 段的信息，第三行描述了 BSS 段的信息。</p>
+<pre><code>00600000-00601000 r--p 00000000 fd:01 51061371                           /root/workspace/cpp-test/memory_layout/main
+00601000-00602000 rw-p 00001000 fd:01 51061371                           /root/workspace/cpp-test/memory_layout/main
+</code></pre><p>Data 段存储的是初始化的全局变量和静态变量。在程序开始执行之前，操作系统会为这些变量分配内存，并将它们的值设置为程序中的初始值。例如，static char * foo = &ldquo;bar&rdquo;; 就会在这个段中分配内存，字符串 &ldquo;bar&rdquo; 会被存储在这个内存区域。</p>
+<p>BSS 段存储的是未初始化的全局变量和静态变量。在程序开始执行之前，操作系统也会为这些变量分配内存，但它们会被填充为 0。例如，static char * username; 就会在这个段中分配内存，但默认值会是 0。</p>
+<p>我们用同样用 objdump 来看看，这两行的内容，执行命令</p>
+<pre><code>objdump --disassemble-all --start-address=0x600000 --stop-address=0x602000 main
+</code></pre><p>会得到类似的输出（同样省略了部分输出）</p>
+<pre><code>[root@lambertx memory_layout]# objdump --disassemble-all --start-address=0x600000 --stop-address=0x601000 main
+
+main:     file format elf64-x86-64
+
+
+Disassembly of section .init_array:
+
+0000000000600e10 &lt;__frame_dummy_init_array_entry&gt;:
+  600e10:	60                   	(bad)
+  600e11:	06                   	(bad)
+  600e12:	40 00 00             	add    %al,(%rax)
+  600e15:	00 00                	add    %al,(%rax)
+	...
+
+Disassembly of section .fini_array:
+
+0000000000600e18 &lt;__do_global_dtors_aux_fini_array_entry&gt;:
+  600e18:	40 06                	rex (bad)
+  600e1a:	40 00 00             	add    %al,(%rax)
+  600e1d:	00 00                	add    %al,(%rax)
+	...
+
+Disassembly of section .jcr:
+
+0000000000600e20 &lt;__JCR_END__&gt;:
+	...
+
+Disassembly of section .dynamic:
+
+...(此处忽略大段输出)
+
+Disassembly of section .got:
+
+0000000000600ff8 &lt;.got&gt;:
+	...
+
+Disassembly of section .got.plt:
+
+...(此处忽略大段输出)
+
+Disassembly of section .data:
+
+0000000000601050 &lt;__data_start&gt;:
+  601050:	00 00                	add    %al,(%rax)
+	...
+
+Disassembly of section .bss:
+
+0000000000601054 &lt;__bss_start&gt;:
+  601054:	00 00                	add    %al,(%rax)
+
+</code></pre><p>可以发现，实际上 data 段实际是从<code>0x601050</code>开始的，然后 bss 段是从<code>0x601054</code>开始的，并且 data 段前面还包含了许多我们暂时还不认识的段。所有的段依次是是</p>
+<ul>
+<li>.init_array</li>
+<li>.fini_array</li>
+<li>.jcr</li>
+<li>.dynamic</li>
+<li>.got</li>
+<li>.got.plt</li>
+<li>.data</li>
+<li>.bss</li>
+</ul>
+<p>从名称上看，除了.data 和.bss 外的段，应该是跟初始化、析构、动态链接相关，有机会再开一篇文章独立讲讲。</p>
+<blockquote>
+<p>我们发现这三个段目前通过 address 范围算出来的大小都是 4KB，为什么呢？其实是由于我们现在的程序还太过于简单（没有静态变量也没有全局变量），而 4KB 是 linux 上默认的内存 page 的大小，因此这三个段此时的大小都是 4KB。</p>
+</blockquote>
+<h3 id="堆区">堆区<a hidden class="anchor" aria-hidden="true" href="#堆区">#</a></h3>
+<p>仍然回到 maps 文件的输出</p>
+<pre><code>00400000-00401000 r-xp 00000000 fd:01 51061371                           /root/workspace/cpp-test/memory_layout/main
+00600000-00601000 r--p 00000000 fd:01 51061371                           /root/workspace/cpp-test/memory_layout/main
+00601000-00602000 rw-p 00001000 fd:01 51061371                           /root/workspace/cpp-test/memory_layout/main
+
+// 内存去哪了？
+
+7f3220378000-7f322051a000 r-xp 00000000 fd:01 50354460                   /usr/lib64/libc-2.18.so
+7f322051a000-7f322071a000 ---p 001a2000 fd:01 50354460                   /usr/lib64/libc-2.18.so
+... (省略)
+</code></pre><p>重点看一下第三行的结束地址第四行和开始地址，好家伙，直接从地址 <code>00602000</code> 到了 <code>7f3220378000</code>，中间大概 127TB 的空间，来了一个超级大跳跃，那么中间的这段内存去哪了呢？</p>
+<p>你可以已经猜到了，这么庞大的一段内存其实就是我们平时提到的堆内存，用来存放我们程序里动态分配的内存，由于是动态分配的，那么需要的内存大小就是不可预期的，所以这一段虚拟的范围特别的大；堆内存从低地址往高地址的方向增长。</p>
+<p>还记得我们的进程还停留在 <code>getchar()</code> 上吗，此时的进程还没有向堆区申请过内存，接下来我们在终端上输入一个字符然后按回车，让程序继续往下走并执行
+<code>addr = (char *) malloc(1000)</code></p>
+<p>此时查看 maps 文件会发现，多了一行堆区的描述</p>
+<pre><code>011f0000-01211000 rw-p 00000000 00:00 0                                  [heap]
+</code></pre><p>此时堆的大小是 132KB ，那么这个时候一定就有小伙伴有疑问了，明明我们分配的只有 100B，为啥实际是 132KB？</p>
+<p>这里先补充一个知识点</p>
+<blockquote>
+<p>glibc 中的 malloc 通过内部调用 brk 或 mmap 调用来从操作系统获取内存，brk 系统调用通常用于增加堆的大小，而 mmap 将用于加载共享库、为线程创建新区域等其他用途。当请求的内存量大于 MMAP_THRESHOLD（通常默认值是 128KB）时，它实际上会切换到使用 mmap 而不是 brk。</p>
+</blockquote>
+<p>ok，由于我们 malloc 的大小是 100B，因此实际是通过 brk 的方式申请的内存，而 brk 去申请时是带有一个填充大小（padded size）的，简而言之，就是 brk 每次需要跟系统申请内存的时候都会多申请一点，从而减少系统调用的次数和上下文切换的次数。这些多申请出的内存会在后续的 malloc 调用中被使用。</p>
+<p>空口无凭，我们通过 strace 命令来验证一下当 malloc(1000)时，是不是真的走的是 brk，通过下面的程序</p>
+<p>check_brk.c</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#000080">#include</span> <span style="color:#000080">&lt;stdlib.h&gt;</span><span style="color:#000080">
+</span><span style="color:#000080"></span>
+<span style="color:#00cd00">int</span> main () {
+    <span style="color:#00cd00">char</span> <span style="color:#39c">*</span> addr <span style="color:#39c">=</span> (<span style="color:#00cd00">char</span> <span style="color:#39c">*</span>) malloc(<span style="color:#cd00cd">1000</span>);
+    free(addr);
+    <span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>;
+}
+</code></pre></div><p>以及 check_mmap.c</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#000080">#include</span> <span style="color:#000080">&lt;stdlib.h&gt;</span><span style="color:#000080">
+</span><span style="color:#000080"></span>
+<span style="color:#00cd00">int</span> main () {
+    <span style="color:#00cd00">char</span> <span style="color:#39c">*</span> addr <span style="color:#39c">=</span> (<span style="color:#00cd00">char</span> <span style="color:#39c">*</span>) malloc(<span style="color:#cd00cd">1024</span> <span style="color:#39c">*</span> <span style="color:#cd00cd">128</span>);
+    free(addr);
+    <span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>;
+}
+</code></pre></div><p>编译并生成可执行文件后，分别用 <code>strace</code> 命令运行，可以看到 strace 输出的结果确实是符合预期</p>
+<p><img loading="lazy" src="i/6f25f0b2-97d7-49c7-a8ec-4ba2253e469b.jpg" alt=""  />
+</p>
+<p>简单总结下 brk 和 mmap</p>
+<ul>
+<li>brk 适用于小块内存的分配，所有通过 brk 分配出来的内存在堆上都是连续的。并且回收的时候需要从堆顶开始回收，因此不灵活。</li>
+<li>mmap 适用于较大内存的分配，分配出来的内存会落在内存映射区，也不要求内存是连续分配的且可以独立回收，因此它更灵活。</li>
+</ul>
+<h3 id="内存映射区">内存映射区<a hidden class="anchor" aria-hidden="true" href="#内存映射区">#</a></h3>
+<p>在堆下面，就是内存映射区，除了上一节里提到的 mmap 方式申请的内存会落在这个区域外，共享库的内存段和匿名缓冲区也在这里</p>
+<pre><code>7f3220378000-7f322051a000 r-xp 00000000 fd:01 50354460                   /usr/lib64/libc-2.18.so
+7f322051a000-7f322071a000 ---p 001a2000 fd:01 50354460                   /usr/lib64/libc-2.18.so
+7f322071a000-7f322071e000 r--p 001a2000 fd:01 50354460                   /usr/lib64/libc-2.18.so
+7f322071e000-7f3220720000 rw-p 001a6000 fd:01 50354460                   /usr/lib64/libc-2.18.so
+7f3220720000-7f3220724000 rw-p 00000000 00:00 0
+7f3220724000-7f3220744000 r-xp 00000000 fd:01 50354459                   /usr/lib64/ld-2.18.so
+7f3220935000-7f3220938000 rw-p 00000000 00:00 0
+7f3220941000-7f3220944000 rw-p 00000000 00:00 0
+7f3220944000-7f3220945000 r--p 00020000 fd:01 50354459                   /usr/lib64/ld-2.18.so
+7f3220945000-7f3220946000 rw-p 00021000 fd:01 50354459                   /usr/lib64/ld-2.18.so
+7f3220946000-7f3220947000 rw-p 00000000 00:00 0
+</code></pre><p>当我们的程序需要依赖一些动态链接库，这些库就会在程序启动时被加载到这个内存映射区。</p>
+<p>作为一个 C 程序员，你一定也用过 ldd 命令吧，事实上，ldd 命令就是通过读取 maps 文件，从而拿到一个可执行文件所依赖的外部库的信息的。</p>
+<p>举个例子</p>
+<pre><code>[root@lambertx memory_layout]# ldd main
+	linux-vdso.so.1 (0x00007ffdde795000)
+	libc.so.6 =&gt; /lib64/libc.so.6 (0x00007f8bf795a000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007f8bf7d06000)
+[root@lambertx memory_layout]#
+[root@lambertx memory_layout]# ldd main
+	linux-vdso.so.1 (0x00007ffff25e3000)
+	libc.so.6 =&gt; /lib64/libc.so.6 (0x00007fcb49bd3000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007fcb49f7f000)
+[root@lambertx memory_layout]#
+[root@lambertx memory_layout]# ldd main
+	linux-vdso.so.1 (0x00007ffcf3fd1000)
+	libc.so.6 =&gt; /lib64/libc.so.6 (0x00007f44ea0f7000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007f44ea4a3000)
+</code></pre><p>上面执行了三次 ldd 命令，ldd 会将 main 这个可执行文件的依赖库输出，同时我们注意到每次输出结果里，依赖库的被加载到的内存位置都是不一样的，这其实是 linux 的一个安全机制。同样的，当你多次运行同一个程序，查看/proc/$PID/maps 也会看到不同的地址。</p>
+<h3 id="栈区">栈区<a hidden class="anchor" aria-hidden="true" href="#栈区">#</a></h3>
+<pre><code>7ffecf289000-7ffecf2aa000 rw-p 00000000 00:00 0                          [stack]
+</code></pre><p>这段空间就是平常我们说的栈区里，当我们程序运行的时候，局部变量，函数参数，函数返回值，函数返回地址等数据就会存放在这块区域；数据写入的时候叫做入栈，数据不要了则叫出栈（通过改变 ESP 寄存器的指向）；栈的空间分配方向由高地址往低地址。</p>
+<p>同时也可以看出，这里栈空间的大小是 132KB，在程序的运行错误里有一个很经典的错误叫 stackoverflow，就是指的这个栈区写满了。</p>
+<h3 id="最后的区域">最后的区域<a hidden class="anchor" aria-hidden="true" href="#最后的区域">#</a></h3>
+<pre><code>7ffecf38c000-7ffecf38f000 r--p 00000000 00:00 0                          [vvar]
+7ffecf38f000-7ffecf391000 r-xp 00000000 00:00 0                          [vdso]
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
+</code></pre><p>关于 vvar，vdso 和 vsyscall，这三个玩意可以归于为了提升系统调用性能而提出来的奇巧淫技了；vsyscall 出现得最早，比如读取时间 gettimeofday ，内核会把时间数据和 gettimeofday 的实现映射到这块区域，用户空间可以直接调用，不需要从用户空间切换到内核空间。 但是 vsyscall 区域太小了，而且映射区域固定，有安全问题。 后来又造出了 vdso，之所以 vsyscall 保留是为了兼容已有程序。 vdso 相当于加载一个 linux-vd.so 库文件一样，也就是把一些函数实现映射到这个区域，而 vvar 也就是存放数据的地方了，那么用户可以通过调用 vdso 里的函数，使用 vvar 里的数据，来获得自己想要的信息。</p>
+<h2 id="总结">总结<a hidden class="anchor" aria-hidden="true" href="#总结">#</a></h2>
+<p>经过上面的分析，我们可以得到更新过后的内存布局示意图了</p>
+<p><img loading="lazy" src="../i/25b3a828-6eb9-43f3-be85-56b5e08fb72e.jpg" alt=""  />
+</p>
+<p>本文所有的分析都是基于 centos7 系统，以及默认的 gcc 编译配置，因此如果你经过相同的实验并发现结果和本文的结果不同，也是合理的。</p>
+<h2 id="参考文档">参考文档<a hidden class="anchor" aria-hidden="true" href="#参考文档">#</a></h2>
+<ul>
+<li><a href="https://github.com/torvalds/linux/blob/v6.0/Documentation/x86/x86_64/mm.rst">https://github.com/torvalds/linux/blob/v6.0/Documentation/x86/x86_64/mm.rst</a></li>
+<li><a href="https://gist.github.com/CMCDragonkai/10ab53654b2aa6ce55c11cfc5b2432a4#understanding-the-memory-layout-of-linux-executables">https://gist.github.com/CMCDragonkai/10ab53654b2aa6ce55c11cfc5b2432a4#understanding-the-memory-layout-of-linux-executables</a></li>
+<li><a href="https://cboard.cprogramming.com/linux-programming/101090-what-differences-between-brk-mmap.html">https://cboard.cprogramming.com/linux-programming/101090-what-differences-between-brk-mmap.html</a></li>
+</ul>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lambertxiao.github.io/tags/%E8%BF%9B%E7%A8%8B/">进程</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lambertxiao.github.io/posts/virtio/doc/">
+    <span class="title">« Prev Page</span>
+    <br>
+    <span>什么是Virtio</span>
+  </a>
+  <a class="next" href="https://lambertxiao.github.io/posts/openssl%E7%94%9F%E6%88%90%E8%87%AA%E7%AD%BE%E5%90%8D%E8%AF%81%E4%B9%A6/doc/">
+    <span class="title">Next Page »</span>
+    <br>
+    <span>openssl生成自签名证书</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 进程的内存是怎么布局的 on twitter"
+        href="https://twitter.com/intent/tweet/?text=%e8%bf%9b%e7%a8%8b%e7%9a%84%e5%86%85%e5%ad%98%e6%98%af%e6%80%8e%e4%b9%88%e5%b8%83%e5%b1%80%e7%9a%84&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E8%25BF%259B%25E7%25A8%258B%25E7%259A%2584%25E5%2586%2585%25E5%25AD%2598%25E5%25B8%2583%25E5%25B1%2580%2fdoc%2f&amp;hashtags=%e8%bf%9b%e7%a8%8b">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 进程的内存是怎么布局的 on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E8%25BF%259B%25E7%25A8%258B%25E7%259A%2584%25E5%2586%2585%25E5%25AD%2598%25E5%25B8%2583%25E5%25B1%2580%2fdoc%2f&amp;title=%e8%bf%9b%e7%a8%8b%e7%9a%84%e5%86%85%e5%ad%98%e6%98%af%e6%80%8e%e4%b9%88%e5%b8%83%e5%b1%80%e7%9a%84&amp;summary=%e8%bf%9b%e7%a8%8b%e7%9a%84%e5%86%85%e5%ad%98%e6%98%af%e6%80%8e%e4%b9%88%e5%b8%83%e5%b1%80%e7%9a%84&amp;source=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E8%25BF%259B%25E7%25A8%258B%25E7%259A%2584%25E5%2586%2585%25E5%25AD%2598%25E5%25B8%2583%25E5%25B1%2580%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 进程的内存是怎么布局的 on reddit"
+        href="https://reddit.com/submit?url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E8%25BF%259B%25E7%25A8%258B%25E7%259A%2584%25E5%2586%2585%25E5%25AD%2598%25E5%25B8%2583%25E5%25B1%2580%2fdoc%2f&title=%e8%bf%9b%e7%a8%8b%e7%9a%84%e5%86%85%e5%ad%98%e6%98%af%e6%80%8e%e4%b9%88%e5%b8%83%e5%b1%80%e7%9a%84">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 进程的内存是怎么布局的 on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E8%25BF%259B%25E7%25A8%258B%25E7%259A%2584%25E5%2586%2585%25E5%25AD%2598%25E5%25B8%2583%25E5%25B1%2580%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 进程的内存是怎么布局的 on whatsapp"
+        href="https://api.whatsapp.com/send?text=%e8%bf%9b%e7%a8%8b%e7%9a%84%e5%86%85%e5%ad%98%e6%98%af%e6%80%8e%e4%b9%88%e5%b8%83%e5%b1%80%e7%9a%84%20-%20https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E8%25BF%259B%25E7%25A8%258B%25E7%259A%2584%25E5%2586%2585%25E5%25AD%2598%25E5%25B8%2583%25E5%25B1%2580%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 进程的内存是怎么布局的 on telegram"
+        href="https://telegram.me/share/url?text=%e8%bf%9b%e7%a8%8b%e7%9a%84%e5%86%85%e5%ad%98%e6%98%af%e6%80%8e%e4%b9%88%e5%b8%83%e5%b1%80%e7%9a%84&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E8%25BF%259B%25E7%25A8%258B%25E7%259A%2584%25E5%2586%2585%25E5%25AD%2598%25E5%25B8%2583%25E5%25B1%2580%2fdoc%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_KY25sRiRtb" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Linux on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/linux/</link>
+    <description>Recent content in Linux on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Thu, 13 Apr 2023 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/linux/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Linux-dlsym</title>
+      <link>https://lambertxiao.github.io/posts/linux-dlsym/doc/</link>
+      <pubDate>Thu, 13 Apr 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/linux-dlsym/doc/</guid>
+      <description>dlsym(dynamic link symbol)</description>
+    </item>
+    
+    <item>
+      <title>Linux-strace</title>
+      <link>https://lambertxiao.github.io/posts/linux-strace%E5%91%BD%E4%BB%A4/doc/</link>
+      <pubDate>Thu, 16 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/linux-strace%E5%91%BD%E4%BB%A4/doc/</guid>
+      <description>查看系统调用的神器</description>
+    </item>
+    
+    <item>
+      <title>Socks5</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2019-12-10-socks5/</link>
+      <pubDate>Tue, 10 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2019-12-10-socks5/</guid>
+      <description>Socks5 概念 Socks5是一种网络传输协议, 用于客户端与(代理)服务器通讯使用
+三个阶段 认证阶段 socks5比socks4多了一个认证阶段, 客户端必须将自己使用的socks版本, 加密方式等信息发送给服务端(以节点为单位, 总共258)
+   VER NMETHODS METHODS     1 1 1-255      VER
+使用的socks协议的版本号, 当前最新的版本号是5
+  NMETHODS
+METHODS 字段占用的字节数
+  METHODS
+METHODS是客户端支持的认证方式列表，每个方法占1字节。当前的定义是：
+  0x00 不需要认证
+  0x01 GSSAPI
+  0x02 用户名、密码认证
+  0x03 - 0x7F 由IANA分配（保留）
+  0x80 - 0xFE 为私人方法保留
+  0xFF 无可接受的方法
+    服务端从客户端提供的方法中选择一个并通过以下消息通知客户端:</description>
+    </item>
+    
+  </channel>
+</rss>

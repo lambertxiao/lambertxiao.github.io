@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>kafka on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/kafka/</link>
+    <description>Recent content in kafka on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Sun, 06 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/kafka/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>kafka-知识总览</title>
+      <link>https://lambertxiao.github.io/posts/kafka-%E7%9F%A5%E8%AF%86%E6%80%BB%E8%A7%88/kafka/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/kafka-%E7%9F%A5%E8%AF%86%E6%80%BB%E8%A7%88/kafka/</guid>
+      <description>顺序写、复制状态机、分区、多副本、时间轮</description>
+    </item>
+    
+    <item>
+      <title>Kafka的基本命令</title>
+      <link>https://lambertxiao.github.io/posts/kafak%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%91%BD%E4%BB%A4/doc/</link>
+      <pubDate>Mon, 26 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/kafak%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%91%BD%E4%BB%A4/doc/</guid>
+      <description>脚本命令使用 生产消息 ./kafka-console-producer.sh --broker-list kafkas:9092 --topic user_register 输入消息:
+{&amp;quot;accountname&amp;quot;:&amp;quot;test@qq.com&amp;quot;,&amp;quot;action&amp;quot;:&amp;quot;register&amp;quot;,&amp;quot;appname&amp;quot;:&amp;quot;CoolLine&amp;quot;,&amp;quot;appversion&amp;quot;:&amp;quot;1.6.xx&amp;quot;,&amp;quot;channelName&amp;quot;:&amp;quot;googleplay&amp;quot;,&amp;quot;cityen&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;cityzh&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;continentsen&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;continentszh&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;countryen&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;countryZh&amp;quot;:&amp;quot;美国&amp;quot;,&amp;quot;createTimestamp&amp;quot;:1566376441,&amp;quot;deviceid&amp;quot;:&amp;quot;edb3d8ce8df595ad&amp;quot;,&amp;quot;isPrivilegedUser&amp;quot;:&amp;quot;true&amp;quot;,&amp;quot;line&amp;quot;:&amp;quot;CoolLine&amp;quot;,&amp;quot;mail&amp;quot;:&amp;quot;test@qq.com&amp;quot;,&amp;quot;pkgname&amp;quot;:&amp;quot;cc.coolline.client&amp;quot;,&amp;quot;platform&amp;quot;:&amp;quot;Android&amp;quot;,&amp;quot;provinceen&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;provincezh&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;pt&amp;quot;:&amp;quot;2019-08-21&amp;quot;,&amp;quot;registerip&amp;quot;:&amp;quot;10.244.2.64&amp;quot;,&amp;quot;registertime&amp;quot;:&amp;quot;2019-08-21 16:34:01&amp;quot;,&amp;quot;registertype&amp;quot;:&amp;quot;mail&amp;quot;,&amp;quot;userid&amp;quot;:19348,&amp;quot;userName&amp;quot;:&amp;quot;test@qq.com&amp;quot;,&amp;quot;userpwd&amp;quot;:&amp;quot;86A8F132223D033619389988E663F6C2&amp;quot;,&amp;quot;userstate&amp;quot;:0,&amp;quot;virtualCountryCode&amp;quot;:&amp;quot;AF&amp;quot;} 消费主题 ./kafka-console-consumer.sh --bootstrap-server kafkas:9092 --topic user_register --from-beginning 设置某个主题的消息缓存时间 ./kafka-configs.sh --zookeeper zookeeper:2181 --alter --entity-name ${主题} --entity-type topics --add-config retention.ms=86400000 立即生效 ./kafka-topics.sh --zookeeper zookeeper:2181 --alter --topic ${主题} --config cleanup.policy=delete </description>
+    </item>
+    
+  </channel>
+</rss>

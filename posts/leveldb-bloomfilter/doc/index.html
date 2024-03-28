@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>LevelDB是干嘛的 | Lambert&#39;s blog</title>
+<meta name="keywords" content="kv存储" />
+<meta name="description" content="level，多层级">
+<meta name="author" content="Lambert Xiao">
+<link rel="canonical" href="https://lambertxiao.github.io/posts/leveldb-bloomfilter/doc/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js" integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5&#43;kdJvBz5iKbt6B5PJI="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="LevelDB是干嘛的" />
+<meta property="og:description" content="level，多层级" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://lambertxiao.github.io/posts/leveldb-bloomfilter/doc/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-03-25T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2022-03-25T00:00:00&#43;00:00" />
+<meta property="og:see_also" content="https://lambertxiao.github.io/posts/gdb_usage/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/numa/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/uio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/vfio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/virtio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="LevelDB是干嘛的"/>
+<meta name="twitter:description" content="level，多层级"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://lambertxiao.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "LevelDB是干嘛的",
+      "item": "https://lambertxiao.github.io/posts/leveldb-bloomfilter/doc/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "LevelDB是干嘛的",
+  "name": "LevelDB是干嘛的",
+  "description": "level，多层级",
+  "keywords": [
+    "kv存储"
+  ],
+  "articleBody": "简介  KV数据库 数据持久化于磁盘上 底层基于LSM Tree理论  基本使用  以 https://github.com/syndtr/goleveldb 举例\n 打开db db, err := leveldb.OpenFile(\"path/to/db\", nil) ... defer db.Close() 读写操作 // Remember that the contents of the returned slice should not be modified. data, err := db.Get([]byte(\"key\"), nil) ... err = db.Put([]byte(\"key\"), []byte(\"value\"), nil) ... err = db.Delete([]byte(\"key\"), nil) 迭代操作 普通迭代\niter := db.NewIterator(nil, nil) for iter.Next() { // Remember that the contents of the returned slice should not be modified, and \t// only valid until the next call to Next. \tkey := iter.Key() value := iter.Value() ... } iter.Release() err = iter.Error() ... seek到某个key之后迭代\niter := db.NewIterator(nil, nil) for ok := iter.Seek(key); ok; ok = iter.Next() { // Use key/value. \t... } iter.Release() err = iter.Error() ... 条件查找迭代\niter := db.NewIterator(\u0026util.Range{Start: []byte(\"foo\"), Limit: []byte(\"xoo\")}, nil) for iter.Next() { // Use key/value. \t... } iter.Release() err = iter.Error() 批量写入 batch := new(leveldb.Batch) batch.Put([]byte(\"foo\"), []byte(\"value\")) batch.Put([]byte(\"bar\"), []byte(\"another value\")) batch.Delete([]byte(\"baz\")) err = db.Write(batch, nil) ... 使用布隆过滤器 o := \u0026opt.Options{ Filter: filter.NewBloomFilter(10), } db, err := leveldb.OpenFile(\"path/to/db\", o) ... defer db.Close() ... goleveldb源码分析\n主要流程分析 当Put一个Key时发生了什么 func (db *DB) Put(key, value []byte, wo *opt.WriteOptions) error { return db.putRec(keyTypeVal, key, value, wo) } func (db *DB) putRec(kt keyType, key, value []byte, wo *opt.WriteOptions) error { ... merge := !wo.GetNoWriteMerge() \u0026\u0026 !db.s.o.GetNoWriteMerge() sync := wo.GetSync() \u0026\u0026 !db.s.o.GetNoSync() // Acquire write lock. \tif merge { select { case db.writeMergeC  writeMerge{sync: sync, keyType: kt, key: key, value: value}: if db.writeMergedC { // Write is merged. \treturn db.writeAckC } // Write is not merged, the write lock is handed to us. Continue. \tcase db.writeLockC  struct{}{}: // Write lock acquired. \tcase err := db.compPerErrC: // Compaction error. \treturn err case db.closeC: // Closed \treturn ErrClosed } } else { select { case db.writeLockC  struct{}{}: // Write lock acquired. \tcase err := db.compPerErrC: // Compaction error. \treturn err case db.closeC: // Closed \treturn ErrClosed } } batch := db.batchPool.Get().(*Batch) batch.Reset() batch.appendRec(kt, key, value) return db.writeLocked(batch, batch, merge, sync) }   写之前需要拿到两个bool值，merge和sync，这两个值来源于传入的 writeOption.NoWriteMerge 和db.session.cacheOption.NoSync\n  如果需要merge，通过 writeMergeC 发起一个合并写请求，并阻塞在 writeMergedC 等待合并完成， 同时如果收到合并成功的请求，需要往 writeAckC 取出一个ack(以上chan都是在openDB时初始化好的无缓冲chan)\nfunc openDB(s *session) (*DB, error) { ... db := \u0026DB{ // Write  batchPool: sync.Pool{New: newBatch}, writeMergeC: make(chan writeMerge), writeMergedC: make(chan bool), writeLockC: make(chan struct{}, 1), writeAckC: make(chan error), // Compaction  tcompCmdC: make(chan cCmd), tcompPauseC: make(chan chan struct{}), mcompCmdC: make(chan cCmd), compErrC: make(chan error), compPerErrC: make(chan error), compErrSetC: make(chan error), // Close  closeC: make(chan struct{}), } ... }   如果不需要merge，则将key和value添加到batch中等待批量操作\n  先来看merge操作，找到writeMergeC的接收端\n// ourBatch is batch that we can modify. func (db *DB) writeLocked(batch, ourBatch *Batch, merge, sync bool) error { var ( overflow bool merged int batches = []*Batch{batch} ) if merge { // Merge limit. \tvar mergeLimit int if batch.internalLen  12810 { mergeLimit = (1  20) - batch.internalLen } else { mergeLimit = 128  10 } mergeCap := mdbFree - batch.internalLen if mergeLimit  mergeCap { mergeLimit = mergeCap } ... merge: // 相当于等mergeLimit个请求到了之后才会退出merge循环 \tfor mergeLimit  0 { select { case incoming := db.writeMergeC: if incoming.batch != nil { // Merge batch. \tif incoming.batch.internalLen  mergeLimit { overflow = true break merge } batches = append(batches, incoming.batch) mergeLimit -= incoming.batch.internalLen } else { // Merge put. \tinternalLen := len(incoming.key) + len(incoming.value) + 8 if internalLen  mergeLimit { overflow = true break merge } if ourBatch == nil { ourBatch = db.batchPool.Get().(*Batch) ourBatch.Reset() batches = append(batches, ourBatch) } // We can use same batch since concurrent write doesn't \t// guarantee write order. \tourBatch.appendRec(incoming.keyType, incoming.key, incoming.value) mergeLimit -= internalLen } sync = sync || incoming.sync merged++ db.writeMergedC  true default: break merge } } } // Release ourBatch if any. \tif ourBatch != nil { defer db.batchPool.Put(ourBatch) } // Seq number. \tseq := db.seq + 1 // Write journal. \tif err := db.writeJournal(batches, seq, sync); err != nil { db.unlockWrite(overflow, merged, err) return err } // Put batches. \tfor _, batch := range batches { if err := batch.putMem(seq, mdb.DB); err != nil { panic(err) } seq += uint64(batch.Len()) } // Incr seq number. \tdb.addSeq(uint64(batchesLen(batches))) // Rotate memdb if it's reach the threshold. \tif batch.internalLen = mdbFree { db.rotateMem(0, false) } db.unlockWrite(overflow, merged, nil) return nil }  每次的mergeLimit通过计算得到 当收到一个merge请求时，如果该请求所属的batch已经满了，则跳出merge循环，否则则一只等到mergeLimit减少到0 更新前会提前写日志writeJournal, writeJournal会同时写入一批batch，这一批batch用同一个序列号  主要结构 Journal Memdb Comparer storage // Storage is the storage. A storage instance must be safe for concurrent use. type Storage interface { // Lock locks the storage. Any subsequent attempt to call Lock will fail \t// until the last lock released. \t// Caller should call Unlock method after use. \tLock() (Locker, error) // Log logs a string. This is used for logging. \t// An implementation may write to a file, stdout or simply do nothing. \tLog(str string) // SetMeta store 'file descriptor' that can later be acquired using GetMeta \t// method. The 'file descriptor' should point to a valid file. \t// SetMeta should be implemented in such way that changes should happen \t// atomically. \tSetMeta(fd FileDesc) error // GetMeta returns 'file descriptor' stored in meta. The 'file descriptor' \t// can be updated using SetMeta method. \t// Returns os.ErrNotExist if meta doesn't store any 'file descriptor', or \t// 'file descriptor' point to nonexistent file. \tGetMeta() (FileDesc, error) // List returns file descriptors that match the given file types. \t// The file types may be OR'ed together. \tList(ft FileType) ([]FileDesc, error) // Open opens file with the given 'file descriptor' read-only. \t// Returns os.ErrNotExist error if the file does not exist. \t// Returns ErrClosed if the underlying storage is closed. \tOpen(fd FileDesc) (Reader, error) // Create creates file with the given 'file descriptor', truncate if already \t// exist and opens write-only. \t// Returns ErrClosed if the underlying storage is closed. \tCreate(fd FileDesc) (Writer, error) // Remove removes file with the given 'file descriptor'. \t// Returns ErrClosed if the underlying storage is closed. \tRemove(fd FileDesc) error // Rename renames file from oldfd to newfd. \t// Returns ErrClosed if the underlying storage is closed. \tRename(oldfd, newfd FileDesc) error // Close closes the storage. \t// It is valid to call Close multiple times. Other methods should not be \t// called after the storage has been closed. \tClose() error }  storage层用来对db进行创建、删除、打开等操作 storage层具备获取db元信息的能力 总而言之，storage层用来管理db  session // session represent a persistent database session. type session struct { // Need 64-bit alignment. \tstNextFileNum int64 // current unused file number \tstJournalNum int64 // current journal file number; need external synchronization \tstPrevJournalNum int64 // prev journal file number; no longer used; for compatibility with older version of leveldb \tstTempFileNum int64 stSeqNum uint64 // last mem compacted seq; need external synchronization  stor *iStorage storLock storage.Locker o *cachedOptions icmp *iComparer tops *tOps manifest *journal.Writer manifestWriter storage.Writer manifestFd storage.FileDesc stCompPtrs []internalKey // compaction pointers; need external synchronization \tstVersion *version // current version \tntVersionId int64 // next version id to assign \trefCh chan *vTask relCh chan *vTask deltaCh chan *vDelta abandon chan int64 closeC chan struct{} closeW sync.WaitGroup vmu sync.Mutex // Testing fields \tfileRefCh chan chan map[int64]int // channel used to pass current reference stat }  session代表同db的一次会话 什么是alignment 什么是jounarl 序列号？ iComparer FileDesc internalKey vTask vDelta tOps  // Creates new initialized session instance. func newSession(stor storage.Storage, o *opt.Options) (s *session, err error) { if stor == nil { return nil, os.ErrInvalid } storLock, err := stor.Lock() if err != nil { return } s = \u0026session{ stor: newIStorage(stor), storLock: storLock, refCh: make(chan *vTask), relCh: make(chan *vTask), deltaCh: make(chan *vDelta), abandon: make(chan int64), fileRefCh: make(chan chan map[int64]int), closeC: make(chan struct{}), } s.setOptions(o) s.tops = newTableOps(s) s.closeW.Add(1) go s.refLoop() s.setVersion(nil, newVersion(s)) s.log(\"log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed\") return }  每次创建一个会话，会锁住stroage 什么时候解锁？这意味着leveldb不支持多个session并发咯？  tOps  tOps包含了所有对table的操作 cache是files cache bcache是block cache, bpool是为bcache服务的  // Table operations. type tOps struct { s *session noSync bool evictRemoved bool cache *cache.Cache bcache *cache.Cache bpool *util.BufferPool } FileDesc FileDesc起到一个文件描述符的作用\ntype FileDesc struct { Type FileType Num int64 } // FileType represent a file type. type FileType int // File types. const ( TypeManifest FileType = 1  iota TypeJournal TypeTable TypeTemp TypeAll = TypeManifest | TypeJournal | TypeTable | TypeTemp )  Type总共有4种类型 Num是文件号，session里的stNextFileNum维护了当前会话里下一个被分配出去文件号  Cacher  Cacher从接口上看显然是对Node的操作 Node是干什么的  // Cacher provides interface to implements a caching functionality. // An implementation must be safe for concurrent use. type Cacher interface { // Capacity returns cache capacity. \tCapacity() int // SetCapacity sets cache capacity. \tSetCapacity(capacity int) // Promote promotes the 'cache node'. \tPromote(n *Node) // Ban evicts the 'cache node' and prevent subsequent 'promote'. \tBan(n *Node) // Evict evicts the 'cache node'. \tEvict(n *Node) // EvictNS evicts 'cache node' with the given namespace. \tEvictNS(ns uint64) // EvictAll evicts all 'cache node'. \tEvictAll() // Close closes the 'cache tree' \tClose() error } // Node is a 'cache node'. type Node struct { r *Cache hash uint32 ns, key uint64 mu sync.Mutex size int value Value ref int32 onDel []func() CacheData unsafe.Pointer } Cache  cache用来存放Cacher所持有的nodes数量 带有读写锁  // Cache is a 'cache map'. type Cache struct { mu sync.RWMutex mHead unsafe.Pointer // *mNode \tnodes int32 size int32 cacher Cacher closed bool } BufferPool  BufferPool显然是一个缓冲池，结合pool的类型为[]sync.Pool，大概率是用来池化对象的。 6个uint32的属性是干嘛的？  // BufferPool is a 'buffer pool'. type BufferPool struct { pool [6]sync.Pool baseline [5]int get uint32 put uint32 less uint32 equal uint32 greater uint32 miss uint32 } vTask vTask即version task，用来引用或发布以一个版本任务\n// vTask defines a version task for either reference or release. type vTask struct { vid int64 files []tFiles created time.Time } vDelta vDelta即version delta, 表示下一个版本和当前指定版本之间的变化信息\n// vDelta indicates the change information between the next version // and the currently specified version type vDelta struct { vid int64 added []int64 deleted []int64 } session.refLoop  fileRef 表文件引用计数器  func (s *session) refLoop() { var ( fileRef = make(map[int64]int) // Table file reference counter \tref = make(map[int64]*vTask) // Current referencing version store \tdeltas = make(map[int64]*vDelta) referenced = make(map[int64]struct{}) released = make(map[int64]*vDelta) // Released version that waiting for processing \tabandoned = make(map[int64]struct{}) // Abandoned version id \tnext, last int64 ) // addFileRef adds file reference counter with specified file number and \t// reference value \taddFileRef := func(fnum int64, ref int) int { ref += fileRef[fnum] if ref  0 { fileRef[fnum] = ref } else if ref == 0 { delete(fileRef, fnum) } else { panic(fmt.Sprintf(\"negative ref: %v\", fnum)) } return ref } // skipAbandoned skips useless abandoned version id. \tskipAbandoned := func() bool { if _, exist := abandoned[next]; exist { delete(abandoned, next) return true } return false } // applyDelta applies version change to current file reference. \tapplyDelta := func(d *vDelta) { for _, t := range d.added { addFileRef(t, 1) } for _, t := range d.deleted { if addFileRef(t, -1) == 0 { s.tops.remove(storage.FileDesc{Type: storage.TypeTable, Num: t}) } } } timer := time.NewTimer(0) timer.C // discard the initial tick \tdefer timer.Stop() // processTasks processes version tasks in strict order. \t// \t// If we want to use delta to reduce the cost of file references and dereferences, \t// we must strictly follow the id of the version, otherwise some files that are \t// being referenced will be deleted. \t// \t// In addition, some db operations (such as iterators) may cause a version to be \t// referenced for a long time. In order to prevent such operations from blocking \t// the entire processing queue, we will properly convert some of the version tasks \t// into full file references and releases. \tprocessTasks := func() { timer.Reset(maxCachedTime) // Make sure we don't cache too many version tasks. \tfor { // Skip any abandoned version number to prevent blocking processing. \tif skipAbandoned() { next += 1 continue } // Don't bother the version that has been released. \tif _, exist := released[next]; exist { break } // Ensure the specified version has been referenced. \tif _, exist := ref[next]; !exist { break } if last-next \u0026\u0026 time.Since(ref[next].created) break } // Convert version task into full file references and releases mode. \t// Reference version(i+1) first and wait version(i) to release. \t// FileRef(i+1) = FileRef(i) + Delta(i) \tfor _, tt := range ref[next].files { for _, t := range tt { addFileRef(t.fd.Num, 1) } } // Note, if some compactions take a long time, even more than 5 minutes, \t// we may miss the corresponding delta information here. \t// Fortunately it will not affect the correctness of the file reference, \t// and we can apply the delta once we receive it. \tif d := deltas[next]; d != nil { applyDelta(d) } referenced[next] = struct{}{} delete(ref, next) delete(deltas, next) next += 1 } // Use delta information to process all released versions. \tfor { if skipAbandoned() { next += 1 continue } if d, exist := released[next]; exist { if d != nil { applyDelta(d) } delete(released, next) next += 1 continue } return } } for { processTasks() select { case t := s.refCh: if _, exist := ref[t.vid]; exist { panic(\"duplicate reference request\") } ref[t.vid] = t if t.vid  last { last = t.vid } case d := s.deltaCh: if _, exist := ref[d.vid]; !exist { if _, exist2 := referenced[d.vid]; !exist2 { panic(\"invalid release request\") } // The reference opt is already expired, apply \t// delta here. \tapplyDelta(d) continue } deltas[d.vid] = d case t := s.relCh: if _, exist := referenced[t.vid]; exist { for _, tt := range t.files { for _, t := range tt { if addFileRef(t.fd.Num, -1) == 0 { s.tops.remove(t.fd) } } } delete(referenced, t.vid) continue } if _, exist := ref[t.vid]; !exist { panic(\"invalid release request\") } released[t.vid] = deltas[t.vid] delete(deltas, t.vid) delete(ref, t.vid) case id := s.abandon: if id = next { abandoned[id] = struct{}{} } case timer.C: case r := s.fileRefCh: ref := make(map[int64]int) for f, c := range fileRef { ref[f] = c } r  ref case s.closeC: s.closeW.Done() return } } } ",
+  "wordCount" : "2225",
+  "inLanguage": "en",
+  "datePublished": "2022-03-25T00:00:00Z",
+  "dateModified": "2022-03-25T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "Lambert Xiao"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lambertxiao.github.io/posts/leveldb-bloomfilter/doc/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lambert's blog",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lambertxiao.github.io/avatar.jpeg"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      LevelDB是干嘛的
+    </h1>
+    <div class="post-meta"><span title='2022-03-25 00:00:00 +0000 UTC'>March 25, 2022</span>&nbsp;·&nbsp;11 min&nbsp;·&nbsp;Lambert Xiao&nbsp;|&nbsp;<a href="https://github.com/adityatelange/hugo-PaperMod/tree/exampleSite/content/posts/leveldb-bloomfilter/doc.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+</div>
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#%e7%ae%80%e4%bb%8b" aria-label="简介">简介</a></li>
+                <li>
+                    <a href="#%e5%9f%ba%e6%9c%ac%e4%bd%bf%e7%94%a8" aria-label="基本使用">基本使用</a><ul>
+                        
+                <li>
+                    <a href="#%e6%89%93%e5%bc%80db" aria-label="打开db">打开db</a></li>
+                <li>
+                    <a href="#%e8%af%bb%e5%86%99%e6%93%8d%e4%bd%9c" aria-label="读写操作">读写操作</a></li>
+                <li>
+                    <a href="#%e8%bf%ad%e4%bb%a3%e6%93%8d%e4%bd%9c" aria-label="迭代操作">迭代操作</a></li>
+                <li>
+                    <a href="#%e6%89%b9%e9%87%8f%e5%86%99%e5%85%a5" aria-label="批量写入">批量写入</a></li>
+                <li>
+                    <a href="#%e4%bd%bf%e7%94%a8%e5%b8%83%e9%9a%86%e8%bf%87%e6%bb%a4%e5%99%a8" aria-label="使用布隆过滤器">使用布隆过滤器</a></li></ul>
+                </li>
+                <li>
+                    <a href="#%e4%b8%bb%e8%a6%81%e6%b5%81%e7%a8%8b%e5%88%86%e6%9e%90" aria-label="主要流程分析">主要流程分析</a><ul>
+                        
+                <li>
+                    <a href="#%e5%bd%93put%e4%b8%80%e4%b8%aakey%e6%97%b6%e5%8f%91%e7%94%9f%e4%ba%86%e4%bb%80%e4%b9%88" aria-label="当Put一个Key时发生了什么">当Put一个Key时发生了什么</a></li></ul>
+                </li>
+                <li>
+                    <a href="#%e4%b8%bb%e8%a6%81%e7%bb%93%e6%9e%84" aria-label="主要结构">主要结构</a><ul>
+                        
+                <li>
+                    <a href="#journal" aria-label="Journal">Journal</a></li>
+                <li>
+                    <a href="#memdb" aria-label="Memdb">Memdb</a></li>
+                <li>
+                    <a href="#comparer" aria-label="Comparer">Comparer</a></li>
+                <li>
+                    <a href="#storage" aria-label="storage">storage</a></li>
+                <li>
+                    <a href="#session" aria-label="session">session</a></li>
+                <li>
+                    <a href="#tops" aria-label="tOps">tOps</a></li>
+                <li>
+                    <a href="#filedesc" aria-label="FileDesc">FileDesc</a></li>
+                <li>
+                    <a href="#cacher" aria-label="Cacher">Cacher</a></li>
+                <li>
+                    <a href="#cache" aria-label="Cache">Cache</a></li>
+                <li>
+                    <a href="#bufferpool" aria-label="BufferPool">BufferPool</a></li>
+                <li>
+                    <a href="#vtask" aria-label="vTask">vTask</a></li>
+                <li>
+                    <a href="#vdelta" aria-label="vDelta">vDelta</a></li>
+                <li>
+                    <a href="#sessionrefloop" aria-label="session.refLoop">session.refLoop</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h2 id="简介">简介<a hidden class="anchor" aria-hidden="true" href="#简介">#</a></h2>
+<ul>
+<li>KV数据库</li>
+<li>数据持久化于磁盘上</li>
+<li>底层基于LSM Tree理论</li>
+</ul>
+<h2 id="基本使用">基本使用<a hidden class="anchor" aria-hidden="true" href="#基本使用">#</a></h2>
+<blockquote>
+<p>以 <code>https://github.com/syndtr/goleveldb</code> 举例</p>
+</blockquote>
+<h3 id="打开db">打开db<a hidden class="anchor" aria-hidden="true" href="#打开db">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">db, err <span style="color:#39c">:=</span> leveldb.OpenFile(<span style="color:#cd0000">&#34;path/to/db&#34;</span>, <span style="color:#cdcd00">nil</span>)
+<span style="color:#39c">...</span>
+<span style="color:#cdcd00">defer</span> db.Close()
+</code></pre></div><h3 id="读写操作">读写操作<a hidden class="anchor" aria-hidden="true" href="#读写操作">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// Remember that the contents of the returned slice should not be modified.
+</span><span style="color:#000080"></span>data, err <span style="color:#39c">:=</span> db.Get([]<span style="color:#cd00cd">byte</span>(<span style="color:#cd0000">&#34;key&#34;</span>), <span style="color:#cdcd00">nil</span>)
+<span style="color:#39c">...</span>
+err = db.Put([]<span style="color:#cd00cd">byte</span>(<span style="color:#cd0000">&#34;key&#34;</span>), []<span style="color:#cd00cd">byte</span>(<span style="color:#cd0000">&#34;value&#34;</span>), <span style="color:#cdcd00">nil</span>)
+<span style="color:#39c">...</span>
+err = db.Delete([]<span style="color:#cd00cd">byte</span>(<span style="color:#cd0000">&#34;key&#34;</span>), <span style="color:#cdcd00">nil</span>)
+</code></pre></div><h3 id="迭代操作">迭代操作<a hidden class="anchor" aria-hidden="true" href="#迭代操作">#</a></h3>
+<p>普通迭代</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">iter <span style="color:#39c">:=</span> db.NewIterator(<span style="color:#cdcd00">nil</span>, <span style="color:#cdcd00">nil</span>)
+<span style="color:#cdcd00">for</span> iter.Next() {
+	<span style="color:#000080">// Remember that the contents of the returned slice should not be modified, and
+</span><span style="color:#000080"></span>	<span style="color:#000080">// only valid until the next call to Next.
+</span><span style="color:#000080"></span>	key <span style="color:#39c">:=</span> iter.Key()
+	value <span style="color:#39c">:=</span> iter.Value()
+	<span style="color:#39c">...</span>
+}
+iter.Release()
+err = iter.Error()
+<span style="color:#39c">...</span>
+</code></pre></div><p>seek到某个key之后迭代</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">iter <span style="color:#39c">:=</span> db.NewIterator(<span style="color:#cdcd00">nil</span>, <span style="color:#cdcd00">nil</span>)
+<span style="color:#cdcd00">for</span> ok <span style="color:#39c">:=</span> iter.Seek(key); ok; ok = iter.Next() {
+	<span style="color:#000080">// Use key/value.
+</span><span style="color:#000080"></span>	<span style="color:#39c">...</span>
+}
+iter.Release()
+err = iter.Error()
+<span style="color:#39c">...</span>
+</code></pre></div><p>条件查找迭代</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">iter <span style="color:#39c">:=</span> db.NewIterator(<span style="color:#39c">&amp;</span>util.Range{Start: []<span style="color:#cd00cd">byte</span>(<span style="color:#cd0000">&#34;foo&#34;</span>), Limit: []<span style="color:#cd00cd">byte</span>(<span style="color:#cd0000">&#34;xoo&#34;</span>)}, <span style="color:#cdcd00">nil</span>)
+<span style="color:#cdcd00">for</span> iter.Next() {
+	<span style="color:#000080">// Use key/value.
+</span><span style="color:#000080"></span>	<span style="color:#39c">...</span>
+}
+iter.Release()
+err = iter.Error()
+</code></pre></div><h3 id="批量写入">批量写入<a hidden class="anchor" aria-hidden="true" href="#批量写入">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">batch <span style="color:#39c">:=</span> <span style="color:#cd00cd">new</span>(leveldb.Batch)
+batch.Put([]<span style="color:#cd00cd">byte</span>(<span style="color:#cd0000">&#34;foo&#34;</span>), []<span style="color:#cd00cd">byte</span>(<span style="color:#cd0000">&#34;value&#34;</span>))
+batch.Put([]<span style="color:#cd00cd">byte</span>(<span style="color:#cd0000">&#34;bar&#34;</span>), []<span style="color:#cd00cd">byte</span>(<span style="color:#cd0000">&#34;another value&#34;</span>))
+batch.Delete([]<span style="color:#cd00cd">byte</span>(<span style="color:#cd0000">&#34;baz&#34;</span>))
+err = db.Write(batch, <span style="color:#cdcd00">nil</span>)
+<span style="color:#39c">...</span>
+</code></pre></div><h3 id="使用布隆过滤器">使用布隆过滤器<a hidden class="anchor" aria-hidden="true" href="#使用布隆过滤器">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">o <span style="color:#39c">:=</span> <span style="color:#39c">&amp;</span>opt.Options{
+	Filter: filter.NewBloomFilter(<span style="color:#cd00cd">10</span>),
+}
+db, err <span style="color:#39c">:=</span> leveldb.OpenFile(<span style="color:#cd0000">&#34;path/to/db&#34;</span>, o)
+<span style="color:#39c">...</span>
+<span style="color:#cdcd00">defer</span> db.Close()
+<span style="color:#39c">...</span>
+</code></pre></div><p>goleveldb源码分析</p>
+<h2 id="主要流程分析">主要流程分析<a hidden class="anchor" aria-hidden="true" href="#主要流程分析">#</a></h2>
+<h3 id="当put一个key时发生了什么">当Put一个Key时发生了什么<a hidden class="anchor" aria-hidden="true" href="#当put一个key时发生了什么">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (db <span style="color:#39c">*</span>DB) Put(key, value []<span style="color:#00cd00">byte</span>, wo <span style="color:#39c">*</span>opt.WriteOptions) <span style="color:#00cd00">error</span> {
+	<span style="color:#cdcd00">return</span> db.putRec(keyTypeVal, key, value, wo)
+}
+
+
+<span style="color:#00cd00">func</span> (db <span style="color:#39c">*</span>DB) putRec(kt keyType, key, value []<span style="color:#00cd00">byte</span>, wo <span style="color:#39c">*</span>opt.WriteOptions) <span style="color:#00cd00">error</span> {
+    <span style="color:#39c">...</span>
+
+	merge <span style="color:#39c">:=</span> !wo.GetNoWriteMerge() <span style="color:#39c">&amp;&amp;</span> !db.s.o.GetNoWriteMerge()
+	sync <span style="color:#39c">:=</span> wo.GetSync() <span style="color:#39c">&amp;&amp;</span> !db.s.o.GetNoSync()
+
+	<span style="color:#000080">// Acquire write lock.
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> merge {
+		<span style="color:#cdcd00">select</span> {
+		<span style="color:#cdcd00">case</span> db.writeMergeC <span style="color:#39c">&lt;-</span> writeMerge{sync: sync, keyType: kt, key: key, value: value}:
+			<span style="color:#cdcd00">if</span> <span style="color:#39c">&lt;-</span>db.writeMergedC {
+				<span style="color:#000080">// Write is merged.
+</span><span style="color:#000080"></span>				<span style="color:#cdcd00">return</span> <span style="color:#39c">&lt;-</span>db.writeAckC
+			}
+			<span style="color:#000080">// Write is not merged, the write lock is handed to us. Continue.
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">case</span> db.writeLockC <span style="color:#39c">&lt;-</span> <span style="color:#00cd00">struct</span>{}{}:
+			<span style="color:#000080">// Write lock acquired.
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">case</span> err <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>db.compPerErrC:
+			<span style="color:#000080">// Compaction error.
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">return</span> err
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">&lt;-</span>db.closeC:
+			<span style="color:#000080">// Closed
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">return</span> ErrClosed
+		}
+	} <span style="color:#cdcd00">else</span> {
+		<span style="color:#cdcd00">select</span> {
+		<span style="color:#cdcd00">case</span> db.writeLockC <span style="color:#39c">&lt;-</span> <span style="color:#00cd00">struct</span>{}{}:
+			<span style="color:#000080">// Write lock acquired.
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">case</span> err <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>db.compPerErrC:
+			<span style="color:#000080">// Compaction error.
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">return</span> err
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">&lt;-</span>db.closeC:
+			<span style="color:#000080">// Closed
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">return</span> ErrClosed
+		}
+	}
+
+	batch <span style="color:#39c">:=</span> db.batchPool.Get().(<span style="color:#39c">*</span>Batch)
+	batch.Reset()
+	batch.appendRec(kt, key, value)
+	<span style="color:#cdcd00">return</span> db.writeLocked(batch, batch, merge, sync)
+}
+</code></pre></div><ol>
+<li>
+<p>写之前需要拿到两个bool值，merge和sync，这两个值来源于传入的 <code>writeOption.NoWriteMerge</code> 和<code>db.session.cacheOption.NoSync</code></p>
+</li>
+<li>
+<p>如果需要merge，通过 <code>writeMergeC</code> 发起一个合并写请求，并阻塞在 <code>writeMergedC</code> 等待合并完成，
+同时如果收到合并成功的请求，需要往 <code>writeAckC</code> 取出一个ack(以上chan都是在openDB时初始化好的无缓冲chan)</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> openDB(s <span style="color:#39c">*</span>session) (<span style="color:#39c">*</span>DB, <span style="color:#00cd00">error</span>) {
+    <span style="color:#39c">...</span>
+    db <span style="color:#39c">:=</span> <span style="color:#39c">&amp;</span>DB{
+        <span style="color:#000080">// Write
+</span><span style="color:#000080"></span>        batchPool:    sync.Pool{New: newBatch},
+        writeMergeC:  <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> writeMerge),
+        writeMergedC: <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#00cd00">bool</span>),
+        writeLockC:   <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#00cd00">struct</span>{}, <span style="color:#cd00cd">1</span>),
+        writeAckC:    <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#00cd00">error</span>),
+        <span style="color:#000080">// Compaction
+</span><span style="color:#000080"></span>        tcompCmdC:   <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> cCmd),
+        tcompPauseC: <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#00cd00">chan</span><span style="color:#39c">&lt;-</span> <span style="color:#00cd00">struct</span>{}),
+        mcompCmdC:   <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> cCmd),
+        compErrC:    <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#00cd00">error</span>),
+        compPerErrC: <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#00cd00">error</span>),
+        compErrSetC: <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#00cd00">error</span>),
+        <span style="color:#000080">// Close
+</span><span style="color:#000080"></span>        closeC: <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#00cd00">struct</span>{}),
+    }
+    <span style="color:#39c">...</span>
+}
+</code></pre></div></li>
+<li>
+<p>如果不需要merge，则将key和value添加到batch中等待批量操作</p>
+</li>
+</ol>
+<p>先来看merge操作，找到writeMergeC的接收端</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// ourBatch is batch that we can modify.
+</span><span style="color:#000080"></span><span style="color:#00cd00">func</span> (db <span style="color:#39c">*</span>DB) writeLocked(batch, ourBatch <span style="color:#39c">*</span>Batch, merge, sync <span style="color:#00cd00">bool</span>) <span style="color:#00cd00">error</span> {
+    <span style="color:#00cd00">var</span> (
+		overflow <span style="color:#00cd00">bool</span>
+		merged   <span style="color:#00cd00">int</span>
+		batches  = []<span style="color:#39c">*</span>Batch{batch}
+	)
+
+	<span style="color:#cdcd00">if</span> merge {
+		<span style="color:#000080">// Merge limit.
+</span><span style="color:#000080"></span>		<span style="color:#00cd00">var</span> mergeLimit <span style="color:#00cd00">int</span>
+		<span style="color:#cdcd00">if</span> batch.internalLen &gt; <span style="color:#cd00cd">128</span><span style="color:#39c">&lt;&lt;</span><span style="color:#cd00cd">10</span> {
+			mergeLimit = (<span style="color:#cd00cd">1</span> <span style="color:#39c">&lt;&lt;</span> <span style="color:#cd00cd">20</span>) <span style="color:#39c">-</span> batch.internalLen
+		} <span style="color:#cdcd00">else</span> {
+			mergeLimit = <span style="color:#cd00cd">128</span> <span style="color:#39c">&lt;&lt;</span> <span style="color:#cd00cd">10</span>
+		}
+		mergeCap <span style="color:#39c">:=</span> mdbFree <span style="color:#39c">-</span> batch.internalLen
+		<span style="color:#cdcd00">if</span> mergeLimit &gt; mergeCap {
+			mergeLimit = mergeCap
+		}
+	<span style="color:#39c">...</span>
+	merge:
+        <span style="color:#000080">// 相当于等mergeLimit个请求到了之后才会退出merge循环
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">for</span> mergeLimit &gt; <span style="color:#cd00cd">0</span> {
+			<span style="color:#cdcd00">select</span> {
+			<span style="color:#cdcd00">case</span> incoming <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>db.writeMergeC:
+				<span style="color:#cdcd00">if</span> incoming.batch <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+					<span style="color:#000080">// Merge batch.
+</span><span style="color:#000080"></span>					<span style="color:#cdcd00">if</span> incoming.batch.internalLen &gt; mergeLimit {
+						overflow = <span style="color:#cdcd00">true</span>
+						<span style="color:#cdcd00">break</span> merge
+					}
+					batches = <span style="color:#cd00cd">append</span>(batches, incoming.batch)
+					mergeLimit <span style="color:#39c">-=</span> incoming.batch.internalLen
+				} <span style="color:#cdcd00">else</span> {
+					<span style="color:#000080">// Merge put.
+</span><span style="color:#000080"></span>					internalLen <span style="color:#39c">:=</span> <span style="color:#cd00cd">len</span>(incoming.key) <span style="color:#39c">+</span> <span style="color:#cd00cd">len</span>(incoming.value) <span style="color:#39c">+</span> <span style="color:#cd00cd">8</span>
+					<span style="color:#cdcd00">if</span> internalLen &gt; mergeLimit {
+						overflow = <span style="color:#cdcd00">true</span>
+						<span style="color:#cdcd00">break</span> merge
+					}
+					<span style="color:#cdcd00">if</span> ourBatch <span style="color:#39c">==</span> <span style="color:#cdcd00">nil</span> {
+						ourBatch = db.batchPool.Get().(<span style="color:#39c">*</span>Batch)
+						ourBatch.Reset()
+						batches = <span style="color:#cd00cd">append</span>(batches, ourBatch)
+					}
+					<span style="color:#000080">// We can use same batch since concurrent write doesn&#39;t
+</span><span style="color:#000080"></span>					<span style="color:#000080">// guarantee write order.
+</span><span style="color:#000080"></span>					ourBatch.appendRec(incoming.keyType, incoming.key, incoming.value)
+					mergeLimit <span style="color:#39c">-=</span> internalLen
+				}
+				sync = sync <span style="color:#39c">||</span> incoming.sync
+				merged<span style="color:#39c">++</span>
+				db.writeMergedC <span style="color:#39c">&lt;-</span> <span style="color:#cdcd00">true</span>
+
+			<span style="color:#cdcd00">default</span>:
+				<span style="color:#cdcd00">break</span> merge
+			}
+		}
+	}
+	<span style="color:#000080">// Release ourBatch if any.
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> ourBatch <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">defer</span> db.batchPool.Put(ourBatch)
+	}
+
+	<span style="color:#000080">// Seq number.
+</span><span style="color:#000080"></span>	seq <span style="color:#39c">:=</span> db.seq <span style="color:#39c">+</span> <span style="color:#cd00cd">1</span>
+
+	<span style="color:#000080">// Write journal.
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> db.writeJournal(batches, seq, sync); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		db.unlockWrite(overflow, merged, err)
+		<span style="color:#cdcd00">return</span> err
+	}
+
+	<span style="color:#000080">// Put batches.
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">for</span> _, batch <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> batches {
+		<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> batch.putMem(seq, mdb.DB); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			<span style="color:#cd00cd">panic</span>(err)
+		}
+		seq <span style="color:#39c">+=</span> <span style="color:#cd00cd">uint64</span>(batch.Len())
+	}
+
+	<span style="color:#000080">// Incr seq number.
+</span><span style="color:#000080"></span>	db.addSeq(<span style="color:#cd00cd">uint64</span>(batchesLen(batches)))
+
+	<span style="color:#000080">// Rotate memdb if it&#39;s reach the threshold.
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> batch.internalLen <span style="color:#39c">&gt;=</span> mdbFree {
+		db.rotateMem(<span style="color:#cd00cd">0</span>, <span style="color:#cdcd00">false</span>)
+	}
+
+	db.unlockWrite(overflow, merged, <span style="color:#cdcd00">nil</span>)
+	<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>
+}
+</code></pre></div><ol>
+<li>每次的mergeLimit通过计算得到</li>
+<li>当收到一个merge请求时，如果该请求所属的batch已经满了，则跳出merge循环，否则则一只等到mergeLimit减少到0</li>
+<li>更新前会提前写日志writeJournal, writeJournal会同时写入一批batch，这一批batch用同一个序列号</li>
+</ol>
+<h2 id="主要结构">主要结构<a hidden class="anchor" aria-hidden="true" href="#主要结构">#</a></h2>
+<h3 id="journal">Journal<a hidden class="anchor" aria-hidden="true" href="#journal">#</a></h3>
+<h3 id="memdb">Memdb<a hidden class="anchor" aria-hidden="true" href="#memdb">#</a></h3>
+<h3 id="comparer">Comparer<a hidden class="anchor" aria-hidden="true" href="#comparer">#</a></h3>
+<h3 id="storage">storage<a hidden class="anchor" aria-hidden="true" href="#storage">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// Storage is the storage. A storage instance must be safe for concurrent use.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> Storage <span style="color:#00cd00">interface</span> {
+	<span style="color:#000080">// Lock locks the storage. Any subsequent attempt to call Lock will fail
+</span><span style="color:#000080"></span>	<span style="color:#000080">// until the last lock released.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Caller should call Unlock method after use.
+</span><span style="color:#000080"></span>	Lock() (Locker, <span style="color:#00cd00">error</span>)
+
+	<span style="color:#000080">// Log logs a string. This is used for logging.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// An implementation may write to a file, stdout or simply do nothing.
+</span><span style="color:#000080"></span>	Log(str <span style="color:#00cd00">string</span>)
+
+	<span style="color:#000080">// SetMeta store &#39;file descriptor&#39; that can later be acquired using GetMeta
+</span><span style="color:#000080"></span>	<span style="color:#000080">// method. The &#39;file descriptor&#39; should point to a valid file.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// SetMeta should be implemented in such way that changes should happen
+</span><span style="color:#000080"></span>	<span style="color:#000080">// atomically.
+</span><span style="color:#000080"></span>	SetMeta(fd FileDesc) <span style="color:#00cd00">error</span>
+
+	<span style="color:#000080">// GetMeta returns &#39;file descriptor&#39; stored in meta. The &#39;file descriptor&#39;
+</span><span style="color:#000080"></span>	<span style="color:#000080">// can be updated using SetMeta method.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Returns os.ErrNotExist if meta doesn&#39;t store any &#39;file descriptor&#39;, or
+</span><span style="color:#000080"></span>	<span style="color:#000080">// &#39;file descriptor&#39; point to nonexistent file.
+</span><span style="color:#000080"></span>	GetMeta() (FileDesc, <span style="color:#00cd00">error</span>)
+
+	<span style="color:#000080">// List returns file descriptors that match the given file types.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// The file types may be OR&#39;ed together.
+</span><span style="color:#000080"></span>	List(ft FileType) ([]FileDesc, <span style="color:#00cd00">error</span>)
+
+	<span style="color:#000080">// Open opens file with the given &#39;file descriptor&#39; read-only.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Returns os.ErrNotExist error if the file does not exist.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Returns ErrClosed if the underlying storage is closed.
+</span><span style="color:#000080"></span>	Open(fd FileDesc) (Reader, <span style="color:#00cd00">error</span>)
+
+	<span style="color:#000080">// Create creates file with the given &#39;file descriptor&#39;, truncate if already
+</span><span style="color:#000080"></span>	<span style="color:#000080">// exist and opens write-only.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Returns ErrClosed if the underlying storage is closed.
+</span><span style="color:#000080"></span>	Create(fd FileDesc) (Writer, <span style="color:#00cd00">error</span>)
+
+	<span style="color:#000080">// Remove removes file with the given &#39;file descriptor&#39;.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Returns ErrClosed if the underlying storage is closed.
+</span><span style="color:#000080"></span>	Remove(fd FileDesc) <span style="color:#00cd00">error</span>
+
+	<span style="color:#000080">// Rename renames file from oldfd to newfd.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Returns ErrClosed if the underlying storage is closed.
+</span><span style="color:#000080"></span>	Rename(oldfd, newfd FileDesc) <span style="color:#00cd00">error</span>
+
+	<span style="color:#000080">// Close closes the storage.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// It is valid to call Close multiple times. Other methods should not be
+</span><span style="color:#000080"></span>	<span style="color:#000080">// called after the storage has been closed.
+</span><span style="color:#000080"></span>	Close() <span style="color:#00cd00">error</span>
+}
+</code></pre></div><ol>
+<li>storage层用来对db进行创建、删除、打开等操作</li>
+<li>storage层具备获取db元信息的能力</li>
+<li>总而言之，storage层用来管理db</li>
+</ol>
+<h3 id="session">session<a hidden class="anchor" aria-hidden="true" href="#session">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">
+<span style="color:#000080">// session represent a persistent database session.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> session <span style="color:#00cd00">struct</span> {
+	<span style="color:#000080">// Need 64-bit alignment.
+</span><span style="color:#000080"></span>	stNextFileNum    <span style="color:#00cd00">int64</span> <span style="color:#000080">// current unused file number
+</span><span style="color:#000080"></span>	stJournalNum     <span style="color:#00cd00">int64</span> <span style="color:#000080">// current journal file number; need external synchronization
+</span><span style="color:#000080"></span>	stPrevJournalNum <span style="color:#00cd00">int64</span> <span style="color:#000080">// prev journal file number; no longer used; for compatibility with older version of leveldb
+</span><span style="color:#000080"></span>	stTempFileNum    <span style="color:#00cd00">int64</span>
+	stSeqNum         <span style="color:#00cd00">uint64</span> <span style="color:#000080">// last mem compacted seq; need external synchronization
+</span><span style="color:#000080"></span>
+	stor     <span style="color:#39c">*</span>iStorage
+	storLock storage.Locker
+	o        <span style="color:#39c">*</span>cachedOptions
+	icmp     <span style="color:#39c">*</span>iComparer
+	tops     <span style="color:#39c">*</span>tOps
+
+	manifest       <span style="color:#39c">*</span>journal.Writer
+	manifestWriter storage.Writer
+	manifestFd     storage.FileDesc
+
+	stCompPtrs  []internalKey <span style="color:#000080">// compaction pointers; need external synchronization
+</span><span style="color:#000080"></span>	stVersion   <span style="color:#39c">*</span>version      <span style="color:#000080">// current version
+</span><span style="color:#000080"></span>	ntVersionId <span style="color:#00cd00">int64</span>         <span style="color:#000080">// next version id to assign
+</span><span style="color:#000080"></span>	refCh       <span style="color:#00cd00">chan</span> <span style="color:#39c">*</span>vTask
+	relCh       <span style="color:#00cd00">chan</span> <span style="color:#39c">*</span>vTask
+	deltaCh     <span style="color:#00cd00">chan</span> <span style="color:#39c">*</span>vDelta
+	abandon     <span style="color:#00cd00">chan</span> <span style="color:#00cd00">int64</span>
+	closeC      <span style="color:#00cd00">chan</span> <span style="color:#00cd00">struct</span>{}
+	closeW      sync.WaitGroup
+	vmu         sync.Mutex
+
+	<span style="color:#000080">// Testing fields
+</span><span style="color:#000080"></span>	fileRefCh <span style="color:#00cd00">chan</span> <span style="color:#00cd00">chan</span> <span style="color:#00cd00">map</span>[<span style="color:#00cd00">int64</span>]<span style="color:#00cd00">int</span> <span style="color:#000080">// channel used to pass current reference stat
+</span><span style="color:#000080"></span>}
+</code></pre></div><ol>
+<li>session代表同db的一次会话</li>
+<li>什么是alignment</li>
+<li>什么是jounarl</li>
+<li>序列号？</li>
+<li>iComparer</li>
+<li>FileDesc</li>
+<li>internalKey</li>
+<li>vTask</li>
+<li>vDelta</li>
+<li>tOps</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// Creates new initialized session instance.
+</span><span style="color:#000080"></span><span style="color:#00cd00">func</span> newSession(stor storage.Storage, o <span style="color:#39c">*</span>opt.Options) (s <span style="color:#39c">*</span>session, err <span style="color:#00cd00">error</span>) {
+	<span style="color:#cdcd00">if</span> stor <span style="color:#39c">==</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, os.ErrInvalid
+	}
+	storLock, err <span style="color:#39c">:=</span> stor.Lock()
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span>
+	}
+	s = <span style="color:#39c">&amp;</span>session{
+		stor:      newIStorage(stor),
+		storLock:  storLock,
+		refCh:     <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#39c">*</span>vTask),
+		relCh:     <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#39c">*</span>vTask),
+		deltaCh:   <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#39c">*</span>vDelta),
+		abandon:   <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#00cd00">int64</span>),
+		fileRefCh: <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#00cd00">chan</span> <span style="color:#00cd00">map</span>[<span style="color:#00cd00">int64</span>]<span style="color:#00cd00">int</span>),
+		closeC:    <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#00cd00">struct</span>{}),
+	}
+	s.setOptions(o)
+	s.tops = newTableOps(s)
+
+	s.closeW.Add(<span style="color:#cd00cd">1</span>)
+	<span style="color:#cdcd00">go</span> s.refLoop()
+	s.setVersion(<span style="color:#cdcd00">nil</span>, newVersion(s))
+	s.log(<span style="color:#cd0000">&#34;log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed&#34;</span>)
+	<span style="color:#cdcd00">return</span>
+}
+</code></pre></div><ol>
+<li>每次创建一个会话，会锁住stroage</li>
+<li>什么时候解锁？这意味着leveldb不支持多个session并发咯？</li>
+</ol>
+<h3 id="tops">tOps<a hidden class="anchor" aria-hidden="true" href="#tops">#</a></h3>
+<ol>
+<li>tOps包含了所有对table的操作</li>
+<li>cache是files cache</li>
+<li>bcache是block cache, bpool是为bcache服务的</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// Table operations.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> tOps <span style="color:#00cd00">struct</span> {
+	s            <span style="color:#39c">*</span>session
+	noSync       <span style="color:#00cd00">bool</span>
+	evictRemoved <span style="color:#00cd00">bool</span>
+	cache        <span style="color:#39c">*</span>cache.Cache
+	bcache       <span style="color:#39c">*</span>cache.Cache
+	bpool        <span style="color:#39c">*</span>util.BufferPool
+}
+</code></pre></div><h3 id="filedesc">FileDesc<a hidden class="anchor" aria-hidden="true" href="#filedesc">#</a></h3>
+<p>FileDesc起到一个文件描述符的作用</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">type</span> FileDesc <span style="color:#00cd00">struct</span> {
+	Type FileType
+	Num  <span style="color:#00cd00">int64</span>
+}
+
+<span style="color:#000080">// FileType represent a file type.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> FileType <span style="color:#00cd00">int</span>
+
+<span style="color:#000080">// File types.
+</span><span style="color:#000080"></span><span style="color:#00cd00">const</span> (
+	TypeManifest FileType = <span style="color:#cd00cd">1</span> <span style="color:#39c">&lt;&lt;</span> <span style="color:#cdcd00">iota</span>
+	TypeJournal
+	TypeTable
+	TypeTemp
+
+	TypeAll = TypeManifest | TypeJournal | TypeTable | TypeTemp
+)
+</code></pre></div><ol>
+<li>Type总共有4种类型</li>
+<li>Num是文件号，session里的stNextFileNum维护了当前会话里下一个被分配出去文件号</li>
+</ol>
+<h3 id="cacher">Cacher<a hidden class="anchor" aria-hidden="true" href="#cacher">#</a></h3>
+<ol>
+<li>Cacher从接口上看显然是对Node的操作</li>
+<li>Node是干什么的</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// Cacher provides interface to implements a caching functionality.
+</span><span style="color:#000080">// An implementation must be safe for concurrent use.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> Cacher <span style="color:#00cd00">interface</span> {
+	<span style="color:#000080">// Capacity returns cache capacity.
+</span><span style="color:#000080"></span>	Capacity() <span style="color:#00cd00">int</span>
+
+	<span style="color:#000080">// SetCapacity sets cache capacity.
+</span><span style="color:#000080"></span>	SetCapacity(capacity <span style="color:#00cd00">int</span>)
+
+	<span style="color:#000080">// Promote promotes the &#39;cache node&#39;.
+</span><span style="color:#000080"></span>	Promote(n <span style="color:#39c">*</span>Node)
+
+	<span style="color:#000080">// Ban evicts the &#39;cache node&#39; and prevent subsequent &#39;promote&#39;.
+</span><span style="color:#000080"></span>	Ban(n <span style="color:#39c">*</span>Node)
+
+	<span style="color:#000080">// Evict evicts the &#39;cache node&#39;.
+</span><span style="color:#000080"></span>	Evict(n <span style="color:#39c">*</span>Node)
+
+	<span style="color:#000080">// EvictNS evicts &#39;cache node&#39; with the given namespace.
+</span><span style="color:#000080"></span>	EvictNS(ns <span style="color:#00cd00">uint64</span>)
+
+	<span style="color:#000080">// EvictAll evicts all &#39;cache node&#39;.
+</span><span style="color:#000080"></span>	EvictAll()
+
+	<span style="color:#000080">// Close closes the &#39;cache tree&#39;
+</span><span style="color:#000080"></span>	Close() <span style="color:#00cd00">error</span>
+}
+
+<span style="color:#000080">// Node is a &#39;cache node&#39;.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> Node <span style="color:#00cd00">struct</span> {
+	r <span style="color:#39c">*</span>Cache
+
+	hash    <span style="color:#00cd00">uint32</span>
+	ns, key <span style="color:#00cd00">uint64</span>
+
+	mu    sync.Mutex
+	size  <span style="color:#00cd00">int</span>
+	value Value
+
+	ref   <span style="color:#00cd00">int32</span>
+	onDel []<span style="color:#00cd00">func</span>()
+
+	CacheData unsafe.Pointer
+}
+</code></pre></div><h3 id="cache">Cache<a hidden class="anchor" aria-hidden="true" href="#cache">#</a></h3>
+<ol>
+<li>cache用来存放Cacher所持有的nodes数量</li>
+<li>带有读写锁</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// Cache is a &#39;cache map&#39;.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> Cache <span style="color:#00cd00">struct</span> {
+	mu     sync.RWMutex
+	mHead  unsafe.Pointer <span style="color:#000080">// *mNode
+</span><span style="color:#000080"></span>	nodes  <span style="color:#00cd00">int32</span>
+	size   <span style="color:#00cd00">int32</span>
+	cacher Cacher
+	closed <span style="color:#00cd00">bool</span>
+}
+</code></pre></div><h3 id="bufferpool">BufferPool<a hidden class="anchor" aria-hidden="true" href="#bufferpool">#</a></h3>
+<ol>
+<li>BufferPool显然是一个缓冲池，结合pool的类型为[]sync.Pool，大概率是用来池化对象的。</li>
+<li>6个uint32的属性是干嘛的？</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// BufferPool is a &#39;buffer pool&#39;.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> BufferPool <span style="color:#00cd00">struct</span> {
+	pool     [<span style="color:#cd00cd">6</span>]sync.Pool
+	baseline [<span style="color:#cd00cd">5</span>]<span style="color:#00cd00">int</span>
+
+	get     <span style="color:#00cd00">uint32</span>
+	put     <span style="color:#00cd00">uint32</span>
+	less    <span style="color:#00cd00">uint32</span>
+	equal   <span style="color:#00cd00">uint32</span>
+	greater <span style="color:#00cd00">uint32</span>
+	miss    <span style="color:#00cd00">uint32</span>
+}
+</code></pre></div><h3 id="vtask">vTask<a hidden class="anchor" aria-hidden="true" href="#vtask">#</a></h3>
+<p>vTask即version task，用来引用或发布以一个版本任务</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// vTask defines a version task for either reference or release.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> vTask <span style="color:#00cd00">struct</span> {
+	vid     <span style="color:#00cd00">int64</span>
+	files   []tFiles
+	created time.Time
+}
+</code></pre></div><h3 id="vdelta">vDelta<a hidden class="anchor" aria-hidden="true" href="#vdelta">#</a></h3>
+<p>vDelta即version delta, 表示下一个版本和当前指定版本之间的变化信息</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// vDelta indicates the change information between the next version
+</span><span style="color:#000080">// and the currently specified version
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> vDelta <span style="color:#00cd00">struct</span> {
+	vid     <span style="color:#00cd00">int64</span>
+	added   []<span style="color:#00cd00">int64</span>
+	deleted []<span style="color:#00cd00">int64</span>
+}
+</code></pre></div><h3 id="sessionrefloop">session.refLoop<a hidden class="anchor" aria-hidden="true" href="#sessionrefloop">#</a></h3>
+<ol>
+<li>fileRef 表文件引用计数器</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (s <span style="color:#39c">*</span>session) refLoop() {
+	<span style="color:#00cd00">var</span> (
+		fileRef    = <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">map</span>[<span style="color:#00cd00">int64</span>]<span style="color:#00cd00">int</span>)    <span style="color:#000080">// Table file reference counter
+</span><span style="color:#000080"></span>		ref        = <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">map</span>[<span style="color:#00cd00">int64</span>]<span style="color:#39c">*</span>vTask) <span style="color:#000080">// Current referencing version store
+</span><span style="color:#000080"></span>		deltas     = <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">map</span>[<span style="color:#00cd00">int64</span>]<span style="color:#39c">*</span>vDelta)
+		referenced = <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">map</span>[<span style="color:#00cd00">int64</span>]<span style="color:#00cd00">struct</span>{})
+		released   = <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">map</span>[<span style="color:#00cd00">int64</span>]<span style="color:#39c">*</span>vDelta)  <span style="color:#000080">// Released version that waiting for processing
+</span><span style="color:#000080"></span>		abandoned  = <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">map</span>[<span style="color:#00cd00">int64</span>]<span style="color:#00cd00">struct</span>{}) <span style="color:#000080">// Abandoned version id
+</span><span style="color:#000080"></span>		next, last <span style="color:#00cd00">int64</span>
+	)
+	<span style="color:#000080">// addFileRef adds file reference counter with specified file number and
+</span><span style="color:#000080"></span>	<span style="color:#000080">// reference value
+</span><span style="color:#000080"></span>	addFileRef <span style="color:#39c">:=</span> <span style="color:#00cd00">func</span>(fnum <span style="color:#00cd00">int64</span>, ref <span style="color:#00cd00">int</span>) <span style="color:#00cd00">int</span> {
+		ref <span style="color:#39c">+=</span> fileRef[fnum]
+		<span style="color:#cdcd00">if</span> ref &gt; <span style="color:#cd00cd">0</span> {
+			fileRef[fnum] = ref
+		} <span style="color:#cdcd00">else</span> <span style="color:#cdcd00">if</span> ref <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> {
+			<span style="color:#cd00cd">delete</span>(fileRef, fnum)
+		} <span style="color:#cdcd00">else</span> {
+			<span style="color:#cd00cd">panic</span>(fmt.Sprintf(<span style="color:#cd0000">&#34;negative ref: %v&#34;</span>, fnum))
+		}
+		<span style="color:#cdcd00">return</span> ref
+	}
+	<span style="color:#000080">// skipAbandoned skips useless abandoned version id.
+</span><span style="color:#000080"></span>	skipAbandoned <span style="color:#39c">:=</span> <span style="color:#00cd00">func</span>() <span style="color:#00cd00">bool</span> {
+		<span style="color:#cdcd00">if</span> _, exist <span style="color:#39c">:=</span> abandoned[next]; exist {
+			<span style="color:#cd00cd">delete</span>(abandoned, next)
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">true</span>
+		}
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">false</span>
+	}
+	<span style="color:#000080">// applyDelta applies version change to current file reference.
+</span><span style="color:#000080"></span>	applyDelta <span style="color:#39c">:=</span> <span style="color:#00cd00">func</span>(d <span style="color:#39c">*</span>vDelta) {
+		<span style="color:#cdcd00">for</span> _, t <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> d.added {
+			addFileRef(t, <span style="color:#cd00cd">1</span>)
+		}
+		<span style="color:#cdcd00">for</span> _, t <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> d.deleted {
+			<span style="color:#cdcd00">if</span> addFileRef(t, <span style="color:#39c">-</span><span style="color:#cd00cd">1</span>) <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> {
+				s.tops.remove(storage.FileDesc{Type: storage.TypeTable, Num: t})
+			}
+		}
+	}
+
+	timer <span style="color:#39c">:=</span> time.NewTimer(<span style="color:#cd00cd">0</span>)
+	<span style="color:#39c">&lt;-</span>timer.C <span style="color:#000080">// discard the initial tick
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">defer</span> timer.Stop()
+
+	<span style="color:#000080">// processTasks processes version tasks in strict order.
+</span><span style="color:#000080"></span>	<span style="color:#000080">//
+</span><span style="color:#000080"></span>	<span style="color:#000080">// If we want to use delta to reduce the cost of file references and dereferences,
+</span><span style="color:#000080"></span>	<span style="color:#000080">// we must strictly follow the id of the version, otherwise some files that are
+</span><span style="color:#000080"></span>	<span style="color:#000080">// being referenced will be deleted.
+</span><span style="color:#000080"></span>	<span style="color:#000080">//
+</span><span style="color:#000080"></span>	<span style="color:#000080">// In addition, some db operations (such as iterators) may cause a version to be
+</span><span style="color:#000080"></span>	<span style="color:#000080">// referenced for a long time. In order to prevent such operations from blocking
+</span><span style="color:#000080"></span>	<span style="color:#000080">// the entire processing queue, we will properly convert some of the version tasks
+</span><span style="color:#000080"></span>	<span style="color:#000080">// into full file references and releases.
+</span><span style="color:#000080"></span>	processTasks <span style="color:#39c">:=</span> <span style="color:#00cd00">func</span>() {
+		timer.Reset(maxCachedTime)
+		<span style="color:#000080">// Make sure we don&#39;t cache too many version tasks.
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">for</span> {
+			<span style="color:#000080">// Skip any abandoned version number to prevent blocking processing.
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">if</span> skipAbandoned() {
+				next <span style="color:#39c">+=</span> <span style="color:#cd00cd">1</span>
+				<span style="color:#cdcd00">continue</span>
+			}
+			<span style="color:#000080">// Don&#39;t bother the version that has been released.
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">if</span> _, exist <span style="color:#39c">:=</span> released[next]; exist {
+				<span style="color:#cdcd00">break</span>
+			}
+			<span style="color:#000080">// Ensure the specified version has been referenced.
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">if</span> _, exist <span style="color:#39c">:=</span> ref[next]; !exist {
+				<span style="color:#cdcd00">break</span>
+			}
+			<span style="color:#cdcd00">if</span> last<span style="color:#39c">-</span>next &lt; maxCachedNumber <span style="color:#39c">&amp;&amp;</span> time.Since(ref[next].created) &lt; maxCachedTime {
+				<span style="color:#cdcd00">break</span>
+			}
+			<span style="color:#000080">// Convert version task into full file references and releases mode.
+</span><span style="color:#000080"></span>			<span style="color:#000080">// Reference version(i+1) first and wait version(i) to release.
+</span><span style="color:#000080"></span>			<span style="color:#000080">// FileRef(i+1) = FileRef(i) + Delta(i)
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">for</span> _, tt <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> ref[next].files {
+				<span style="color:#cdcd00">for</span> _, t <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> tt {
+					addFileRef(t.fd.Num, <span style="color:#cd00cd">1</span>)
+				}
+			}
+			<span style="color:#000080">// Note, if some compactions take a long time, even more than 5 minutes,
+</span><span style="color:#000080"></span>			<span style="color:#000080">// we may miss the corresponding delta information here.
+</span><span style="color:#000080"></span>			<span style="color:#000080">// Fortunately it will not affect the correctness of the file reference,
+</span><span style="color:#000080"></span>			<span style="color:#000080">// and we can apply the delta once we receive it.
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">if</span> d <span style="color:#39c">:=</span> deltas[next]; d <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+				applyDelta(d)
+			}
+			referenced[next] = <span style="color:#00cd00">struct</span>{}{}
+			<span style="color:#cd00cd">delete</span>(ref, next)
+			<span style="color:#cd00cd">delete</span>(deltas, next)
+			next <span style="color:#39c">+=</span> <span style="color:#cd00cd">1</span>
+		}
+
+		<span style="color:#000080">// Use delta information to process all released versions.
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">for</span> {
+			<span style="color:#cdcd00">if</span> skipAbandoned() {
+				next <span style="color:#39c">+=</span> <span style="color:#cd00cd">1</span>
+				<span style="color:#cdcd00">continue</span>
+			}
+			<span style="color:#cdcd00">if</span> d, exist <span style="color:#39c">:=</span> released[next]; exist {
+				<span style="color:#cdcd00">if</span> d <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+					applyDelta(d)
+				}
+				<span style="color:#cd00cd">delete</span>(released, next)
+				next <span style="color:#39c">+=</span> <span style="color:#cd00cd">1</span>
+				<span style="color:#cdcd00">continue</span>
+			}
+			<span style="color:#cdcd00">return</span>
+		}
+	}
+
+	<span style="color:#cdcd00">for</span> {
+		processTasks()
+
+		<span style="color:#cdcd00">select</span> {
+		<span style="color:#cdcd00">case</span> t <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>s.refCh:
+			<span style="color:#cdcd00">if</span> _, exist <span style="color:#39c">:=</span> ref[t.vid]; exist {
+				<span style="color:#cd00cd">panic</span>(<span style="color:#cd0000">&#34;duplicate reference request&#34;</span>)
+			}
+			ref[t.vid] = t
+			<span style="color:#cdcd00">if</span> t.vid &gt; last {
+				last = t.vid
+			}
+
+		<span style="color:#cdcd00">case</span> d <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>s.deltaCh:
+			<span style="color:#cdcd00">if</span> _, exist <span style="color:#39c">:=</span> ref[d.vid]; !exist {
+				<span style="color:#cdcd00">if</span> _, exist2 <span style="color:#39c">:=</span> referenced[d.vid]; !exist2 {
+					<span style="color:#cd00cd">panic</span>(<span style="color:#cd0000">&#34;invalid release request&#34;</span>)
+				}
+				<span style="color:#000080">// The reference opt is already expired, apply
+</span><span style="color:#000080"></span>				<span style="color:#000080">// delta here.
+</span><span style="color:#000080"></span>				applyDelta(d)
+				<span style="color:#cdcd00">continue</span>
+			}
+			deltas[d.vid] = d
+
+		<span style="color:#cdcd00">case</span> t <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>s.relCh:
+			<span style="color:#cdcd00">if</span> _, exist <span style="color:#39c">:=</span> referenced[t.vid]; exist {
+				<span style="color:#cdcd00">for</span> _, tt <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> t.files {
+					<span style="color:#cdcd00">for</span> _, t <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> tt {
+						<span style="color:#cdcd00">if</span> addFileRef(t.fd.Num, <span style="color:#39c">-</span><span style="color:#cd00cd">1</span>) <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> {
+							s.tops.remove(t.fd)
+						}
+					}
+				}
+				<span style="color:#cd00cd">delete</span>(referenced, t.vid)
+				<span style="color:#cdcd00">continue</span>
+			}
+			<span style="color:#cdcd00">if</span> _, exist <span style="color:#39c">:=</span> ref[t.vid]; !exist {
+				<span style="color:#cd00cd">panic</span>(<span style="color:#cd0000">&#34;invalid release request&#34;</span>)
+			}
+			released[t.vid] = deltas[t.vid]
+			<span style="color:#cd00cd">delete</span>(deltas, t.vid)
+			<span style="color:#cd00cd">delete</span>(ref, t.vid)
+
+		<span style="color:#cdcd00">case</span> id <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>s.abandon:
+			<span style="color:#cdcd00">if</span> id <span style="color:#39c">&gt;=</span> next {
+				abandoned[id] = <span style="color:#00cd00">struct</span>{}{}
+			}
+
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">&lt;-</span>timer.C:
+
+		<span style="color:#cdcd00">case</span> r <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>s.fileRefCh:
+			ref <span style="color:#39c">:=</span> <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">map</span>[<span style="color:#00cd00">int64</span>]<span style="color:#00cd00">int</span>)
+			<span style="color:#cdcd00">for</span> f, c <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> fileRef {
+				ref[f] = c
+			}
+			r <span style="color:#39c">&lt;-</span> ref
+
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">&lt;-</span>s.closeC:
+			s.closeW.Done()
+			<span style="color:#cdcd00">return</span>
+		}
+	}
+}
+</code></pre></div>
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lambertxiao.github.io/tags/kv%E5%AD%98%E5%82%A8/">kv存储</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lambertxiao.github.io/posts/golang/golang-runtime/doc/">
+    <span class="title">« Prev Page</span>
+    <br>
+    <span>golang-runtime</span>
+  </a>
+  <a class="next" href="https://lambertxiao.github.io/posts/golang/golang-epoll/doc/">
+    <span class="title">Next Page »</span>
+    <br>
+    <span>Golang-epoll</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share LevelDB是干嘛的 on twitter"
+        href="https://twitter.com/intent/tweet/?text=LevelDB%e6%98%af%e5%b9%b2%e5%98%9b%e7%9a%84&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-bloomfilter%2fdoc%2f&amp;hashtags=kv%e5%ad%98%e5%82%a8">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share LevelDB是干嘛的 on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-bloomfilter%2fdoc%2f&amp;title=LevelDB%e6%98%af%e5%b9%b2%e5%98%9b%e7%9a%84&amp;summary=LevelDB%e6%98%af%e5%b9%b2%e5%98%9b%e7%9a%84&amp;source=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-bloomfilter%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share LevelDB是干嘛的 on reddit"
+        href="https://reddit.com/submit?url=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-bloomfilter%2fdoc%2f&title=LevelDB%e6%98%af%e5%b9%b2%e5%98%9b%e7%9a%84">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share LevelDB是干嘛的 on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-bloomfilter%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share LevelDB是干嘛的 on whatsapp"
+        href="https://api.whatsapp.com/send?text=LevelDB%e6%98%af%e5%b9%b2%e5%98%9b%e7%9a%84%20-%20https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-bloomfilter%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share LevelDB是干嘛的 on telegram"
+        href="https://telegram.me/share/url?text=LevelDB%e6%98%af%e5%b9%b2%e5%98%9b%e7%9a%84&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fleveldb-bloomfilter%2fdoc%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_KY25sRiRtb" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

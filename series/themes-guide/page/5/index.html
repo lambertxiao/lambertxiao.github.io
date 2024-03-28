@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Themes Guide | Lambert&#39;s blog</title>
+<meta name="keywords" content="" />
+<meta name="description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod">
+<meta name="author" content="Theme PaperMod">
+<link rel="canonical" href="https://lambertxiao.github.io/series/themes-guide/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" type="application/rss+xml" href="https://lambertxiao.github.io/series/themes-guide/index.xml">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="Themes Guide" />
+<meta property="og:description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://lambertxiao.github.io/series/themes-guide/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="Themes Guide"/>
+<meta name="twitter:description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod"/>
+
+</head>
+
+<body class="list" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main"> 
+<header class="page-header"><div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/series/">Series</a></div>
+  <h1>Themes Guide</h1>
+</header>
+
+<article class="post-entry tag-entry"> 
+<figure class="entry-cover"><img loading="lazy" src="https://lambertxiao.github.io/cover/%E7%AE%97%E6%B3%95-%E6%89%93%E5%AE%B6%E5%8A%AB%E8%88%8D.png" alt="">
+</figure>
+  <header class="entry-header">
+    <h2>动态规划-打家劫舍
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>不会打家劫舍的程序员不是好的小偷</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-09 00:00:00 +0000 UTC'>March 9, 2022</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 动态规划-打家劫舍" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%89%93%E5%AE%B6%E5%8A%AB%E8%88%8D/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+<figure class="entry-cover"><img loading="lazy" src="https://lambertxiao.github.io/cover/%E7%AE%97%E6%B3%95-%E7%88%AC%E6%A5%BC%E6%A2%AF.png" alt="">
+</figure>
+  <header class="entry-header">
+    <h2>动态规划-爬楼梯
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>爬个楼梯也事多</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-09 00:00:00 +0000 UTC'>March 9, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 动态规划-爬楼梯" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E7%88%AC%E6%A5%BC%E6%A2%AF/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+<figure class="entry-cover"><img loading="lazy" src="https://lambertxiao.github.io/cover/%E8%A7%92%E8%90%BD%E7%94%9F%E7%89%A9.png" alt="">
+</figure>
+  <header class="entry-header">
+    <h2>角落生物-坨坨坨酱
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>坨坨酱</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-09 00:00:00 +0000 UTC'>March 9, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 角落生物-坨坨坨酱" href="https://lambertxiao.github.io/posts/%E8%A7%92%E8%90%BD%E7%94%9F%E7%89%A9-%E5%9D%A8/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Golang-Defer底层实现机制
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>麻了呀，面试面到了答不出来</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-08 00:00:00 +0000 UTC'>March 8, 2022</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-Defer底层实现机制" href="https://lambertxiao.github.io/posts/golang/golang-defer%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+<figure class="entry-cover"><img loading="lazy" src="https://lambertxiao.github.io/cover/golang-syncpool.png" alt="">
+</figure>
+  <header class="entry-header">
+    <h2>Golang-Sync.Pool底层结构
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>sync.Pool在项目中被频繁用到，那么它底下是怎么实现的呢</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-08 00:00:00 +0000 UTC'>March 8, 2022</span>&nbsp;·&nbsp;7 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-Sync.Pool底层结构" href="https://lambertxiao.github.io/posts/golang/golang-sync.pool%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0/pool/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+<figure class="entry-cover"><img loading="lazy" src="https://lambertxiao.github.io/cover/golang-%E5%AE%9E%E7%8E%B0%E9%99%90%E6%B5%81%E5%99%A8.png" alt="">
+</figure>
+  <header class="entry-header">
+    <h2>Golang-实现限流器
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>麻了呀，面试问到限流器相关的知识答不出来</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-08 00:00:00 +0000 UTC'>March 8, 2022</span>&nbsp;·&nbsp;7 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-实现限流器" href="https://lambertxiao.github.io/posts/golang/golang-%E5%AE%9E%E7%8E%B0%E9%99%90%E6%B5%81%E5%99%A8/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Raft-简单入门
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>分布式一致性协议的当红辣子鸡</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-07 00:00:00 +0000 UTC'>March 7, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Raft-简单入门" href="https://lambertxiao.github.io/posts/raft-%E7%AE%80%E5%8D%95%E5%85%A5%E9%97%A8/raft/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Redis-实现分布式锁
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>只要是分布式应用，免不了要使用分布式锁</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-07 00:00:00 +0000 UTC'>March 7, 2022</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Redis-实现分布式锁" href="https://lambertxiao.github.io/posts/redis-%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/redis/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>B&#43;树
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>用过mysql的都知道我</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to B&#43;树" href="https://lambertxiao.github.io/posts/data-struct/b&#43;%E6%A0%91/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>BIOS是什么
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>当年重装系统的时候，没少听过BIOS吧？</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to BIOS是什么" href="https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/bios/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>B树
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>平衡多路查找树</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to B树" href="https://lambertxiao.github.io/posts/data-struct/b%E6%A0%91/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>C-啥是宏
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>宏在C中真的是无所不在了吧</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to C-啥是宏" href="https://lambertxiao.github.io/posts/c-%E5%95%A5%E6%98%AF%E5%AE%8F%E5%91%80/define%E5%AE%8F/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>C-小知识
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>为了在存储的路上深耕，C/C&#43;&#43;知识储备不能少</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to C-小知识" href="https://lambertxiao.github.io/posts/c-%E5%B0%8F%E7%9F%A5%E8%AF%86/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>DNS记录都有哪些？
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>NS记录、A记录都是些啥</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to DNS记录都有哪些？" href="https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/dns%E8%A7%A3%E6%9E%90/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Docker原理
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>Namespace, CGroup, UnionFS的整合怪</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Docker原理" href="https://lambertxiao.github.io/posts/docker-%E5%8E%9F%E7%90%86/docker/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Golang-Channel的底层结构
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>一把锁&#43;一个环形数组&#43;两个等待队列</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-Channel的底层结构" href="https://lambertxiao.github.io/posts/golang/golang-channel%E7%9A%84%E5%BA%95%E5%B1%82%E7%BB%93%E6%9E%84/channel%E7%9A%84%E5%BA%95%E5%B1%82%E7%BB%93%E6%9E%84/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Golang-小知识
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>面试前总得背一背吧</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-小知识" href="https://lambertxiao.github.io/posts/golang/golang-%E5%B0%8F%E7%9F%A5%E8%AF%86/golang%E5%B0%8F%E7%9F%A5%E8%AF%86/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Golang-线程模型
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>M(内核线程)、P(处理器)、G(协程)</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-线程模型" href="https://lambertxiao.github.io/posts/golang/golang-%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B/golang%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Golang垃圾回收
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>三色标记法</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang垃圾回收" href="https://lambertxiao.github.io/posts/golang/golang-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/golang%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Http2简介
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>二进制协议、多路复用、流量控制、首部压缩</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Http2简介" href="https://lambertxiao.github.io/posts/http2-%E7%AE%80%E4%BB%8B/http2/"></a>
+</article>
+<footer class="page-footer">
+  <nav class="pagination">
+    <a class="prev" href="https://lambertxiao.github.io/series/themes-guide/page/4/">« Prev Page</a>
+    <a class="next" href="https://lambertxiao.github.io/series/themes-guide/page/6/">Next Page »</a>
+  </nav>
+</footer>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>

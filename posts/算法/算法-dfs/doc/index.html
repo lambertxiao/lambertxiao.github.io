@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>算法-DFS | Lambert&#39;s blog</title>
+<meta name="keywords" content="算法" />
+<meta name="description" content="22. 括号生成 22. 括号生成 数字 n 代表生成括号的对数，请你设计一个函数，用于能够生成所有可能的并且 有效的 括号组合。
+func generateParenthesis(n int) []string { ans := []string{} var dfs func(lb, rb int, s string) dfs = func(lb, rb int, s string) { if lb &gt; rb { return } if lb == 0 &amp;&amp; rb == 0 { // 括号用完了，并且是合法的  if isValid(s) { ans = append(ans, s) } return } if lb != 0 { dfs(lb - 1, rb, s &#43; &#34;(&#34;) } if rb !">
+<meta name="author" content="Lambert Xiao">
+<link rel="canonical" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-dfs/doc/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js" integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5&#43;kdJvBz5iKbt6B5PJI="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="算法-DFS" />
+<meta property="og:description" content="22. 括号生成 22. 括号生成 数字 n 代表生成括号的对数，请你设计一个函数，用于能够生成所有可能的并且 有效的 括号组合。
+func generateParenthesis(n int) []string { ans := []string{} var dfs func(lb, rb int, s string) dfs = func(lb, rb int, s string) { if lb &gt; rb { return } if lb == 0 &amp;&amp; rb == 0 { // 括号用完了，并且是合法的  if isValid(s) { ans = append(ans, s) } return } if lb != 0 { dfs(lb - 1, rb, s &#43; &#34;(&#34;) } if rb !" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-dfs/doc/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-03-13T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2022-03-13T00:00:00&#43;00:00" />
+<meta property="og:see_also" content="https://lambertxiao.github.io/posts/gdb_usage/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/numa/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/uio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/vfio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/virtio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="算法-DFS"/>
+<meta name="twitter:description" content="22. 括号生成 22. 括号生成 数字 n 代表生成括号的对数，请你设计一个函数，用于能够生成所有可能的并且 有效的 括号组合。
+func generateParenthesis(n int) []string { ans := []string{} var dfs func(lb, rb int, s string) dfs = func(lb, rb int, s string) { if lb &gt; rb { return } if lb == 0 &amp;&amp; rb == 0 { // 括号用完了，并且是合法的  if isValid(s) { ans = append(ans, s) } return } if lb != 0 { dfs(lb - 1, rb, s &#43; &#34;(&#34;) } if rb !"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://lambertxiao.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "算法-DFS",
+      "item": "https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-dfs/doc/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "算法-DFS",
+  "name": "算法-DFS",
+  "description": "22. 括号生成 22. 括号生成 数字 n 代表生成括号的对数，请你设计一个函数，用于能够生成所有可能的并且 有效的 括号组合。\nfunc generateParenthesis(n int) []string { ans := []string{} var dfs func(lb, rb int, s string) dfs = func(lb, rb int, s string) { if lb \u0026gt; rb { return } if lb == 0 \u0026amp;\u0026amp; rb == 0 { // 括号用完了，并且是合法的  if isValid(s) { ans = append(ans, s) } return } if lb != 0 { dfs(lb - 1, rb, s + \u0026#34;(\u0026#34;) } if rb !",
+  "keywords": [
+    "算法"
+  ],
+  "articleBody": "22. 括号生成 22. 括号生成 数字 n 代表生成括号的对数，请你设计一个函数，用于能够生成所有可能的并且 有效的 括号组合。\nfunc generateParenthesis(n int) []string { ans := []string{} var dfs func(lb, rb int, s string) dfs = func(lb, rb int, s string) { if lb  rb { return } if lb == 0 \u0026\u0026 rb == 0 { // 括号用完了，并且是合法的  if isValid(s) { ans = append(ans, s) } return } if lb != 0 { dfs(lb - 1, rb, s + \"(\") } if rb != 0 { dfs(lb, rb - 1, s + \")\") } } dfs(n, n, \"\") return ans } func isValid(s string) bool { left := 0 for _, c := range s { if c == '(' { left++ } else { if left == 0 { return false } left-- } } return left == 0 } 39. 组合总和 39. 组合总和 给你一个 无重复元素 的整数数组 candidates 和一个目标整数 target ，找出 candidates 中可以使数字和为目标数 target 的 所有 不同组合 ，并以列表形式返回。你可以按 任意顺序 返回这些组合。\ncandidates 中的 同一个 数字可以 无限制重复被选取 。如果至少一个数字的被选数量不同，则两种组合是不同的。\n对于给定的输入，保证和为 target 的不同组合数少于 150 个。\nfunc combinationSum(candidates []int, target int) [][]int { res := [][]int{} // idx是为了不添加重复的集合  var backtrace func (sum int, track []int, idx int) backtrace = func (sum int, track []int, idx int) { if target == sum { res = append(res, append([]int{}, track...)) return } if sum  target { return } for i := idx; i len(candidates); i++ { c := candidates[i] backtrace(sum+c, append(track, c), i) } } backtrace(0, []int{}, 0) return res } 40. 组合总和 II 40. 组合总和 II 给定一个候选人编号的集合 candidates 和一个目标数 target ，找出 candidates 中所有可以使数字和为 target 的组合。\ncandidates 中的每个数字在每个组合中只能使用 一次 。\n注意：解集不能包含重复的组合。\nfunc combinationSum2(candidates []int, target int) [][]int { sort.Ints(candidates) ans := [][]int{} var backtrace func (sum int, set []int, idx int) backtrace = func (sum int, set []int, idx int) { if sum == target { ans = append(ans, append([]int{}, set...)) return } if sum  target { return } for i := idx; i len(candidates); i++ { if i  idx \u0026\u0026 candidates[i] == candidates[i-1] { continue } val := candidates[i] backtrace(sum + val, append(set, val), i+1) } } backtrace(0, []int{}, 0) return ans } 46. 全排列 46. 全排列 给定一个不含重复数字的数组 nums ，返回其 所有可能的全排列 。你可以 按任意顺序 返回答案。\nfunc permute(nums []int) [][]int { n := len(nums) ans := [][]int{} used := make([]bool, n) var backtrace func(path []int) backtrace = func(path []int) { if len(path) == n { ans = append(ans, append([]int{}, path...)) return } for idx, v := range nums { if !used[idx] { used[idx] = true backtrace(append(path, v)) used[idx] = false } } } backtrace([]int{}) return ans } 78. 子集 78. 子集 给你一个整数数组 nums ，数组中的元素 互不相同 。返回该数组所有可能的子集（幂集）。\n解集 不能 包含重复的子集。你可以按 任意顺序 返回解集。\nfunc subsets(nums []int) [][]int { size := len(nums) ans := [][]int{} var backtrace func(startIdx int, path []int) backtrace = func(startIdx int, path []int) { ans = append(ans, append([]int{}, path...)) if startIdx = size { return } for i := startIdx; i ++ { backtrace(i+1, append(path, nums[i])) } } backtrace(0, []int{}) return ans } 79. 单词搜索 79. 单词搜索 给定一个 m x n 二维字符网格 board 和一个字符串单词 word 。如果 word 存在于网格中，返回 true ；否则，返回 false 。\n单词必须按照字母顺序，通过相邻的单元格内的字母构成，其中“相邻”单元格是那些水平相邻或垂直相邻的单元格。同一个单元格内的字母不允许被重复使用。\nfunc exist(board [][]byte, word string) bool { workLength := len(word) directions := [][]int{ {-1, 0}, // 往上  {1, 0}, // 往下  {0, -1}, // 往左  {0, 1}, // 往右  } w := len(board) h := len(board[0]) visit := geneVisit(w, h) var check func(i, j, k int) bool check = func(i, j, k int) bool { if board[i][j] != word[k] { return false } // word已经匹配到最后一位  if k == workLength - 1 { return true } visit[i][j] = true defer func() { visit[i][j] = false }() // 朝上下左右继续匹配k+1位  for _, d := range directions { newI := i+d[0] newJ := j+d[1] if newI = 0 \u0026\u0026 newJ = 0 \u0026\u0026 newI \u0026\u0026 newJ if visit[newI][newJ] { continue } if check(newI, newJ, k+1) { return true } } } return false } for i, row := range board { for j := range row { if check(i, j, 0) { return true } } } return false } func geneVisit(w, h int) [][]bool { visit := make([][]bool, w) for i := 0; i ++ { visit[i] = make([]bool, h) } return visit } 695. 岛屿的最大面积 695. 岛屿的最大面积 给你一个大小为 m x n 的二进制矩阵 grid 。\n岛屿 是由一些相邻的 1 (代表土地) 构成的组合，这里的「相邻」要求两个 1 必须在 水平或者竖直的四个方向上 相邻。你可以假设 grid 的四个边缘都被 0（代表水）包围着。\n岛屿的面积是岛上值为 1 的单元格的数目。\n计算并返回 grid 中最大的岛屿面积。如果没有岛屿，则返回面积为 0 。\nfunc maxAreaOfIsland(grid [][]int) int { m, n := len(grid), len(grid[0]) var dfs func(i, j int) int dfs = func(i, j int) int { if i 0 || j 0 || i = m || j = n || grid[i][j] == 0 { return 0 } // 沉没岛屿, 避免重复计算  grid[i][j] = 0 cnt := 1 cnt += dfs(i-1, j) cnt += dfs(i+1, j) cnt += dfs(i, j-1) cnt += dfs(i, j+1) return cnt } ans := 0 for i := 0; i ++ { for j := 0; j ++ { if grid[i][j] == 1 { ans = max(ans, dfs(i, j)) } } } return ans } 130. 被围绕的区域 130. 被围绕的区域 给你一个 m x n 的矩阵 board ，由若干字符 ‘X’ 和 ‘O’ ，找到所有被 ‘X’ 围绕的区域，并将这些区域里所有的 ‘O’ 用 ‘X’ 填充。\n思路：\n 需要从上下左右边界开始找（因为从中间找的话可能找到的O其实是跟边界相连着的，此时这个O是不能替换成X的） 替换与边界相连的O为任意字符# 最后遍历整个board，修正整个board  func solve(board [][]byte) { m, n := len(board), len(board[0]) var dfs func(i, j int) dfs = func(i, j int) { // 判断i，j是否位于边界  if i 0 || i  m - 1 || j 0 || j  n - 1 || board[i][j] != 'O' { return } // 置为任意字符  board[i][j] = '#' dfs(i+1, j) dfs(i-1, j) dfs(i, j+1) dfs(i, j-1) } // 从左右两边出发，将与边界上的O字符置为#字符  for i := 0; i ++ { dfs(i, 0) dfs(i, n-1) } // 从上下两边出发，将与边界上的O字符置为#字符  for j := 0; j ++ { dfs(0, j) dfs(m-1, j) } for i := 0; i ++ { for j := 0; j ++ { // 没有被置为#的O字符，证明没有同边界相连，可以替换  if board[i][j] == 'O' { board[i][j] = 'X' } else if board[i][j] == '#' { // 对于#，实际上是同边界相连的O，所以需要还原  board[i][j] = 'O' } } } } ",
+  "wordCount" : "999",
+  "inLanguage": "en",
+  "datePublished": "2022-03-13T00:00:00Z",
+  "dateModified": "2022-03-13T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "Lambert Xiao"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-dfs/doc/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lambert's blog",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lambertxiao.github.io/avatar.jpeg"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      算法-DFS
+    </h1>
+    <div class="post-meta"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;5 min&nbsp;·&nbsp;Lambert Xiao&nbsp;|&nbsp;<a href="https://github.com/adityatelange/hugo-PaperMod/tree/exampleSite/content/posts/%e7%ae%97%e6%b3%95/%e7%ae%97%e6%b3%95-DFS/doc.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+</div>
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#22-%e6%8b%ac%e5%8f%b7%e7%94%9f%e6%88%90" aria-label="22. 括号生成">22. 括号生成</a></li>
+                <li>
+                    <a href="#39-%e7%bb%84%e5%90%88%e6%80%bb%e5%92%8c" aria-label="39. 组合总和">39. 组合总和</a></li>
+                <li>
+                    <a href="#40-%e7%bb%84%e5%90%88%e6%80%bb%e5%92%8c-ii" aria-label="40. 组合总和 II">40. 组合总和 II</a></li>
+                <li>
+                    <a href="#46-%e5%85%a8%e6%8e%92%e5%88%97" aria-label="46. 全排列">46. 全排列</a></li>
+                <li>
+                    <a href="#78-%e5%ad%90%e9%9b%86" aria-label="78. 子集">78. 子集</a></li>
+                <li>
+                    <a href="#79-%e5%8d%95%e8%af%8d%e6%90%9c%e7%b4%a2" aria-label="79. 单词搜索">79. 单词搜索</a></li>
+                <li>
+                    <a href="#695-%e5%b2%9b%e5%b1%bf%e7%9a%84%e6%9c%80%e5%a4%a7%e9%9d%a2%e7%a7%af" aria-label="695. 岛屿的最大面积">695. 岛屿的最大面积</a></li>
+                <li>
+                    <a href="#130-%e8%a2%ab%e5%9b%b4%e7%bb%95%e7%9a%84%e5%8c%ba%e5%9f%9f" aria-label="130. 被围绕的区域">130. 被围绕的区域</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h3 id="22-括号生成">22. 括号生成<a hidden class="anchor" aria-hidden="true" href="#22-括号生成">#</a></h3>
+<p><a href="https://leetcode-cn.com/problems/generate-parentheses/">22. 括号生成</a>
+数字 n 代表生成括号的对数，请你设计一个函数，用于能够生成所有可能的并且 有效的 括号组合。</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> generateParenthesis(n <span style="color:#00cd00">int</span>) []<span style="color:#00cd00">string</span> {
+    ans <span style="color:#39c">:=</span> []<span style="color:#00cd00">string</span>{}
+    <span style="color:#00cd00">var</span> dfs <span style="color:#00cd00">func</span>(lb, rb <span style="color:#00cd00">int</span>, s <span style="color:#00cd00">string</span>)
+    dfs = <span style="color:#00cd00">func</span>(lb, rb <span style="color:#00cd00">int</span>, s <span style="color:#00cd00">string</span>) {
+        <span style="color:#cdcd00">if</span> lb &gt; rb {
+            <span style="color:#cdcd00">return</span>
+        }
+        
+        <span style="color:#cdcd00">if</span> lb <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> <span style="color:#39c">&amp;&amp;</span> rb <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> {
+            <span style="color:#000080">// 括号用完了，并且是合法的
+</span><span style="color:#000080"></span>            <span style="color:#cdcd00">if</span> isValid(s) {
+                ans = <span style="color:#cd00cd">append</span>(ans, s)
+            }
+            <span style="color:#cdcd00">return</span>
+        }
+
+        <span style="color:#cdcd00">if</span> lb <span style="color:#39c">!=</span> <span style="color:#cd00cd">0</span> {
+            dfs(lb <span style="color:#39c">-</span> <span style="color:#cd00cd">1</span>, rb, s <span style="color:#39c">+</span> <span style="color:#cd0000">&#34;(&#34;</span>)
+        }
+
+        <span style="color:#cdcd00">if</span> rb <span style="color:#39c">!=</span> <span style="color:#cd00cd">0</span> {
+            dfs(lb, rb <span style="color:#39c">-</span> <span style="color:#cd00cd">1</span>, s <span style="color:#39c">+</span> <span style="color:#cd0000">&#34;)&#34;</span>)
+        }
+    }
+    dfs(n, n, <span style="color:#cd0000">&#34;&#34;</span>)
+    <span style="color:#cdcd00">return</span> ans
+}
+
+<span style="color:#00cd00">func</span> isValid(s <span style="color:#00cd00">string</span>) <span style="color:#00cd00">bool</span> {
+    left <span style="color:#39c">:=</span> <span style="color:#cd00cd">0</span>
+    <span style="color:#cdcd00">for</span> _, c <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> s {
+        <span style="color:#cdcd00">if</span> c <span style="color:#39c">==</span> <span style="color:#cd0000">&#39;(&#39;</span> {
+            left<span style="color:#39c">++</span>
+        } <span style="color:#cdcd00">else</span> {
+            <span style="color:#cdcd00">if</span> left <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> {
+                <span style="color:#cdcd00">return</span> <span style="color:#cdcd00">false</span>
+            }
+            left<span style="color:#39c">--</span>
+        }
+    }
+    
+    <span style="color:#cdcd00">return</span> left <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span>
+}
+</code></pre></div><h3 id="39-组合总和">39. 组合总和<a hidden class="anchor" aria-hidden="true" href="#39-组合总和">#</a></h3>
+<p><a href="https://leetcode-cn.com/problems/combination-sum/">39. 组合总和</a>
+给你一个 无重复元素 的整数数组 candidates 和一个目标整数 target ，找出 candidates 中可以使数字和为目标数 target 的 所有 不同组合 ，并以列表形式返回。你可以按 任意顺序 返回这些组合。</p>
+<p>candidates 中的 同一个 数字可以 无限制重复被选取 。如果至少一个数字的被选数量不同，则两种组合是不同的。</p>
+<p>对于给定的输入，保证和为 target 的不同组合数少于 150 个。</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> combinationSum(candidates []<span style="color:#00cd00">int</span>, target <span style="color:#00cd00">int</span>) [][]<span style="color:#00cd00">int</span> {
+    res <span style="color:#39c">:=</span> [][]<span style="color:#00cd00">int</span>{}
+
+    <span style="color:#000080">// idx是为了不添加重复的集合
+</span><span style="color:#000080"></span>    <span style="color:#00cd00">var</span> backtrace <span style="color:#00cd00">func</span> (sum <span style="color:#00cd00">int</span>, track []<span style="color:#00cd00">int</span>, idx <span style="color:#00cd00">int</span>)
+    backtrace = <span style="color:#00cd00">func</span> (sum <span style="color:#00cd00">int</span>, track []<span style="color:#00cd00">int</span>, idx <span style="color:#00cd00">int</span>) {
+        <span style="color:#cdcd00">if</span> target <span style="color:#39c">==</span> sum {
+            res = <span style="color:#cd00cd">append</span>(res, <span style="color:#cd00cd">append</span>([]<span style="color:#00cd00">int</span>{}, track<span style="color:#39c">...</span>))
+            <span style="color:#cdcd00">return</span>
+        }
+
+        <span style="color:#cdcd00">if</span> sum &gt; target {
+            <span style="color:#cdcd00">return</span>
+        }
+
+        <span style="color:#cdcd00">for</span> i <span style="color:#39c">:=</span> idx; i &lt; <span style="color:#cd00cd">len</span>(candidates); i<span style="color:#39c">++</span> {
+            c <span style="color:#39c">:=</span> candidates[i]
+            backtrace(sum<span style="color:#39c">+</span>c, <span style="color:#cd00cd">append</span>(track, c), i)
+        }
+    }
+
+    backtrace(<span style="color:#cd00cd">0</span>, []<span style="color:#00cd00">int</span>{}, <span style="color:#cd00cd">0</span>)
+    <span style="color:#cdcd00">return</span> res
+}
+</code></pre></div><h3 id="40-组合总和-ii">40. 组合总和 II<a hidden class="anchor" aria-hidden="true" href="#40-组合总和-ii">#</a></h3>
+<p><a href="https://leetcode-cn.com/problems/combination-sum-ii/">40. 组合总和 II</a>
+给定一个候选人编号的集合 candidates 和一个目标数 target ，找出 candidates 中所有可以使数字和为 target 的组合。</p>
+<p>candidates 中的每个数字在每个组合中只能使用 一次 。</p>
+<p>注意：解集不能包含重复的组合。</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> combinationSum2(candidates []<span style="color:#00cd00">int</span>, target <span style="color:#00cd00">int</span>) [][]<span style="color:#00cd00">int</span> {
+    sort.Ints(candidates)
+    ans <span style="color:#39c">:=</span> [][]<span style="color:#00cd00">int</span>{}
+    
+    <span style="color:#00cd00">var</span> backtrace <span style="color:#00cd00">func</span> (sum <span style="color:#00cd00">int</span>, set []<span style="color:#00cd00">int</span>, idx <span style="color:#00cd00">int</span>)
+    backtrace = <span style="color:#00cd00">func</span> (sum <span style="color:#00cd00">int</span>, set []<span style="color:#00cd00">int</span>, idx <span style="color:#00cd00">int</span>) {
+        <span style="color:#cdcd00">if</span> sum <span style="color:#39c">==</span> target {
+            ans = <span style="color:#cd00cd">append</span>(ans, <span style="color:#cd00cd">append</span>([]<span style="color:#00cd00">int</span>{}, set<span style="color:#39c">...</span>))
+            <span style="color:#cdcd00">return</span>
+        }
+
+        <span style="color:#cdcd00">if</span> sum &gt; target {
+            <span style="color:#cdcd00">return</span>
+        }
+
+        <span style="color:#cdcd00">for</span> i <span style="color:#39c">:=</span> idx; i &lt; <span style="color:#cd00cd">len</span>(candidates); i<span style="color:#39c">++</span> {
+            <span style="color:#cdcd00">if</span> i &gt; idx <span style="color:#39c">&amp;&amp;</span> candidates[i] <span style="color:#39c">==</span> candidates[i<span style="color:#39c">-</span><span style="color:#cd00cd">1</span>] {
+                <span style="color:#cdcd00">continue</span>
+            }
+            val <span style="color:#39c">:=</span> candidates[i]
+            backtrace(sum <span style="color:#39c">+</span> val, <span style="color:#cd00cd">append</span>(set, val), i<span style="color:#39c">+</span><span style="color:#cd00cd">1</span>)
+        }
+    }
+
+    backtrace(<span style="color:#cd00cd">0</span>, []<span style="color:#00cd00">int</span>{}, <span style="color:#cd00cd">0</span>)
+    <span style="color:#cdcd00">return</span> ans
+}
+</code></pre></div><h3 id="46-全排列">46. 全排列<a hidden class="anchor" aria-hidden="true" href="#46-全排列">#</a></h3>
+<p><a href="https://leetcode-cn.com/problems/permutations/">46. 全排列</a>
+给定一个不含重复数字的数组 nums ，返回其 所有可能的全排列 。你可以 按任意顺序 返回答案。</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> permute(nums []<span style="color:#00cd00">int</span>) [][]<span style="color:#00cd00">int</span> {
+    n <span style="color:#39c">:=</span> <span style="color:#cd00cd">len</span>(nums)
+    ans <span style="color:#39c">:=</span> [][]<span style="color:#00cd00">int</span>{}
+    used <span style="color:#39c">:=</span> <span style="color:#cd00cd">make</span>([]<span style="color:#00cd00">bool</span>, n)
+
+    <span style="color:#00cd00">var</span> backtrace <span style="color:#00cd00">func</span>(path []<span style="color:#00cd00">int</span>)
+    backtrace = <span style="color:#00cd00">func</span>(path []<span style="color:#00cd00">int</span>) {
+        <span style="color:#cdcd00">if</span> <span style="color:#cd00cd">len</span>(path) <span style="color:#39c">==</span> n {
+            ans = <span style="color:#cd00cd">append</span>(ans, <span style="color:#cd00cd">append</span>([]<span style="color:#00cd00">int</span>{}, path<span style="color:#39c">...</span>))
+            <span style="color:#cdcd00">return</span>
+        }
+
+        <span style="color:#cdcd00">for</span> idx, v <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> nums {
+            <span style="color:#cdcd00">if</span> !used[idx] {
+                used[idx] = <span style="color:#cdcd00">true</span>
+                backtrace(<span style="color:#cd00cd">append</span>(path, v))
+                used[idx] = <span style="color:#cdcd00">false</span>
+            }
+        }
+    }
+    backtrace([]<span style="color:#00cd00">int</span>{})
+    <span style="color:#cdcd00">return</span> ans
+}
+</code></pre></div><h3 id="78-子集">78. 子集<a hidden class="anchor" aria-hidden="true" href="#78-子集">#</a></h3>
+<p><a href="https://leetcode-cn.com/problems/subsets/">78. 子集</a>
+给你一个整数数组 nums ，数组中的元素 互不相同 。返回该数组所有可能的子集（幂集）。</p>
+<p>解集 不能 包含重复的子集。你可以按 任意顺序 返回解集。</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> subsets(nums []<span style="color:#00cd00">int</span>) [][]<span style="color:#00cd00">int</span> {
+    size <span style="color:#39c">:=</span> <span style="color:#cd00cd">len</span>(nums)
+    ans <span style="color:#39c">:=</span> [][]<span style="color:#00cd00">int</span>{}
+
+    <span style="color:#00cd00">var</span> backtrace <span style="color:#00cd00">func</span>(startIdx <span style="color:#00cd00">int</span>, path []<span style="color:#00cd00">int</span>)
+    backtrace = <span style="color:#00cd00">func</span>(startIdx <span style="color:#00cd00">int</span>, path []<span style="color:#00cd00">int</span>) {
+        ans = <span style="color:#cd00cd">append</span>(ans, <span style="color:#cd00cd">append</span>([]<span style="color:#00cd00">int</span>{}, path<span style="color:#39c">...</span>))
+        <span style="color:#cdcd00">if</span> startIdx <span style="color:#39c">&gt;=</span> size {
+            <span style="color:#cdcd00">return</span>
+        }
+        <span style="color:#cdcd00">for</span> i <span style="color:#39c">:=</span> startIdx; i &lt; size; i<span style="color:#39c">++</span> {
+            backtrace(i<span style="color:#39c">+</span><span style="color:#cd00cd">1</span>, <span style="color:#cd00cd">append</span>(path, nums[i])) 
+        }
+    }
+
+    backtrace(<span style="color:#cd00cd">0</span>, []<span style="color:#00cd00">int</span>{})
+    <span style="color:#cdcd00">return</span> ans
+}
+</code></pre></div><h3 id="79-单词搜索">79. 单词搜索<a hidden class="anchor" aria-hidden="true" href="#79-单词搜索">#</a></h3>
+<p><a href="https://leetcode-cn.com/problems/word-search/">79. 单词搜索</a>
+给定一个 m x n 二维字符网格 board 和一个字符串单词 word 。如果 word 存在于网格中，返回 true ；否则，返回 false 。</p>
+<p>单词必须按照字母顺序，通过相邻的单元格内的字母构成，其中“相邻”单元格是那些水平相邻或垂直相邻的单元格。同一个单元格内的字母不允许被重复使用。</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> exist(board [][]<span style="color:#00cd00">byte</span>, word <span style="color:#00cd00">string</span>) <span style="color:#00cd00">bool</span> {
+    workLength <span style="color:#39c">:=</span> <span style="color:#cd00cd">len</span>(word)
+    directions <span style="color:#39c">:=</span> [][]<span style="color:#00cd00">int</span>{
+        {<span style="color:#39c">-</span><span style="color:#cd00cd">1</span>, <span style="color:#cd00cd">0</span>}, <span style="color:#000080">// 往上
+</span><span style="color:#000080"></span>        {<span style="color:#cd00cd">1</span>, <span style="color:#cd00cd">0</span>}, <span style="color:#000080">// 往下
+</span><span style="color:#000080"></span>        {<span style="color:#cd00cd">0</span>, <span style="color:#39c">-</span><span style="color:#cd00cd">1</span>}, <span style="color:#000080">// 往左
+</span><span style="color:#000080"></span>        {<span style="color:#cd00cd">0</span>, <span style="color:#cd00cd">1</span>}, <span style="color:#000080">// 往右
+</span><span style="color:#000080"></span>    }
+    w <span style="color:#39c">:=</span> <span style="color:#cd00cd">len</span>(board)
+    h <span style="color:#39c">:=</span> <span style="color:#cd00cd">len</span>(board[<span style="color:#cd00cd">0</span>])
+
+    visit <span style="color:#39c">:=</span> geneVisit(w, h)
+    <span style="color:#00cd00">var</span> check <span style="color:#00cd00">func</span>(i, j, k <span style="color:#00cd00">int</span>) <span style="color:#00cd00">bool</span>
+    check = <span style="color:#00cd00">func</span>(i, j, k <span style="color:#00cd00">int</span>) <span style="color:#00cd00">bool</span> {
+        <span style="color:#cdcd00">if</span> board[i][j] <span style="color:#39c">!=</span> word[k] {
+            <span style="color:#cdcd00">return</span> <span style="color:#cdcd00">false</span>
+        }
+
+        <span style="color:#000080">// word已经匹配到最后一位
+</span><span style="color:#000080"></span>        <span style="color:#cdcd00">if</span> k <span style="color:#39c">==</span> workLength <span style="color:#39c">-</span> <span style="color:#cd00cd">1</span> {
+            <span style="color:#cdcd00">return</span> <span style="color:#cdcd00">true</span>
+        }
+
+        visit[i][j] = <span style="color:#cdcd00">true</span>
+        <span style="color:#cdcd00">defer</span> <span style="color:#00cd00">func</span>() {
+            visit[i][j] = <span style="color:#cdcd00">false</span>
+        }() 
+        <span style="color:#000080">// 朝上下左右继续匹配k+1位
+</span><span style="color:#000080"></span>        <span style="color:#cdcd00">for</span> _, d <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> directions {
+            newI <span style="color:#39c">:=</span> i<span style="color:#39c">+</span>d[<span style="color:#cd00cd">0</span>]
+            newJ <span style="color:#39c">:=</span> j<span style="color:#39c">+</span>d[<span style="color:#cd00cd">1</span>]
+
+            <span style="color:#cdcd00">if</span> newI <span style="color:#39c">&gt;=</span> <span style="color:#cd00cd">0</span> <span style="color:#39c">&amp;&amp;</span> newJ <span style="color:#39c">&gt;=</span> <span style="color:#cd00cd">0</span> <span style="color:#39c">&amp;&amp;</span> newI &lt; w <span style="color:#39c">&amp;&amp;</span> newJ &lt; h{
+                <span style="color:#cdcd00">if</span> visit[newI][newJ] {
+                    <span style="color:#cdcd00">continue</span>
+                }
+
+                <span style="color:#cdcd00">if</span> check(newI, newJ, k<span style="color:#39c">+</span><span style="color:#cd00cd">1</span>) {
+                    <span style="color:#cdcd00">return</span> <span style="color:#cdcd00">true</span>
+                }
+            }
+        }
+        <span style="color:#cdcd00">return</span> <span style="color:#cdcd00">false</span>
+    }
+
+
+    <span style="color:#cdcd00">for</span> i, row <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> board {
+        <span style="color:#cdcd00">for</span> j <span style="color:#39c">:=</span> <span style="color:#cdcd00">range</span> row {
+            <span style="color:#cdcd00">if</span> check(i, j, <span style="color:#cd00cd">0</span>) {
+                <span style="color:#cdcd00">return</span> <span style="color:#cdcd00">true</span>
+            }
+        }
+    }
+
+    <span style="color:#cdcd00">return</span> <span style="color:#cdcd00">false</span>
+}
+
+<span style="color:#00cd00">func</span> geneVisit(w, h <span style="color:#00cd00">int</span>) [][]<span style="color:#00cd00">bool</span> {
+    visit <span style="color:#39c">:=</span> <span style="color:#cd00cd">make</span>([][]<span style="color:#00cd00">bool</span>, w)
+    <span style="color:#cdcd00">for</span> i <span style="color:#39c">:=</span> <span style="color:#cd00cd">0</span>; i &lt; w; i<span style="color:#39c">++</span> {
+        visit[i] = <span style="color:#cd00cd">make</span>([]<span style="color:#00cd00">bool</span>, h)
+    }
+
+    <span style="color:#cdcd00">return</span> visit
+}
+</code></pre></div><h3 id="695-岛屿的最大面积">695. 岛屿的最大面积<a hidden class="anchor" aria-hidden="true" href="#695-岛屿的最大面积">#</a></h3>
+<p><a href="https://leetcode-cn.com/problems/max-area-of-island/">695. 岛屿的最大面积</a>
+给你一个大小为 m x n 的二进制矩阵 grid 。</p>
+<p>岛屿 是由一些相邻的 1 (代表土地) 构成的组合，这里的「相邻」要求两个 1 必须在 水平或者竖直的四个方向上 相邻。你可以假设 grid 的四个边缘都被 0（代表水）包围着。</p>
+<p>岛屿的面积是岛上值为 1 的单元格的数目。</p>
+<p>计算并返回 grid 中最大的岛屿面积。如果没有岛屿，则返回面积为 0 。</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> maxAreaOfIsland(grid [][]<span style="color:#00cd00">int</span>) <span style="color:#00cd00">int</span> {
+    m, n <span style="color:#39c">:=</span> <span style="color:#cd00cd">len</span>(grid), <span style="color:#cd00cd">len</span>(grid[<span style="color:#cd00cd">0</span>])
+
+    <span style="color:#00cd00">var</span> dfs <span style="color:#00cd00">func</span>(i, j <span style="color:#00cd00">int</span>) <span style="color:#00cd00">int</span>
+    dfs = <span style="color:#00cd00">func</span>(i, j <span style="color:#00cd00">int</span>) <span style="color:#00cd00">int</span> {
+        <span style="color:#cdcd00">if</span> i &lt; <span style="color:#cd00cd">0</span> <span style="color:#39c">||</span> j &lt; <span style="color:#cd00cd">0</span> <span style="color:#39c">||</span> i <span style="color:#39c">&gt;=</span> m <span style="color:#39c">||</span> j <span style="color:#39c">&gt;=</span> n <span style="color:#39c">||</span> grid[i][j] <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> {
+            <span style="color:#cdcd00">return</span> <span style="color:#cd00cd">0</span>
+        }
+
+        <span style="color:#000080">// 沉没岛屿, 避免重复计算
+</span><span style="color:#000080"></span>        grid[i][j] = <span style="color:#cd00cd">0</span>
+        cnt <span style="color:#39c">:=</span> <span style="color:#cd00cd">1</span>
+
+        cnt <span style="color:#39c">+=</span> dfs(i<span style="color:#39c">-</span><span style="color:#cd00cd">1</span>, j)
+        cnt <span style="color:#39c">+=</span> dfs(i<span style="color:#39c">+</span><span style="color:#cd00cd">1</span>, j)
+        cnt <span style="color:#39c">+=</span> dfs(i, j<span style="color:#39c">-</span><span style="color:#cd00cd">1</span>)
+        cnt <span style="color:#39c">+=</span> dfs(i, j<span style="color:#39c">+</span><span style="color:#cd00cd">1</span>)
+        <span style="color:#cdcd00">return</span> cnt
+    }
+
+    ans <span style="color:#39c">:=</span> <span style="color:#cd00cd">0</span>
+    <span style="color:#cdcd00">for</span> i <span style="color:#39c">:=</span> <span style="color:#cd00cd">0</span>; i &lt; m; i<span style="color:#39c">++</span> {
+        <span style="color:#cdcd00">for</span> j <span style="color:#39c">:=</span> <span style="color:#cd00cd">0</span>; j &lt; n; j<span style="color:#39c">++</span> {
+            <span style="color:#cdcd00">if</span> grid[i][j] <span style="color:#39c">==</span> <span style="color:#cd00cd">1</span> {
+                ans = max(ans, dfs(i, j))
+            }
+        }
+    }
+    <span style="color:#cdcd00">return</span> ans
+}
+</code></pre></div><h3 id="130-被围绕的区域">130. 被围绕的区域<a hidden class="anchor" aria-hidden="true" href="#130-被围绕的区域">#</a></h3>
+<p><a href="https://leetcode-cn.com/problems/surrounded-regions/">130. 被围绕的区域</a>
+给你一个 m x n 的矩阵 board ，由若干字符 &lsquo;X&rsquo; 和 &lsquo;O&rsquo; ，找到所有被 &lsquo;X&rsquo; 围绕的区域，并将这些区域里所有的 &lsquo;O&rsquo; 用 &lsquo;X&rsquo; 填充。</p>
+<p>思路：</p>
+<ol>
+<li>需要从上下左右边界开始找（因为从中间找的话可能找到的O其实是跟边界相连着的，此时这个O是不能替换成X的）</li>
+<li>替换与边界相连的O为任意字符#</li>
+<li>最后遍历整个board，修正整个board</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> solve(board [][]<span style="color:#00cd00">byte</span>)  {
+    m, n <span style="color:#39c">:=</span> <span style="color:#cd00cd">len</span>(board), <span style="color:#cd00cd">len</span>(board[<span style="color:#cd00cd">0</span>])
+
+    <span style="color:#00cd00">var</span> dfs <span style="color:#00cd00">func</span>(i, j <span style="color:#00cd00">int</span>)
+    dfs = <span style="color:#00cd00">func</span>(i, j <span style="color:#00cd00">int</span>) {
+        <span style="color:#000080">// 判断i，j是否位于边界
+</span><span style="color:#000080"></span>        <span style="color:#cdcd00">if</span> i &lt; <span style="color:#cd00cd">0</span> <span style="color:#39c">||</span> i &gt; m <span style="color:#39c">-</span> <span style="color:#cd00cd">1</span> <span style="color:#39c">||</span> j &lt; <span style="color:#cd00cd">0</span> <span style="color:#39c">||</span> j &gt; n <span style="color:#39c">-</span> <span style="color:#cd00cd">1</span> <span style="color:#39c">||</span> board[i][j] <span style="color:#39c">!=</span> <span style="color:#cd0000">&#39;O&#39;</span> {
+            <span style="color:#cdcd00">return</span>
+        }
+
+        <span style="color:#000080">// 置为任意字符
+</span><span style="color:#000080"></span>        board[i][j] = <span style="color:#cd0000">&#39;#&#39;</span>
+        dfs(i<span style="color:#39c">+</span><span style="color:#cd00cd">1</span>, j)
+        dfs(i<span style="color:#39c">-</span><span style="color:#cd00cd">1</span>, j)
+        dfs(i, j<span style="color:#39c">+</span><span style="color:#cd00cd">1</span>)
+        dfs(i, j<span style="color:#39c">-</span><span style="color:#cd00cd">1</span>)
+    }
+
+    <span style="color:#000080">// 从左右两边出发，将与边界上的O字符置为#字符
+</span><span style="color:#000080"></span>    <span style="color:#cdcd00">for</span> i <span style="color:#39c">:=</span> <span style="color:#cd00cd">0</span>; i &lt; m; i<span style="color:#39c">++</span> {
+        dfs(i, <span style="color:#cd00cd">0</span>)
+        dfs(i, n<span style="color:#39c">-</span><span style="color:#cd00cd">1</span>)
+    }
+    <span style="color:#000080">// 从上下两边出发，将与边界上的O字符置为#字符
+</span><span style="color:#000080"></span>    <span style="color:#cdcd00">for</span> j <span style="color:#39c">:=</span> <span style="color:#cd00cd">0</span>; j &lt; n; j<span style="color:#39c">++</span> {
+        dfs(<span style="color:#cd00cd">0</span>, j)
+        dfs(m<span style="color:#39c">-</span><span style="color:#cd00cd">1</span>, j)
+    }
+
+    <span style="color:#cdcd00">for</span> i <span style="color:#39c">:=</span> <span style="color:#cd00cd">0</span>; i &lt; m; i<span style="color:#39c">++</span> {
+        <span style="color:#cdcd00">for</span> j <span style="color:#39c">:=</span> <span style="color:#cd00cd">0</span>; j &lt; n; j<span style="color:#39c">++</span> {
+            <span style="color:#000080">// 没有被置为#的O字符，证明没有同边界相连，可以替换
+</span><span style="color:#000080"></span>            <span style="color:#cdcd00">if</span> board[i][j] <span style="color:#39c">==</span> <span style="color:#cd0000">&#39;O&#39;</span> {
+                board[i][j] = <span style="color:#cd0000">&#39;X&#39;</span>
+            } <span style="color:#cdcd00">else</span> <span style="color:#cdcd00">if</span> board[i][j] <span style="color:#39c">==</span> <span style="color:#cd0000">&#39;#&#39;</span> {
+                <span style="color:#000080">// 对于#，实际上是同边界相连的O，所以需要还原
+</span><span style="color:#000080"></span>                board[i][j] = <span style="color:#cd0000">&#39;O&#39;</span>
+            }
+        }
+    }
+}
+</code></pre></div>
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lambertxiao.github.io/tags/%E7%AE%97%E6%B3%95/">算法</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-bfs/doc/">
+    <span class="title">« Prev Page</span>
+    <br>
+    <span>算法-BFS</span>
+  </a>
+  <a class="next" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-hash%E8%A1%A8/doc/">
+    <span class="title">Next Page »</span>
+    <br>
+    <span>算法-hash表</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 算法-DFS on twitter"
+        href="https://twitter.com/intent/tweet/?text=%e7%ae%97%e6%b3%95-DFS&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E7%25AE%2597%25E6%25B3%2595%2f%25E7%25AE%2597%25E6%25B3%2595-dfs%2fdoc%2f&amp;hashtags=%e7%ae%97%e6%b3%95">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 算法-DFS on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E7%25AE%2597%25E6%25B3%2595%2f%25E7%25AE%2597%25E6%25B3%2595-dfs%2fdoc%2f&amp;title=%e7%ae%97%e6%b3%95-DFS&amp;summary=%e7%ae%97%e6%b3%95-DFS&amp;source=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E7%25AE%2597%25E6%25B3%2595%2f%25E7%25AE%2597%25E6%25B3%2595-dfs%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 算法-DFS on reddit"
+        href="https://reddit.com/submit?url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E7%25AE%2597%25E6%25B3%2595%2f%25E7%25AE%2597%25E6%25B3%2595-dfs%2fdoc%2f&title=%e7%ae%97%e6%b3%95-DFS">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 算法-DFS on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E7%25AE%2597%25E6%25B3%2595%2f%25E7%25AE%2597%25E6%25B3%2595-dfs%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 算法-DFS on whatsapp"
+        href="https://api.whatsapp.com/send?text=%e7%ae%97%e6%b3%95-DFS%20-%20https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E7%25AE%2597%25E6%25B3%2595%2f%25E7%25AE%2597%25E6%25B3%2595-dfs%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 算法-DFS on telegram"
+        href="https://telegram.me/share/url?text=%e7%ae%97%e6%b3%95-DFS&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E7%25AE%2597%25E6%25B3%2595%2f%25E7%25AE%2597%25E6%25B3%2595-dfs%2fdoc%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_KY25sRiRtb" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

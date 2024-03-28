@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>MongoDB查询计划 | Lambert&#39;s blog</title>
+<meta name="keywords" content="mongo" />
+<meta name="description" content="什么是查询计划">
+<meta name="author" content="Lambert Xiao">
+<link rel="canonical" href="https://lambertxiao.github.io/posts/mongo-%E6%9F%A5%E8%AF%A2%E8%AE%A1%E5%88%92/doc/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js" integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5&#43;kdJvBz5iKbt6B5PJI="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="MongoDB查询计划" />
+<meta property="og:description" content="什么是查询计划" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://lambertxiao.github.io/posts/mongo-%E6%9F%A5%E8%AF%A2%E8%AE%A1%E5%88%92/doc/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-05-08T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2022-05-08T00:00:00&#43;00:00" />
+<meta property="og:see_also" content="https://lambertxiao.github.io/posts/gdb_usage/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/numa/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/uio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/vfio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/virtio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="MongoDB查询计划"/>
+<meta name="twitter:description" content="什么是查询计划"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://lambertxiao.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "MongoDB查询计划",
+      "item": "https://lambertxiao.github.io/posts/mongo-%E6%9F%A5%E8%AF%A2%E8%AE%A1%E5%88%92/doc/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "MongoDB查询计划",
+  "name": "MongoDB查询计划",
+  "description": "什么是查询计划",
+  "keywords": [
+    "mongo"
+  ],
+  "articleBody": "简介 MongoDB采用自底向上的方式来构造查询计划，每一个查询计划 (query plan）都会被分解为若千个有层次的阶段 (stage）。有意思的是，整个查询计划最终会呈现出一颗多叉树的形状。\n整个计算过程是从下向上投递的，每一个阶段的计算结果都是其上层阶段的输入\nvar collection = db.getCollection(\"practise\"); var count = 10000; var base = 10; var items = []; for (var i = 0; i  count; i++) { var item = {}; item.x = Math.round(Math.random() * base); item.y = Math.round(Math.random() * base); item.z = Math.round(Math.random() * base); item.did = \"ITEM\" + i; items.push(item); if (i % 1000 == 0) { collection.insertMany(items); items = []; } } db.getCollection('practise').ensureIndex({x: 1, y: 1, z: 1}) db.getCollection('practise').ensureIndex({did: 1}) 全表扫描 db.getCollection('practise').find({aaa: 11}).explain() { ... \"queryPlanner\" : { \"namespace\" : \"test.practise\", \"indexFilterSet\" : false, \"parsedQuery\" : { \"aaa\" : { \"$eq\" : 11.0 } }, \"maxIndexedOrSolutionsReached\" : false, \"maxIndexedAndSolutionsReached\" : false, \"maxScansToExplodeReached\" : false, \"winningPlan\" : { \"stage\" : \"COLLSCAN\", \"filter\" : { \"aaa\" : { \"$eq\" : 11.0 } }, \"direction\" : \"forward\" }, \"rejectedPlans\" : [] }, ... } 单键索引命中 db.getCollection('practise').find({did: \"ITEM24\"}).explain() { ... \"queryPlanner\" : { \"namespace\" : \"test.practise\", \"indexFilterSet\" : false, \"parsedQuery\" : { \"did\" : { \"$eq\" : \"ITEM24\" } }, \"queryHash\" : \"B4F08825\", \"planCacheKey\" : \"9F7BDA42\", \"maxIndexedOrSolutionsReached\" : false, \"maxIndexedAndSolutionsReached\" : false, \"maxScansToExplodeReached\" : false, \"winningPlan\" : { \"stage\" : \"FETCH\", \"inputStage\" : { \"stage\" : \"IXSCAN\", \"keyPattern\" : { \"did\" : 1.0 }, \"indexName\" : \"did_1\", \"isMultiKey\" : false, \"multiKeyPaths\" : { \"did\" : [] }, \"isUnique\" : false, \"isSparse\" : false, \"isPartial\" : false, \"indexVersion\" : 2, \"direction\" : \"forward\", \"indexBounds\" : { \"did\" : [ \"[\\\"ITEM24\\\", \\\"ITEM24\\\"]\" ] } } }, \"rejectedPlans\" : [] }, ... } 覆盖索引 db.getCollection('practise').find({did: \"ITEM24\"}, {did: 1, _id: 0}).explain() { \"queryPlanner\" : { \"namespace\" : \"test.practise\", \"indexFilterSet\" : false, \"parsedQuery\" : { \"did\" : { \"$eq\" : \"ITEM24\" } }, \"queryHash\" : \"BA4C57C6\", \"planCacheKey\" : \"302BC8FB\", \"maxIndexedOrSolutionsReached\" : false, \"maxIndexedAndSolutionsReached\" : false, \"maxScansToExplodeReached\" : false, \"winningPlan\" : { \"stage\" : \"PROJECTION_COVERED\", \"transformBy\" : { \"did\" : 1.0, \"_id\" : 0.0 }, \"inputStage\" : { \"stage\" : \"IXSCAN\", \"keyPattern\" : { \"did\" : 1.0 }, \"indexName\" : \"did_1\", \"isMultiKey\" : false, \"multiKeyPaths\" : { \"did\" : [] }, \"isUnique\" : false, \"isSparse\" : false, \"isPartial\" : false, \"indexVersion\" : 2, \"direction\" : \"forward\", \"indexBounds\" : { \"did\" : [ \"[\\\"ITEM24\\\", \\\"ITEM24\\\"]\" ] } } }, \"rejectedPlans\" : [] }, } 列表查询+skip/limit db.getCollection('practise').find({x: {$gt: 3}}).skip(10).limit(5).explain() { ... \"queryPlanner\" : { \"namespace\" : \"test.practise\", \"indexFilterSet\" : false, \"parsedQuery\" : { \"x\" : { \"$gt\" : 3.0 } }, \"queryHash\" : \"39913629\", \"planCacheKey\" : \"CB9286EB\", \"maxIndexedOrSolutionsReached\" : false, \"maxIndexedAndSolutionsReached\" : false, \"maxScansToExplodeReached\" : false, \"winningPlan\" : { \"stage\" : \"LIMIT\", \"limitAmount\" : 5, \"inputStage\" : { \"stage\" : \"FETCH\", \"inputStage\" : { \"stage\" : \"SKIP\", \"skipAmount\" : 10, \"inputStage\" : { \"stage\" : \"IXSCAN\", \"keyPattern\" : { \"x\" : 1.0, \"y\" : 1.0, \"z\" : 1.0 }, \"indexName\" : \"x_1_y_1_z_1\", \"isMultiKey\" : false, \"multiKeyPaths\" : { \"x\" : [], \"y\" : [], \"z\" : [] }, \"isUnique\" : false, \"isSparse\" : false, \"isPartial\" : false, \"indexVersion\" : 2, \"direction\" : \"forward\", \"indexBounds\" : { \"x\" : [ \"(3.0, inf.0]\" ], \"y\" : [ \"[MinKey, MaxKey]\" ], \"z\" : [ \"[MinKey, MaxKey]\" ] } } } } }, \"rejectedPlans\" : [] }, ... } 内存排序 使用了{x1: 1}, 因此无法利用索引进行排序，只能在内存里排序。当内存排序超过了memLimit时，查询就会出错\ndb.getCollection('practise').find({x: {$gt: 3}}).sort({x1: 1}).explain(\"executionStats\") { \"queryPlanner\" : { \"namespace\" : \"test.practise\", \"indexFilterSet\" : false, \"parsedQuery\" : { \"x\" : { \"$gt\" : 3.0 } }, \"maxIndexedOrSolutionsReached\" : false, \"maxIndexedAndSolutionsReached\" : false, \"maxScansToExplodeReached\" : false, \"winningPlan\" : { \"stage\" : \"SORT\", \"sortPattern\" : { \"x1\" : 1 }, \"memLimit\" : 104857600, \"type\" : \"simple\", \"inputStage\" : { \"stage\" : \"FETCH\", \"inputStage\" : { \"stage\" : \"IXSCAN\", \"keyPattern\" : { \"x\" : 1.0, \"y\" : 1.0, \"z\" : 1.0 }, \"indexName\" : \"x_1_y_1_z_1\", \"isMultiKey\" : false, \"multiKeyPaths\" : { \"x\" : [], \"y\" : [], \"z\" : [] }, \"isUnique\" : false, \"isSparse\" : false, \"isPartial\" : false, \"indexVersion\" : 2, \"direction\" : \"forward\", \"indexBounds\" : { \"x\" : [ \"(3.0, inf.0]\" ], \"y\" : [ \"[MinKey, MaxKey]\" ], \"z\" : [ \"[MinKey, MaxKey]\" ] } } } }, \"rejectedPlans\" : [] }, } 组合索引无法命中 查询无法满足前缀匹配原则，实际上做了全表扫描\ndb.getCollection('practise').find({y: 1, z: 3}).explain() { \"queryPlanner\" : { \"namespace\" : \"test.practise\", \"indexFilterSet\" : false, \"parsedQuery\" : { \"$and\" : [ { \"y\" : { \"$eq\" : 1.0 } }, { \"z\" : { \"$eq\" : 3.0 } } ] }, \"queryHash\" : \"2B5DAA81\", \"planCacheKey\" : \"189A1787\", \"maxIndexedOrSolutionsReached\" : false, \"maxIndexedAndSolutionsReached\" : false, \"maxScansToExplodeReached\" : false, \"winningPlan\" : { \"stage\" : \"COLLSCAN\", \"filter\" : { \"$and\" : [ { \"y\" : { \"$eq\" : 1.0 } }, { \"z\" : { \"$eq\" : 3.0 } } ] }, \"direction\" : \"forward\" }, \"rejectedPlans\" : [] }, } 组合索引排序命中 sort({y: -1, z: -1}) y和z都使用了降序，所以可以使用索引排序\ndb.getCollection('practise').find({x: 1}).sort({y: -1, z: -1}).limit(5).explain() { \"queryPlanner\" : { \"namespace\" : \"test.practise\", \"indexFilterSet\" : false, \"parsedQuery\" : { \"x\" : { \"$eq\" : 1.0 } }, \"queryHash\" : \"D1E516FC\", \"planCacheKey\" : \"36B48F45\", \"maxIndexedOrSolutionsReached\" : false, \"maxIndexedAndSolutionsReached\" : false, \"maxScansToExplodeReached\" : false, \"winningPlan\" : { \"stage\" : \"LIMIT\", \"limitAmount\" : 5, \"inputStage\" : { \"stage\" : \"FETCH\", \"inputStage\" : { \"stage\" : \"IXSCAN\", \"keyPattern\" : { \"x\" : 1.0, \"y\" : 1.0, \"z\" : 1.0 }, \"indexName\" : \"x_1_y_1_z_1\", \"isMultiKey\" : false, \"multiKeyPaths\" : { \"x\" : [], \"y\" : [], \"z\" : [] }, \"isUnique\" : false, \"isSparse\" : false, \"isPartial\" : false, \"indexVersion\" : 2, \"direction\" : \"backward\", \"indexBounds\" : { \"x\" : [ \"[1.0, 1.0]\" ], \"y\" : [ \"[MaxKey, MinKey]\" ], \"z\" : [ \"[MaxKey, MinKey]\" ] } } } }, \"rejectedPlans\" : [] }, } 组合索引命中，内存排序 sort({y: 1, z: -1}) y和z排序方向不同，所以只能在内存中排序。需要注意的是，这里的内存排序是基于索引的而不是文档的，但在mongodb4.0及以前的版本中，对于这种查询的排序是基于文档的，也就是先执行FETCH再执行SORT。\ndb.getCollection('practise').find({x: 1}).sort({y: 1, z: -1}).limit(5).explain() { \"queryPlanner\" : { \"namespace\" : \"test.practise\", \"indexFilterSet\" : false, \"parsedQuery\" : { \"x\" : { \"$eq\" : 1.0 } }, \"queryHash\" : \"048FB511\", \"planCacheKey\" : \"3CE59AC2\", \"maxIndexedOrSolutionsReached\" : false, \"maxIndexedAndSolutionsReached\" : false, \"maxScansToExplodeReached\" : false, \"winningPlan\" : { \"stage\" : \"FETCH\", \"inputStage\" : { \"stage\" : \"SORT\", \"sortPattern\" : { \"y\" : 1, \"z\" : -1 }, \"memLimit\" : 104857600, \"limitAmount\" : 5, \"type\" : \"default\", \"inputStage\" : { \"stage\" : \"IXSCAN\", \"keyPattern\" : { \"x\" : 1.0, \"y\" : 1.0, \"z\" : 1.0 }, \"indexName\" : \"x_1_y_1_z_1\", \"isMultiKey\" : false, \"multiKeyPaths\" : { \"x\" : [], \"y\" : [], \"z\" : [] }, \"isUnique\" : false, \"isSparse\" : false, \"isPartial\" : false, \"indexVersion\" : 2, \"direction\" : \"forward\", \"indexBounds\" : { \"x\" : [ \"[1.0, 1.0]\" ], \"y\" : [ \"[MinKey, MaxKey]\" ], \"z\" : [ \"[MinKey, MaxKey]\" ] } } } }, \"rejectedPlans\" : [] }, } 组合索引命中，范围+排序 db.getCollection('practise').find({x: {$gt: 3}}).sort({x: 1, y: 1, z: 1}).explain() { \"queryPlanner\" : { \"namespace\" : \"test.practise\", \"indexFilterSet\" : false, \"parsedQuery\" : { \"x\" : { \"$gt\" : 3.0 } }, \"queryHash\" : \"D7099141\", \"planCacheKey\" : \"4B559A11\", \"maxIndexedOrSolutionsReached\" : false, \"maxIndexedAndSolutionsReached\" : false, \"maxScansToExplodeReached\" : false, \"winningPlan\" : { \"stage\" : \"FETCH\", \"inputStage\" : { \"stage\" : \"IXSCAN\", \"keyPattern\" : { \"x\" : 1.0, \"y\" : 1.0, \"z\" : 1.0 }, \"indexName\" : \"x_1_y_1_z_1\", \"isMultiKey\" : false, \"multiKeyPaths\" : { \"x\" : [], \"y\" : [], \"z\" : [] }, \"isUnique\" : false, \"isSparse\" : false, \"isPartial\" : false, \"indexVersion\" : 2, \"direction\" : \"forward\", \"indexBounds\" : { \"x\" : [ \"(3.0, inf.0]\" ], \"y\" : [ \"[MinKey, MaxKey]\" ], \"z\" : [ \"[MinKey, MaxKey]\" ] } } }, \"rejectedPlans\" : [] }, } 不合适的组合索引，范围+排序 x不是等值匹配，因此{y: 1, z: 1}的排序无法利用组合索引的顺序，此时产生了内存排序\ndb.getCollection('practise').find({x: {$gt: 3}}).sort({y: 1, z: 1}).explain() { \"queryPlanner\" : { \"namespace\" : \"test.practise\", \"indexFilterSet\" : false, \"parsedQuery\" : { \"x\" : { \"$gt\" : 3.0 } }, \"queryHash\" : \"916DB19C\", \"planCacheKey\" : \"B7596367\", \"maxIndexedOrSolutionsReached\" : false, \"maxIndexedAndSolutionsReached\" : false, \"maxScansToExplodeReached\" : false, \"winningPlan\" : { \"stage\" : \"FETCH\", \"inputStage\" : { \"stage\" : \"SORT\", \"sortPattern\" : { \"y\" : 1, \"z\" : 1 }, \"memLimit\" : 104857600, \"type\" : \"default\", \"inputStage\" : { \"stage\" : \"IXSCAN\", \"keyPattern\" : { \"x\" : 1.0, \"y\" : 1.0, \"z\" : 1.0 }, \"indexName\" : \"x_1_y_1_z_1\", \"isMultiKey\" : false, \"multiKeyPaths\" : { \"x\" : [], \"y\" : [], \"z\" : [] }, \"isUnique\" : false, \"isSparse\" : false, \"isPartial\" : false, \"indexVersion\" : 2, \"direction\" : \"forward\", \"indexBounds\" : { \"x\" : [ \"(3.0, inf.0]\" ], \"y\" : [ \"[MinKey, MaxKey]\" ], \"z\" : [ \"[MinKey, MaxKey]\" ] } } } }, \"rejectedPlans\" : [] }, } 合并排序 这里使用$in将目标值锁定在有限的若干个值上，数据库会使用归并排序的方式来保证结果的有序性\ndb.getCollection('practise').find({x: {$in: [1, 2, 3, 4]}}).sort({y: 1}).explain() { \"queryPlanner\" : { \"namespace\" : \"test.practise\", \"indexFilterSet\" : false, \"parsedQuery\" : { \"x\" : { \"$in\" : [ 1.0, 2.0, 3.0, 4.0 ] } }, \"queryHash\" : \"C28AC753\", \"planCacheKey\" : \"AB92D2F0\", \"maxIndexedOrSolutionsReached\" : false, \"maxIndexedAndSolutionsReached\" : false, \"maxScansToExplodeReached\" : false, \"winningPlan\" : { \"stage\" : \"FETCH\", \"inputStage\" : { \"stage\" : \"SORT_MERGE\", \"sortPattern\" : { \"y\" : 1.0 }, \"inputStages\" : [ { \"stage\" : \"IXSCAN\", \"keyPattern\" : { \"x\" : 1.0, \"y\" : 1.0, \"z\" : 1.0 }, \"indexName\" : \"x_1_y_1_z_1\", \"isMultiKey\" : false, \"multiKeyPaths\" : { \"x\" : [], \"y\" : [], \"z\" : [] }, \"isUnique\" : false, \"isSparse\" : false, \"isPartial\" : false, \"indexVersion\" : 2, \"direction\" : \"forward\", \"indexBounds\" : { \"x\" : [ \"[1.0, 1.0]\" ], \"y\" : [ \"[MinKey, MaxKey]\" ], \"z\" : [ \"[MinKey, MaxKey]\" ] } }, { \"stage\" : \"IXSCAN\", \"keyPattern\" : { \"x\" : 1.0, \"y\" : 1.0, \"z\" : 1.0 }, \"indexName\" : \"x_1_y_1_z_1\", \"isMultiKey\" : false, \"multiKeyPaths\" : { \"x\" : [], \"y\" : [], \"z\" : [] }, \"isUnique\" : false, \"isSparse\" : false, \"isPartial\" : false, \"indexVersion\" : 2, \"direction\" : \"forward\", \"indexBounds\" : { \"x\" : [ \"[2.0, 2.0]\" ], \"y\" : [ \"[MinKey, MaxKey]\" ], \"z\" : [ \"[MinKey, MaxKey]\" ] } }, { \"stage\" : \"IXSCAN\", \"keyPattern\" : { \"x\" : 1.0, \"y\" : 1.0, \"z\" : 1.0 }, \"indexName\" : \"x_1_y_1_z_1\", \"isMultiKey\" : false, \"multiKeyPaths\" : { \"x\" : [], \"y\" : [], \"z\" : [] }, \"isUnique\" : false, \"isSparse\" : false, \"isPartial\" : false, \"indexVersion\" : 2, \"direction\" : \"forward\", \"indexBounds\" : { \"x\" : [ \"[3.0, 3.0]\" ], \"y\" : [ \"[MinKey, MaxKey]\" ], \"z\" : [ \"[MinKey, MaxKey]\" ] } }, { \"stage\" : \"IXSCAN\", \"keyPattern\" : { \"x\" : 1.0, \"y\" : 1.0, \"z\" : 1.0 }, \"indexName\" : \"x_1_y_1_z_1\", \"isMultiKey\" : false, \"multiKeyPaths\" : { \"x\" : [], \"y\" : [], \"z\" : [] }, \"isUnique\" : false, \"isSparse\" : false, \"isPartial\" : false, \"indexVersion\" : 2, \"direction\" : \"forward\", \"indexBounds\" : { \"x\" : [ \"[4.0, 4.0]\" ], \"y\" : [ \"[MinKey, MaxKey]\" ], \"z\" : [ \"[MinKey, MaxKey]\" ] } } ] } }, \"rejectedPlans\" : [] }, } 跨索引的合并排序 db.practise.ensureIndex({x: 1, z: 1}); db.practise.ensureIndex({y: 1, z: 1}); db.getCollection('practise').find({$or: [{x: 1}, {y: 1}]}).sort({z: 1}).explain() { \"queryPlanner\" : { \"namespace\" : \"test.practise\", \"indexFilterSet\" : false, \"parsedQuery\" : { \"$or\" : [ { \"x\" : { \"$eq\" : 1.0 } }, { \"y\" : { \"$eq\" : 1.0 } } ] }, \"queryHash\" : \"56592F73\", \"planCacheKey\" : \"CE19B698\", \"maxIndexedOrSolutionsReached\" : false, \"maxIndexedAndSolutionsReached\" : false, \"maxScansToExplodeReached\" : false, \"winningPlan\" : { \"stage\" : \"SUBPLAN\", \"inputStage\" : { \"stage\" : \"FETCH\", \"inputStage\" : { \"stage\" : \"SORT_MERGE\", \"sortPattern\" : { \"z\" : 1.0 }, \"inputStages\" : [ { \"stage\" : \"IXSCAN\", \"keyPattern\" : { \"x\" : 1.0, \"z\" : 1.0 }, \"indexName\" : \"x_1_z_1\", \"isMultiKey\" : false, \"multiKeyPaths\" : { \"x\" : [], \"z\" : [] }, \"isUnique\" : false, \"isSparse\" : false, \"isPartial\" : false, \"indexVersion\" : 2, \"direction\" : \"forward\", \"indexBounds\" : { \"x\" : [ \"[1.0, 1.0]\" ], \"z\" : [ \"[MinKey, MaxKey]\" ] } }, { \"stage\" : \"IXSCAN\", \"keyPattern\" : { \"y\" : 1.0, \"z\" : 1.0 }, \"indexName\" : \"y_1_z_1\", \"isMultiKey\" : false, \"multiKeyPaths\" : { \"y\" : [], \"z\" : [] }, \"isUnique\" : false, \"isSparse\" : false, \"isPartial\" : false, \"indexVersion\" : 2, \"direction\" : \"forward\", \"indexBounds\" : { \"y\" : [ \"[1.0, 1.0]\" ], \"z\" : [ \"[MinKey, MaxKey]\" ] } } ] } } }, \"rejectedPlans\" : [] }, } ",
+  "wordCount" : "1955",
+  "inLanguage": "en",
+  "datePublished": "2022-05-08T00:00:00Z",
+  "dateModified": "2022-05-08T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "Lambert Xiao"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lambertxiao.github.io/posts/mongo-%E6%9F%A5%E8%AF%A2%E8%AE%A1%E5%88%92/doc/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lambert's blog",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lambertxiao.github.io/avatar.jpeg"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      MongoDB查询计划
+    </h1>
+    <div class="post-meta"><span title='2022-05-08 00:00:00 +0000 UTC'>May 8, 2022</span>&nbsp;·&nbsp;10 min&nbsp;·&nbsp;Lambert Xiao&nbsp;|&nbsp;<a href="https://github.com/adityatelange/hugo-PaperMod/tree/exampleSite/content/posts/mongo-%e6%9f%a5%e8%af%a2%e8%ae%a1%e5%88%92/doc.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+</div>
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#%e7%ae%80%e4%bb%8b" aria-label="简介">简介</a><ul>
+                        
+                <li>
+                    <a href="#%e5%85%a8%e8%a1%a8%e6%89%ab%e6%8f%8f" aria-label="全表扫描">全表扫描</a></li>
+                <li>
+                    <a href="#%e5%8d%95%e9%94%ae%e7%b4%a2%e5%bc%95%e5%91%bd%e4%b8%ad" aria-label="单键索引命中">单键索引命中</a></li>
+                <li>
+                    <a href="#%e8%a6%86%e7%9b%96%e7%b4%a2%e5%bc%95" aria-label="覆盖索引">覆盖索引</a></li>
+                <li>
+                    <a href="#%e5%88%97%e8%a1%a8%e6%9f%a5%e8%af%a2skiplimit" aria-label="列表查询&#43;skip/limit">列表查询+skip/limit</a></li>
+                <li>
+                    <a href="#%e5%86%85%e5%ad%98%e6%8e%92%e5%ba%8f" aria-label="内存排序">内存排序</a></li>
+                <li>
+                    <a href="#%e7%bb%84%e5%90%88%e7%b4%a2%e5%bc%95%e6%97%a0%e6%b3%95%e5%91%bd%e4%b8%ad" aria-label="组合索引无法命中">组合索引无法命中</a></li>
+                <li>
+                    <a href="#%e7%bb%84%e5%90%88%e7%b4%a2%e5%bc%95%e6%8e%92%e5%ba%8f%e5%91%bd%e4%b8%ad" aria-label="组合索引排序命中">组合索引排序命中</a></li>
+                <li>
+                    <a href="#%e7%bb%84%e5%90%88%e7%b4%a2%e5%bc%95%e5%91%bd%e4%b8%ad%e5%86%85%e5%ad%98%e6%8e%92%e5%ba%8f" aria-label="组合索引命中，内存排序">组合索引命中，内存排序</a></li>
+                <li>
+                    <a href="#%e7%bb%84%e5%90%88%e7%b4%a2%e5%bc%95%e5%91%bd%e4%b8%ad%e8%8c%83%e5%9b%b4%e6%8e%92%e5%ba%8f" aria-label="组合索引命中，范围&#43;排序">组合索引命中，范围+排序</a></li>
+                <li>
+                    <a href="#%e4%b8%8d%e5%90%88%e9%80%82%e7%9a%84%e7%bb%84%e5%90%88%e7%b4%a2%e5%bc%95%e8%8c%83%e5%9b%b4%e6%8e%92%e5%ba%8f" aria-label="不合适的组合索引，范围&#43;排序">不合适的组合索引，范围+排序</a></li>
+                <li>
+                    <a href="#%e5%90%88%e5%b9%b6%e6%8e%92%e5%ba%8f" aria-label="合并排序">合并排序</a></li>
+                <li>
+                    <a href="#%e8%b7%a8%e7%b4%a2%e5%bc%95%e7%9a%84%e5%90%88%e5%b9%b6%e6%8e%92%e5%ba%8f" aria-label="跨索引的合并排序">跨索引的合并排序</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h2 id="简介">简介<a hidden class="anchor" aria-hidden="true" href="#简介">#</a></h2>
+<p>MongoDB采用自底向上的方式来构造查询计划，每一个查询计划 (query plan）都会被分解为若千个有层次的阶段
+(stage）。有意思的是，整个查询计划最终会呈现出一颗多叉树的形状。</p>
+<p><img loading="lazy" src="../1.png" alt=""  />
+</p>
+<p>整个计算过程是从下向上投递的，每一个阶段的计算结果都是其上层阶段的输入</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js"><span style="color:#00cd00">var</span> collection <span style="color:#39c">=</span> db.getCollection(<span style="color:#cd0000">&#34;practise&#34;</span>);
+<span style="color:#00cd00">var</span> count <span style="color:#39c">=</span> <span style="color:#cd00cd">10000</span>;
+<span style="color:#00cd00">var</span> base <span style="color:#39c">=</span> <span style="color:#cd00cd">10</span>;
+<span style="color:#00cd00">var</span> items <span style="color:#39c">=</span> [];
+<span style="color:#cdcd00">for</span> (<span style="color:#00cd00">var</span> i <span style="color:#39c">=</span> <span style="color:#cd00cd">0</span>; i <span style="color:#39c">&lt;=</span> count; i<span style="color:#39c">++</span>) {
+    <span style="color:#00cd00">var</span> item <span style="color:#39c">=</span> {};
+    item.x <span style="color:#39c">=</span> <span style="color:#cd00cd">Math</span>.round(<span style="color:#cd00cd">Math</span>.random() <span style="color:#39c">*</span> base);
+    item.y <span style="color:#39c">=</span> <span style="color:#cd00cd">Math</span>.round(<span style="color:#cd00cd">Math</span>.random() <span style="color:#39c">*</span> base);
+    item.z <span style="color:#39c">=</span> <span style="color:#cd00cd">Math</span>.round(<span style="color:#cd00cd">Math</span>.random() <span style="color:#39c">*</span> base);
+    item.did <span style="color:#39c">=</span> <span style="color:#cd0000">&#34;ITEM&#34;</span> <span style="color:#39c">+</span> i;
+    items.push(item);
+
+    <span style="color:#cdcd00">if</span> (i <span style="color:#39c">%</span> <span style="color:#cd00cd">1000</span> <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span>) {
+        collection.insertMany(items);
+        items <span style="color:#39c">=</span> [];
+    }
+}
+
+db.getCollection(<span style="color:#cd0000">&#39;practise&#39;</span>).ensureIndex({x<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>, y<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>, z<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>})
+db.getCollection(<span style="color:#cd0000">&#39;practise&#39;</span>).ensureIndex({did<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>})
+</code></pre></div><h3 id="全表扫描">全表扫描<a hidden class="anchor" aria-hidden="true" href="#全表扫描">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js">db.getCollection(<span style="color:#cd0000">&#39;practise&#39;</span>).find({aaa<span style="color:#39c">:</span> <span style="color:#cd00cd">11</span>}).explain()
+
+{
+    ...
+    <span style="color:#cd0000">&#34;queryPlanner&#34;</span> <span style="color:#39c">:</span> {
+        <span style="color:#cd0000">&#34;namespace&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;test.practise&#34;</span>,
+        <span style="color:#cd0000">&#34;indexFilterSet&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;parsedQuery&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;aaa&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;$eq&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">11.0</span>
+            }
+        },
+        <span style="color:#cd0000">&#34;maxIndexedOrSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxIndexedAndSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxScansToExplodeReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;winningPlan&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;COLLSCAN&#34;</span>,
+            <span style="color:#cd0000">&#34;filter&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;aaa&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;$eq&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">11.0</span>
+                }
+            },
+            <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>
+        },
+        <span style="color:#cd0000">&#34;rejectedPlans&#34;</span> <span style="color:#39c">:</span> []
+    },
+    ...
+}
+</code></pre></div><h3 id="单键索引命中">单键索引命中<a hidden class="anchor" aria-hidden="true" href="#单键索引命中">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js">db.getCollection(<span style="color:#cd0000">&#39;practise&#39;</span>).find({did<span style="color:#39c">:</span> <span style="color:#cd0000">&#34;ITEM24&#34;</span>}).explain()
+
+{
+    ...
+    <span style="color:#cd0000">&#34;queryPlanner&#34;</span> <span style="color:#39c">:</span> {
+        <span style="color:#cd0000">&#34;namespace&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;test.practise&#34;</span>,
+        <span style="color:#cd0000">&#34;indexFilterSet&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;parsedQuery&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;did&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;$eq&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;ITEM24&#34;</span>
+            }
+        },
+        <span style="color:#cd0000">&#34;queryHash&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;B4F08825&#34;</span>,
+        <span style="color:#cd0000">&#34;planCacheKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;9F7BDA42&#34;</span>,
+        <span style="color:#cd0000">&#34;maxIndexedOrSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxIndexedAndSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxScansToExplodeReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;winningPlan&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;FETCH&#34;</span>,
+            <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;IXSCAN&#34;</span>,
+                <span style="color:#cd0000">&#34;keyPattern&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;did&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                },
+                <span style="color:#cd0000">&#34;indexName&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;did_1&#34;</span>,
+                <span style="color:#cd0000">&#34;isMultiKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                <span style="color:#cd0000">&#34;multiKeyPaths&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;did&#34;</span> <span style="color:#39c">:</span> []
+                },
+                <span style="color:#cd0000">&#34;isUnique&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                <span style="color:#cd0000">&#34;isSparse&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                <span style="color:#cd0000">&#34;isPartial&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                <span style="color:#cd0000">&#34;indexVersion&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">2</span>,
+                <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>,
+                <span style="color:#cd0000">&#34;indexBounds&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;did&#34;</span> <span style="color:#39c">:</span> [ 
+                        <span style="color:#cd0000">&#34;[\&#34;ITEM24\&#34;, \&#34;ITEM24\&#34;]&#34;</span>
+                    ]
+                }
+            }
+        },
+        <span style="color:#cd0000">&#34;rejectedPlans&#34;</span> <span style="color:#39c">:</span> []
+    },
+    ...
+}
+
+</code></pre></div><h3 id="覆盖索引">覆盖索引<a hidden class="anchor" aria-hidden="true" href="#覆盖索引">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js">db.getCollection(<span style="color:#cd0000">&#39;practise&#39;</span>).find({did<span style="color:#39c">:</span> <span style="color:#cd0000">&#34;ITEM24&#34;</span>}, {did<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>, <span style="color:#cd00cd">_</span>id<span style="color:#39c">:</span> <span style="color:#cd00cd">0</span>}).explain()
+
+{
+    <span style="color:#cd0000">&#34;queryPlanner&#34;</span> <span style="color:#39c">:</span> {
+        <span style="color:#cd0000">&#34;namespace&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;test.practise&#34;</span>,
+        <span style="color:#cd0000">&#34;indexFilterSet&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;parsedQuery&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;did&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;$eq&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;ITEM24&#34;</span>
+            }
+        },
+        <span style="color:#cd0000">&#34;queryHash&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;BA4C57C6&#34;</span>,
+        <span style="color:#cd0000">&#34;planCacheKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;302BC8FB&#34;</span>,
+        <span style="color:#cd0000">&#34;maxIndexedOrSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxIndexedAndSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxScansToExplodeReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;winningPlan&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;PROJECTION_COVERED&#34;</span>,
+            <span style="color:#cd0000">&#34;transformBy&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;did&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                <span style="color:#cd0000">&#34;_id&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">0.0</span>
+            },
+            <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;IXSCAN&#34;</span>,
+                <span style="color:#cd0000">&#34;keyPattern&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;did&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                },
+                <span style="color:#cd0000">&#34;indexName&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;did_1&#34;</span>,
+                <span style="color:#cd0000">&#34;isMultiKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                <span style="color:#cd0000">&#34;multiKeyPaths&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;did&#34;</span> <span style="color:#39c">:</span> []
+                },
+                <span style="color:#cd0000">&#34;isUnique&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                <span style="color:#cd0000">&#34;isSparse&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                <span style="color:#cd0000">&#34;isPartial&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                <span style="color:#cd0000">&#34;indexVersion&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">2</span>,
+                <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>,
+                <span style="color:#cd0000">&#34;indexBounds&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;did&#34;</span> <span style="color:#39c">:</span> [ 
+                        <span style="color:#cd0000">&#34;[\&#34;ITEM24\&#34;, \&#34;ITEM24\&#34;]&#34;</span>
+                    ]
+                }
+            }
+        },
+        <span style="color:#cd0000">&#34;rejectedPlans&#34;</span> <span style="color:#39c">:</span> []
+    },
+}
+</code></pre></div><h3 id="列表查询skiplimit">列表查询+skip/limit<a hidden class="anchor" aria-hidden="true" href="#列表查询skiplimit">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js">db.getCollection(<span style="color:#cd0000">&#39;practise&#39;</span>).find({x<span style="color:#39c">:</span> {$gt<span style="color:#39c">:</span> <span style="color:#cd00cd">3</span>}}).skip(<span style="color:#cd00cd">10</span>).limit(<span style="color:#cd00cd">5</span>).explain()
+
+{
+    ...
+    <span style="color:#cd0000">&#34;queryPlanner&#34;</span> <span style="color:#39c">:</span> {
+        <span style="color:#cd0000">&#34;namespace&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;test.practise&#34;</span>,
+        <span style="color:#cd0000">&#34;indexFilterSet&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;parsedQuery&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;$gt&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">3.0</span>
+            }
+        },
+        <span style="color:#cd0000">&#34;queryHash&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;39913629&#34;</span>,
+        <span style="color:#cd0000">&#34;planCacheKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;CB9286EB&#34;</span>,
+        <span style="color:#cd0000">&#34;maxIndexedOrSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxIndexedAndSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxScansToExplodeReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;winningPlan&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;LIMIT&#34;</span>,
+            <span style="color:#cd0000">&#34;limitAmount&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">5</span>,
+            <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;FETCH&#34;</span>,
+                <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;SKIP&#34;</span>,
+                    <span style="color:#cd0000">&#34;skipAmount&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">10</span>,
+                    <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;IXSCAN&#34;</span>,
+                        <span style="color:#cd0000">&#34;keyPattern&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                        },
+                        <span style="color:#cd0000">&#34;indexName&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;x_1_y_1_z_1&#34;</span>,
+                        <span style="color:#cd0000">&#34;isMultiKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;multiKeyPaths&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [],
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [],
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> []
+                        },
+                        <span style="color:#cd0000">&#34;isUnique&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;isSparse&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;isPartial&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;indexVersion&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">2</span>,
+                        <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>,
+                        <span style="color:#cd0000">&#34;indexBounds&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;(3.0, inf.0]&#34;</span>
+                            ],
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                            ],
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        <span style="color:#cd0000">&#34;rejectedPlans&#34;</span> <span style="color:#39c">:</span> []
+    },
+    ...
+}
+</code></pre></div><h3 id="内存排序">内存排序<a hidden class="anchor" aria-hidden="true" href="#内存排序">#</a></h3>
+<p>使用了<code>{x1: 1}</code>, 因此无法利用索引进行排序，只能在内存里排序。当内存排序超过了memLimit时，查询就会出错</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js">db.getCollection(<span style="color:#cd0000">&#39;practise&#39;</span>).find({x<span style="color:#39c">:</span> {$gt<span style="color:#39c">:</span> <span style="color:#cd00cd">3</span>}}).sort({x1<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>}).explain(<span style="color:#cd0000">&#34;executionStats&#34;</span>)
+
+{
+    <span style="color:#cd0000">&#34;queryPlanner&#34;</span> <span style="color:#39c">:</span> {
+        <span style="color:#cd0000">&#34;namespace&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;test.practise&#34;</span>,
+        <span style="color:#cd0000">&#34;indexFilterSet&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;parsedQuery&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;$gt&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">3.0</span>
+            }
+        },
+        <span style="color:#cd0000">&#34;maxIndexedOrSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxIndexedAndSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxScansToExplodeReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;winningPlan&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;SORT&#34;</span>,
+            <span style="color:#cd0000">&#34;sortPattern&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;x1&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>
+            },
+            <span style="color:#cd0000">&#34;memLimit&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">104857600</span>,
+            <span style="color:#cd0000">&#34;type&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;simple&#34;</span>,
+            <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;FETCH&#34;</span>,
+                <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;IXSCAN&#34;</span>,
+                    <span style="color:#cd0000">&#34;keyPattern&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                        <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                        <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                    },
+                    <span style="color:#cd0000">&#34;indexName&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;x_1_y_1_z_1&#34;</span>,
+                    <span style="color:#cd0000">&#34;isMultiKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;multiKeyPaths&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [],
+                        <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [],
+                        <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> []
+                    },
+                    <span style="color:#cd0000">&#34;isUnique&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;isSparse&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;isPartial&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;indexVersion&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">2</span>,
+                    <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>,
+                    <span style="color:#cd0000">&#34;indexBounds&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [ 
+                            <span style="color:#cd0000">&#34;(3.0, inf.0]&#34;</span>
+                        ],
+                        <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [ 
+                            <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                        ],
+                        <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> [ 
+                            <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                        ]
+                    }
+                }
+            }
+        },
+        <span style="color:#cd0000">&#34;rejectedPlans&#34;</span> <span style="color:#39c">:</span> []
+    },
+}
+</code></pre></div><h3 id="组合索引无法命中">组合索引无法命中<a hidden class="anchor" aria-hidden="true" href="#组合索引无法命中">#</a></h3>
+<p>查询无法满足前缀匹配原则，实际上做了全表扫描</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js">db.getCollection(<span style="color:#cd0000">&#39;practise&#39;</span>).find({y<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>, z<span style="color:#39c">:</span> <span style="color:#cd00cd">3</span>}).explain()
+
+{
+    <span style="color:#cd0000">&#34;queryPlanner&#34;</span> <span style="color:#39c">:</span> {
+        <span style="color:#cd0000">&#34;namespace&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;test.practise&#34;</span>,
+        <span style="color:#cd0000">&#34;indexFilterSet&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;parsedQuery&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;$and&#34;</span> <span style="color:#39c">:</span> [ 
+                {
+                    <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;$eq&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                    }
+                }, 
+                {
+                    <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;$eq&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">3.0</span>
+                    }
+                }
+            ]
+        },
+        <span style="color:#cd0000">&#34;queryHash&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;2B5DAA81&#34;</span>,
+        <span style="color:#cd0000">&#34;planCacheKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;189A1787&#34;</span>,
+        <span style="color:#cd0000">&#34;maxIndexedOrSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxIndexedAndSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxScansToExplodeReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;winningPlan&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;COLLSCAN&#34;</span>,
+            <span style="color:#cd0000">&#34;filter&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;$and&#34;</span> <span style="color:#39c">:</span> [ 
+                    {
+                        <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;$eq&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                        }
+                    }, 
+                    {
+                        <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;$eq&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">3.0</span>
+                        }
+                    }
+                ]
+            },
+            <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>
+        },
+        <span style="color:#cd0000">&#34;rejectedPlans&#34;</span> <span style="color:#39c">:</span> []
+    },
+}
+</code></pre></div><h3 id="组合索引排序命中">组合索引排序命中<a hidden class="anchor" aria-hidden="true" href="#组合索引排序命中">#</a></h3>
+<p><code>sort({y: -1, z: -1})</code> y和z都使用了降序，所以可以使用索引排序</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js">db.getCollection(<span style="color:#cd0000">&#39;practise&#39;</span>).find({x<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>}).sort({y<span style="color:#39c">:</span> <span style="color:#39c">-</span><span style="color:#cd00cd">1</span>, z<span style="color:#39c">:</span> <span style="color:#39c">-</span><span style="color:#cd00cd">1</span>}).limit(<span style="color:#cd00cd">5</span>).explain()
+
+
+{
+    <span style="color:#cd0000">&#34;queryPlanner&#34;</span> <span style="color:#39c">:</span> {
+        <span style="color:#cd0000">&#34;namespace&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;test.practise&#34;</span>,
+        <span style="color:#cd0000">&#34;indexFilterSet&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;parsedQuery&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;$eq&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+            }
+        },
+        <span style="color:#cd0000">&#34;queryHash&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;D1E516FC&#34;</span>,
+        <span style="color:#cd0000">&#34;planCacheKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;36B48F45&#34;</span>,
+        <span style="color:#cd0000">&#34;maxIndexedOrSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxIndexedAndSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxScansToExplodeReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;winningPlan&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;LIMIT&#34;</span>,
+            <span style="color:#cd0000">&#34;limitAmount&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">5</span>,
+            <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;FETCH&#34;</span>,
+                <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;IXSCAN&#34;</span>,
+                    <span style="color:#cd0000">&#34;keyPattern&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                        <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                        <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                    },
+                    <span style="color:#cd0000">&#34;indexName&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;x_1_y_1_z_1&#34;</span>,
+                    <span style="color:#cd0000">&#34;isMultiKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;multiKeyPaths&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [],
+                        <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [],
+                        <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> []
+                    },
+                    <span style="color:#cd0000">&#34;isUnique&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;isSparse&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;isPartial&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;indexVersion&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">2</span>,
+                    <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;backward&#34;</span>,
+                    <span style="color:#cd0000">&#34;indexBounds&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [ 
+                            <span style="color:#cd0000">&#34;[1.0, 1.0]&#34;</span>
+                        ],
+                        <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [ 
+                            <span style="color:#cd0000">&#34;[MaxKey, MinKey]&#34;</span>
+                        ],
+                        <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> [ 
+                            <span style="color:#cd0000">&#34;[MaxKey, MinKey]&#34;</span>
+                        ]
+                    }
+                }
+            }
+        },
+        <span style="color:#cd0000">&#34;rejectedPlans&#34;</span> <span style="color:#39c">:</span> []
+    },
+}
+
+</code></pre></div><h3 id="组合索引命中内存排序">组合索引命中，内存排序<a hidden class="anchor" aria-hidden="true" href="#组合索引命中内存排序">#</a></h3>
+<p><code>sort({y: 1, z: -1})</code> y和z排序方向不同，所以只能在内存中排序。需要注意的是，这里的内存排序是基于索引的而不是文档的，但在mongodb4.0及以前的版本中，对于这种查询的排序是基于文档的，也就是先执行FETCH再执行SORT。</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js">
+db.getCollection(<span style="color:#cd0000">&#39;practise&#39;</span>).find({x<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>}).sort({y<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>, z<span style="color:#39c">:</span> <span style="color:#39c">-</span><span style="color:#cd00cd">1</span>}).limit(<span style="color:#cd00cd">5</span>).explain()
+
+
+{
+    <span style="color:#cd0000">&#34;queryPlanner&#34;</span> <span style="color:#39c">:</span> {
+        <span style="color:#cd0000">&#34;namespace&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;test.practise&#34;</span>,
+        <span style="color:#cd0000">&#34;indexFilterSet&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;parsedQuery&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;$eq&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+            }
+        },
+        <span style="color:#cd0000">&#34;queryHash&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;048FB511&#34;</span>,
+        <span style="color:#cd0000">&#34;planCacheKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;3CE59AC2&#34;</span>,
+        <span style="color:#cd0000">&#34;maxIndexedOrSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxIndexedAndSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxScansToExplodeReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;winningPlan&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;FETCH&#34;</span>,
+            <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;SORT&#34;</span>,
+                <span style="color:#cd0000">&#34;sortPattern&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>,
+                    <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#39c">-</span><span style="color:#cd00cd">1</span>
+                },
+                <span style="color:#cd0000">&#34;memLimit&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">104857600</span>,
+                <span style="color:#cd0000">&#34;limitAmount&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">5</span>,
+                <span style="color:#cd0000">&#34;type&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;default&#34;</span>,
+                <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;IXSCAN&#34;</span>,
+                    <span style="color:#cd0000">&#34;keyPattern&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                        <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                        <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                    },
+                    <span style="color:#cd0000">&#34;indexName&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;x_1_y_1_z_1&#34;</span>,
+                    <span style="color:#cd0000">&#34;isMultiKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;multiKeyPaths&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [],
+                        <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [],
+                        <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> []
+                    },
+                    <span style="color:#cd0000">&#34;isUnique&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;isSparse&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;isPartial&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;indexVersion&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">2</span>,
+                    <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>,
+                    <span style="color:#cd0000">&#34;indexBounds&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [ 
+                            <span style="color:#cd0000">&#34;[1.0, 1.0]&#34;</span>
+                        ],
+                        <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [ 
+                            <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                        ],
+                        <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> [ 
+                            <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                        ]
+                    }
+                }
+            }
+        },
+        <span style="color:#cd0000">&#34;rejectedPlans&#34;</span> <span style="color:#39c">:</span> []
+    },
+}
+</code></pre></div><h3 id="组合索引命中范围排序">组合索引命中，范围+排序<a hidden class="anchor" aria-hidden="true" href="#组合索引命中范围排序">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js">db.getCollection(<span style="color:#cd0000">&#39;practise&#39;</span>).find({x<span style="color:#39c">:</span> {$gt<span style="color:#39c">:</span> <span style="color:#cd00cd">3</span>}}).sort({x<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>, y<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>, z<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>}).explain()
+
+{
+    <span style="color:#cd0000">&#34;queryPlanner&#34;</span> <span style="color:#39c">:</span> {
+        <span style="color:#cd0000">&#34;namespace&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;test.practise&#34;</span>,
+        <span style="color:#cd0000">&#34;indexFilterSet&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;parsedQuery&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;$gt&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">3.0</span>
+            }
+        },
+        <span style="color:#cd0000">&#34;queryHash&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;D7099141&#34;</span>,
+        <span style="color:#cd0000">&#34;planCacheKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;4B559A11&#34;</span>,
+        <span style="color:#cd0000">&#34;maxIndexedOrSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxIndexedAndSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxScansToExplodeReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;winningPlan&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;FETCH&#34;</span>,
+            <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;IXSCAN&#34;</span>,
+                <span style="color:#cd0000">&#34;keyPattern&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                    <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                    <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                },
+                <span style="color:#cd0000">&#34;indexName&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;x_1_y_1_z_1&#34;</span>,
+                <span style="color:#cd0000">&#34;isMultiKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                <span style="color:#cd0000">&#34;multiKeyPaths&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [],
+                    <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [],
+                    <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> []
+                },
+                <span style="color:#cd0000">&#34;isUnique&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                <span style="color:#cd0000">&#34;isSparse&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                <span style="color:#cd0000">&#34;isPartial&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                <span style="color:#cd0000">&#34;indexVersion&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">2</span>,
+                <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>,
+                <span style="color:#cd0000">&#34;indexBounds&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [ 
+                        <span style="color:#cd0000">&#34;(3.0, inf.0]&#34;</span>
+                    ],
+                    <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [ 
+                        <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                    ],
+                    <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> [ 
+                        <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                    ]
+                }
+            }
+        },
+        <span style="color:#cd0000">&#34;rejectedPlans&#34;</span> <span style="color:#39c">:</span> []
+    },
+}
+</code></pre></div><h3 id="不合适的组合索引范围排序">不合适的组合索引，范围+排序<a hidden class="anchor" aria-hidden="true" href="#不合适的组合索引范围排序">#</a></h3>
+<p>x不是等值匹配，因此<code>{y: 1, z: 1}</code>的排序无法利用组合索引的顺序，此时产生了内存排序</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js">db.getCollection(<span style="color:#cd0000">&#39;practise&#39;</span>).find({x<span style="color:#39c">:</span> {$gt<span style="color:#39c">:</span> <span style="color:#cd00cd">3</span>}}).sort({y<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>, z<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>}).explain()
+
+
+{
+    <span style="color:#cd0000">&#34;queryPlanner&#34;</span> <span style="color:#39c">:</span> {
+        <span style="color:#cd0000">&#34;namespace&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;test.practise&#34;</span>,
+        <span style="color:#cd0000">&#34;indexFilterSet&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;parsedQuery&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;$gt&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">3.0</span>
+            }
+        },
+        <span style="color:#cd0000">&#34;queryHash&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;916DB19C&#34;</span>,
+        <span style="color:#cd0000">&#34;planCacheKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;B7596367&#34;</span>,
+        <span style="color:#cd0000">&#34;maxIndexedOrSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxIndexedAndSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxScansToExplodeReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;winningPlan&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;FETCH&#34;</span>,
+            <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;SORT&#34;</span>,
+                <span style="color:#cd0000">&#34;sortPattern&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>,
+                    <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>
+                },
+                <span style="color:#cd0000">&#34;memLimit&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">104857600</span>,
+                <span style="color:#cd0000">&#34;type&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;default&#34;</span>,
+                <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;IXSCAN&#34;</span>,
+                    <span style="color:#cd0000">&#34;keyPattern&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                        <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                        <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                    },
+                    <span style="color:#cd0000">&#34;indexName&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;x_1_y_1_z_1&#34;</span>,
+                    <span style="color:#cd0000">&#34;isMultiKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;multiKeyPaths&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [],
+                        <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [],
+                        <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> []
+                    },
+                    <span style="color:#cd0000">&#34;isUnique&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;isSparse&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;isPartial&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                    <span style="color:#cd0000">&#34;indexVersion&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">2</span>,
+                    <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>,
+                    <span style="color:#cd0000">&#34;indexBounds&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [ 
+                            <span style="color:#cd0000">&#34;(3.0, inf.0]&#34;</span>
+                        ],
+                        <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [ 
+                            <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                        ],
+                        <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> [ 
+                            <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                        ]
+                    }
+                }
+            }
+        },
+        <span style="color:#cd0000">&#34;rejectedPlans&#34;</span> <span style="color:#39c">:</span> []
+    },
+}
+</code></pre></div><h3 id="合并排序">合并排序<a hidden class="anchor" aria-hidden="true" href="#合并排序">#</a></h3>
+<p>这里使用$in将目标值锁定在有限的若干个值上，数据库会使用归并排序的方式来保证结果的有序性</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js">db.getCollection(<span style="color:#cd0000">&#39;practise&#39;</span>).find({x<span style="color:#39c">:</span> {$in<span style="color:#39c">:</span> [<span style="color:#cd00cd">1</span>, <span style="color:#cd00cd">2</span>, <span style="color:#cd00cd">3</span>, <span style="color:#cd00cd">4</span>]}}).sort({y<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>}).explain()
+
+{
+    <span style="color:#cd0000">&#34;queryPlanner&#34;</span> <span style="color:#39c">:</span> {
+        <span style="color:#cd0000">&#34;namespace&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;test.practise&#34;</span>,
+        <span style="color:#cd0000">&#34;indexFilterSet&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;parsedQuery&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;$in&#34;</span> <span style="color:#39c">:</span> [ 
+                    <span style="color:#cd00cd">1.0</span>, 
+                    <span style="color:#cd00cd">2.0</span>, 
+                    <span style="color:#cd00cd">3.0</span>, 
+                    <span style="color:#cd00cd">4.0</span>
+                ]
+            }
+        },
+        <span style="color:#cd0000">&#34;queryHash&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;C28AC753&#34;</span>,
+        <span style="color:#cd0000">&#34;planCacheKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;AB92D2F0&#34;</span>,
+        <span style="color:#cd0000">&#34;maxIndexedOrSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxIndexedAndSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxScansToExplodeReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;winningPlan&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;FETCH&#34;</span>,
+            <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;SORT_MERGE&#34;</span>,
+                <span style="color:#cd0000">&#34;sortPattern&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                },
+                <span style="color:#cd0000">&#34;inputStages&#34;</span> <span style="color:#39c">:</span> [ 
+                    {
+                        <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;IXSCAN&#34;</span>,
+                        <span style="color:#cd0000">&#34;keyPattern&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                        },
+                        <span style="color:#cd0000">&#34;indexName&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;x_1_y_1_z_1&#34;</span>,
+                        <span style="color:#cd0000">&#34;isMultiKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;multiKeyPaths&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [],
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [],
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> []
+                        },
+                        <span style="color:#cd0000">&#34;isUnique&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;isSparse&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;isPartial&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;indexVersion&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">2</span>,
+                        <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>,
+                        <span style="color:#cd0000">&#34;indexBounds&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;[1.0, 1.0]&#34;</span>
+                            ],
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                            ],
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                            ]
+                        }
+                    }, 
+                    {
+                        <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;IXSCAN&#34;</span>,
+                        <span style="color:#cd0000">&#34;keyPattern&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                        },
+                        <span style="color:#cd0000">&#34;indexName&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;x_1_y_1_z_1&#34;</span>,
+                        <span style="color:#cd0000">&#34;isMultiKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;multiKeyPaths&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [],
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [],
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> []
+                        },
+                        <span style="color:#cd0000">&#34;isUnique&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;isSparse&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;isPartial&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;indexVersion&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">2</span>,
+                        <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>,
+                        <span style="color:#cd0000">&#34;indexBounds&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;[2.0, 2.0]&#34;</span>
+                            ],
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                            ],
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                            ]
+                        }
+                    }, 
+                    {
+                        <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;IXSCAN&#34;</span>,
+                        <span style="color:#cd0000">&#34;keyPattern&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                        },
+                        <span style="color:#cd0000">&#34;indexName&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;x_1_y_1_z_1&#34;</span>,
+                        <span style="color:#cd0000">&#34;isMultiKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;multiKeyPaths&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [],
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [],
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> []
+                        },
+                        <span style="color:#cd0000">&#34;isUnique&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;isSparse&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;isPartial&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;indexVersion&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">2</span>,
+                        <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>,
+                        <span style="color:#cd0000">&#34;indexBounds&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;[3.0, 3.0]&#34;</span>
+                            ],
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                            ],
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                            ]
+                        }
+                    }, 
+                    {
+                        <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;IXSCAN&#34;</span>,
+                        <span style="color:#cd0000">&#34;keyPattern&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                        },
+                        <span style="color:#cd0000">&#34;indexName&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;x_1_y_1_z_1&#34;</span>,
+                        <span style="color:#cd0000">&#34;isMultiKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;multiKeyPaths&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [],
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [],
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> []
+                        },
+                        <span style="color:#cd0000">&#34;isUnique&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;isSparse&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;isPartial&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                        <span style="color:#cd0000">&#34;indexVersion&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">2</span>,
+                        <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>,
+                        <span style="color:#cd0000">&#34;indexBounds&#34;</span> <span style="color:#39c">:</span> {
+                            <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;[4.0, 4.0]&#34;</span>
+                            ],
+                            <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                            ],
+                            <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> [ 
+                                <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        <span style="color:#cd0000">&#34;rejectedPlans&#34;</span> <span style="color:#39c">:</span> []
+    },
+}
+</code></pre></div><h3 id="跨索引的合并排序">跨索引的合并排序<a hidden class="anchor" aria-hidden="true" href="#跨索引的合并排序">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js">db.practise.ensureIndex({x<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>, z<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>});
+db.practise.ensureIndex({y<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>, z<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>});
+
+db.getCollection(<span style="color:#cd0000">&#39;practise&#39;</span>).find({$or<span style="color:#39c">:</span> [{x<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>}, {y<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>}]}).sort({z<span style="color:#39c">:</span> <span style="color:#cd00cd">1</span>}).explain()
+
+{
+    <span style="color:#cd0000">&#34;queryPlanner&#34;</span> <span style="color:#39c">:</span> {
+        <span style="color:#cd0000">&#34;namespace&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;test.practise&#34;</span>,
+        <span style="color:#cd0000">&#34;indexFilterSet&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;parsedQuery&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;$or&#34;</span> <span style="color:#39c">:</span> [ 
+                {
+                    <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;$eq&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                    }
+                }, 
+                {
+                    <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;$eq&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                    }
+                }
+            ]
+        },
+        <span style="color:#cd0000">&#34;queryHash&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;56592F73&#34;</span>,
+        <span style="color:#cd0000">&#34;planCacheKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;CE19B698&#34;</span>,
+        <span style="color:#cd0000">&#34;maxIndexedOrSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxIndexedAndSolutionsReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;maxScansToExplodeReached&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+        <span style="color:#cd0000">&#34;winningPlan&#34;</span> <span style="color:#39c">:</span> {
+            <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;SUBPLAN&#34;</span>,
+            <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;FETCH&#34;</span>,
+                <span style="color:#cd0000">&#34;inputStage&#34;</span> <span style="color:#39c">:</span> {
+                    <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;SORT_MERGE&#34;</span>,
+                    <span style="color:#cd0000">&#34;sortPattern&#34;</span> <span style="color:#39c">:</span> {
+                        <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                    },
+                    <span style="color:#cd0000">&#34;inputStages&#34;</span> <span style="color:#39c">:</span> [ 
+                        {
+                            <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;IXSCAN&#34;</span>,
+                            <span style="color:#cd0000">&#34;keyPattern&#34;</span> <span style="color:#39c">:</span> {
+                                <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                                <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                            },
+                            <span style="color:#cd0000">&#34;indexName&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;x_1_z_1&#34;</span>,
+                            <span style="color:#cd0000">&#34;isMultiKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                            <span style="color:#cd0000">&#34;multiKeyPaths&#34;</span> <span style="color:#39c">:</span> {
+                                <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [],
+                                <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> []
+                            },
+                            <span style="color:#cd0000">&#34;isUnique&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                            <span style="color:#cd0000">&#34;isSparse&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                            <span style="color:#cd0000">&#34;isPartial&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                            <span style="color:#cd0000">&#34;indexVersion&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">2</span>,
+                            <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>,
+                            <span style="color:#cd0000">&#34;indexBounds&#34;</span> <span style="color:#39c">:</span> {
+                                <span style="color:#cd0000">&#34;x&#34;</span> <span style="color:#39c">:</span> [ 
+                                    <span style="color:#cd0000">&#34;[1.0, 1.0]&#34;</span>
+                                ],
+                                <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> [ 
+                                    <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                                ]
+                            }
+                        }, 
+                        {
+                            <span style="color:#cd0000">&#34;stage&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;IXSCAN&#34;</span>,
+                            <span style="color:#cd0000">&#34;keyPattern&#34;</span> <span style="color:#39c">:</span> {
+                                <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>,
+                                <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">1.0</span>
+                            },
+                            <span style="color:#cd0000">&#34;indexName&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;y_1_z_1&#34;</span>,
+                            <span style="color:#cd0000">&#34;isMultiKey&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                            <span style="color:#cd0000">&#34;multiKeyPaths&#34;</span> <span style="color:#39c">:</span> {
+                                <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [],
+                                <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> []
+                            },
+                            <span style="color:#cd0000">&#34;isUnique&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                            <span style="color:#cd0000">&#34;isSparse&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                            <span style="color:#cd0000">&#34;isPartial&#34;</span> <span style="color:#39c">:</span> <span style="color:#cdcd00">false</span>,
+                            <span style="color:#cd0000">&#34;indexVersion&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd00cd">2</span>,
+                            <span style="color:#cd0000">&#34;direction&#34;</span> <span style="color:#39c">:</span> <span style="color:#cd0000">&#34;forward&#34;</span>,
+                            <span style="color:#cd0000">&#34;indexBounds&#34;</span> <span style="color:#39c">:</span> {
+                                <span style="color:#cd0000">&#34;y&#34;</span> <span style="color:#39c">:</span> [ 
+                                    <span style="color:#cd0000">&#34;[1.0, 1.0]&#34;</span>
+                                ],
+                                <span style="color:#cd0000">&#34;z&#34;</span> <span style="color:#39c">:</span> [ 
+                                    <span style="color:#cd0000">&#34;[MinKey, MaxKey]&#34;</span>
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        <span style="color:#cd0000">&#34;rejectedPlans&#34;</span> <span style="color:#39c">:</span> []
+    },
+}
+</code></pre></div>
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lambertxiao.github.io/tags/mongo/">mongo</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lambertxiao.github.io/posts/iptables/doc/">
+    <span class="title">« Prev Page</span>
+    <br>
+    <span>iptables和netfilter</span>
+  </a>
+  <a class="next" href="https://lambertxiao.github.io/posts/mongo-%E7%B4%A2%E5%BC%95%E6%A3%80%E7%B4%A2%E5%9B%BE%E8%A7%A3/doc/">
+    <span class="title">Next Page »</span>
+    <br>
+    <span>MongoDB索引检索图解</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share MongoDB查询计划 on twitter"
+        href="https://twitter.com/intent/tweet/?text=MongoDB%e6%9f%a5%e8%af%a2%e8%ae%a1%e5%88%92&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fmongo-%25E6%259F%25A5%25E8%25AF%25A2%25E8%25AE%25A1%25E5%2588%2592%2fdoc%2f&amp;hashtags=mongo">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share MongoDB查询计划 on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fmongo-%25E6%259F%25A5%25E8%25AF%25A2%25E8%25AE%25A1%25E5%2588%2592%2fdoc%2f&amp;title=MongoDB%e6%9f%a5%e8%af%a2%e8%ae%a1%e5%88%92&amp;summary=MongoDB%e6%9f%a5%e8%af%a2%e8%ae%a1%e5%88%92&amp;source=https%3a%2f%2flambertxiao.github.io%2fposts%2fmongo-%25E6%259F%25A5%25E8%25AF%25A2%25E8%25AE%25A1%25E5%2588%2592%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share MongoDB查询计划 on reddit"
+        href="https://reddit.com/submit?url=https%3a%2f%2flambertxiao.github.io%2fposts%2fmongo-%25E6%259F%25A5%25E8%25AF%25A2%25E8%25AE%25A1%25E5%2588%2592%2fdoc%2f&title=MongoDB%e6%9f%a5%e8%af%a2%e8%ae%a1%e5%88%92">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share MongoDB查询计划 on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flambertxiao.github.io%2fposts%2fmongo-%25E6%259F%25A5%25E8%25AF%25A2%25E8%25AE%25A1%25E5%2588%2592%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share MongoDB查询计划 on whatsapp"
+        href="https://api.whatsapp.com/send?text=MongoDB%e6%9f%a5%e8%af%a2%e8%ae%a1%e5%88%92%20-%20https%3a%2f%2flambertxiao.github.io%2fposts%2fmongo-%25E6%259F%25A5%25E8%25AF%25A2%25E8%25AE%25A1%25E5%2588%2592%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share MongoDB查询计划 on telegram"
+        href="https://telegram.me/share/url?text=MongoDB%e6%9f%a5%e8%af%a2%e8%ae%a1%e5%88%92&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fmongo-%25E6%259F%25A5%25E8%25AF%25A2%25E8%25AE%25A1%25E5%2588%2592%2fdoc%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_KY25sRiRtb" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

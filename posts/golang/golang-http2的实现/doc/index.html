@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>golang-http2实现 | Lambert&#39;s blog</title>
+<meta name="keywords" content="http2, 网络知识" />
+<meta name="description" content="扒开go源码，看看http2在go里的实现">
+<meta name="author" content="Lambert Xiao">
+<link rel="canonical" href="https://lambertxiao.github.io/posts/golang/golang-http2%E7%9A%84%E5%AE%9E%E7%8E%B0/doc/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js" integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5&#43;kdJvBz5iKbt6B5PJI="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="golang-http2实现" />
+<meta property="og:description" content="扒开go源码，看看http2在go里的实现" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://lambertxiao.github.io/posts/golang/golang-http2%E7%9A%84%E5%AE%9E%E7%8E%B0/doc/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-03-25T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2022-03-25T00:00:00&#43;00:00" />
+<meta property="og:see_also" content="https://lambertxiao.github.io/posts/gdb_usage/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/numa/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/uio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/vfio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/virtio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="golang-http2实现"/>
+<meta name="twitter:description" content="扒开go源码，看看http2在go里的实现"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://lambertxiao.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "golang-http2实现",
+      "item": "https://lambertxiao.github.io/posts/golang/golang-http2%E7%9A%84%E5%AE%9E%E7%8E%B0/doc/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "golang-http2实现",
+  "name": "golang-http2实现",
+  "description": "扒开go源码，看看http2在go里的实现",
+  "keywords": [
+    "http2", "网络知识"
+  ],
+  "articleBody": "举个例子 怎么接收一个http2请求 func main() { mux := http.NewServeMux() mux.HandleFunc(\"/\", func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, \"Hello h2c\") }) s := \u0026http.Server{ Addr: \"127.0.0.1:8080\", Handler: mux, } log.Fatal(s.ListenAndServeTLS(\"server.crt\", \"server.key\")) } 需要注意的是，http2是必须和tls一起开启，可看源码 /go/src/net/http/server.go\nfunc (c *conn) serve(ctx context.Context) { ... if tlsConn, ok := c.rwc.(*tls.Conn); ok { ... if proto := c.tlsState.NegotiatedProtocol; validNextProto(proto) { // 这里的fn就是http2的handler, 通过http2ConfigureServer方法注册 \tif fn := c.server.TLSNextProto[proto]; fn != nil { h := initALPNRequest{ctx, tlsConn, serverHandler{c.server}} c.setState(c.rwc, StateActive, skipHooks) fn(c.server, tlsConn, h) } return } } // HTTP/1.x from here on. \t// 以下走http1.x的逻辑 \t... } 通过openssl工具生成证书\nopenssl req -newkey rsa:2048 -nodes -keyout server.key -x509 -days 365 -out server.crt 怎么发起一个http2请求 func main() { client := http.Client{ Transport: \u0026http.Transport{ ForceAttemptHTTP2: true, TLSClientConfig: \u0026tls.Config{InsecureSkipVerify: true}, }, } resp, err := client.Get(\"https://127.0.0.1:8080\") if err != nil { panic(err) } rdata, err := ioutil.ReadAll(resp.Body) if err != nil { panic(err) } fmt.Println(resp.Proto, string(rdata)) }  需要自定义一个Transport 打开ForceAttemptHTTP2 由于服务端的整数是自己生成的，所以需要设置跳过校验 最后resp里的proto会是 HTTP/2.0  // ForceAttemptHTTP2的定义  type Transport struct { ... // ForceAttemptHTTP2 controls whether HTTP/2 is enabled when a non-zero \t// Dial, DialTLS, or DialContext func or TLSClientConfig is provided. \t// By default, use of any those fields conservatively disables HTTP/2. \t// To use a custom dialer or TLS config and still attempt HTTP/2 \t// upgrades, set this to true. \tForceAttemptHTTP2 bool } 源码解析 go中http2相关的源码基本都在 /go/src/net/http/h2_bundle.go 文件中\nserver端 http2Server.ServeConn func (s *http2Server) ServeConn(c net.Conn, opts *http2ServeConnOpts) { baseCtx, cancel := http2serverConnBaseContext(c, opts) defer cancel() sc := \u0026http2serverConn{ srv: s, hs: opts.baseConfig(), conn: c, baseCtx: baseCtx, remoteAddrStr: c.RemoteAddr().String(), bw: http2newBufferedWriter(c), handler: opts.handler(), streams: make(map[uint32]*http2stream), readFrameCh: make(chan http2readFrameResult), wantWriteFrameCh: make(chan http2FrameWriteRequest, 8), serveMsgCh: make(chan interface{}, 8), wroteFrameCh: make(chan http2frameWriteResult, 1), // buffered; one send in writeFrameAsync \tbodyReadCh: make(chan http2bodyReadMsg), // buffering doesn't matter either way \tdoneServing: make(chan struct{}), clientMaxStreams: math.MaxUint32, // Section 6.5.2: \"Initially, there is no limit to this value\" \tadvMaxStreams: s.maxConcurrentStreams(), initialStreamSendWindowSize: http2initialWindowSize, maxFrameSize: http2initialMaxFrameSize, headerTableSize: http2initialHeaderTableSize, serveG: http2newGoroutineLock(), pushEnabled: true, } s.state.registerConn(sc) defer s.state.unregisterConn(sc) if sc.hs.WriteTimeout != 0 { sc.conn.SetWriteDeadline(time.Time{}) } if s.NewWriteScheduler != nil { sc.writeSched = s.NewWriteScheduler() } else { sc.writeSched = http2NewRandomWriteScheduler() } // These start at the RFC-specified defaults. If there is a higher \t// configured value for inflow, that will be updated when we send a \t// WINDOW_UPDATE shortly after sending SETTINGS. \tsc.flow.add(http2initialWindowSize) sc.inflow.add(http2initialWindowSize) sc.hpackEncoder = hpack.NewEncoder(\u0026sc.headerWriteBuf) fr := http2NewFramer(sc.bw, c) fr.ReadMetaHeaders = hpack.NewDecoder(http2initialHeaderTableSize, nil) fr.MaxHeaderListSize = sc.maxHeaderListSize() fr.SetMaxReadFrameSize(s.maxReadFrameSize()) sc.framer = fr if tc, ok := c.(http2connectionStater); ok { sc.tlsState = new(tls.ConnectionState) *sc.tlsState = tc.ConnectionState() if sc.tlsState.Version \"TLS version too low\") return } if sc.tlsState.ServerName == \"\" { } if !s.PermitProhibitedCipherSuites \u0026\u0026 http2isBadCipher(sc.tlsState.CipherSuite) { sc.rejectConn(http2ErrCodeInadequateSecurity, fmt.Sprintf(\"Prohibited TLS 1.2 Cipher Suite: %x\", sc.tlsState.CipherSuite)) return } } if hook := http2testHookGetServerConn; hook != nil { hook(sc) } sc.serve() }  使用http2serverConn对象封装了对conn的管理  http2serverConn.serve func (sc *http2serverConn) serve() { sc.serveG.check() defer sc.notePanic() defer sc.conn.Close() defer sc.closeAllStreamsOnConnClose() defer sc.stopShutdownTimer() defer close(sc.doneServing) // unblocks handlers trying to send  if http2VerboseLogs { sc.vlogf(\"http2: server connection from %v on %p\", sc.conn.RemoteAddr(), sc.hs) } // server告诉client端当前我的一些设置 \tsc.writeFrame(http2FrameWriteRequest{ write: http2writeSettings{ {http2SettingMaxFrameSize, sc.srv.maxReadFrameSize()}, {http2SettingMaxConcurrentStreams, sc.advMaxStreams}, {http2SettingMaxHeaderListSize, sc.maxHeaderListSize()}, {http2SettingInitialWindowSize, uint32(sc.srv.initialStreamRecvWindowSize())}, }, }) sc.unackedSettings++ // Each connection starts with intialWindowSize inflow tokens. \t// If a higher value is configured, we add more tokens. \tif diff := sc.srv.initialConnRecvWindowSize() - http2initialWindowSize; diff  0 { sc.sendWindowUpdate(nil, int(diff)) } // 读取客户端发的前言 \tif err := sc.readPreface(); err != nil { sc.condlogf(err, \"http2: server: error reading preface from client %v: %v\", sc.conn.RemoteAddr(), err) return } // 这里理应是通过更新conn的状态来出发某些callback \tsc.setConnState(StateActive) sc.setConnState(StateIdle) if sc.srv.IdleTimeout != 0 { sc.idleTimer = time.AfterFunc(sc.srv.IdleTimeout, sc.onIdleTimer) defer sc.idleTimer.Stop() } // 在新的goroutine中处理后面的frame \tgo sc.readFrames() // closed by defer sc.conn.Close above  settingsTimer := time.AfterFunc(http2firstSettingsTimeout, sc.onSettingsTimer) defer settingsTimer.Stop() // 在主的serve goroutine处理各种事件 \tloopNum := 0 for { loopNum++ select { case wr := sc.wantWriteFrameCh: if se, ok := wr.write.(http2StreamError); ok { sc.resetStream(se) break } sc.writeFrame(wr) case res := sc.wroteFrameCh: // 读取上层需要返回的内容，以frame的形式写回给客户端 \tsc.wroteFrame(res) case res := sc.readFrameCh: // 这里即为framer读出的frame \tif !sc.processFrameFromReader(res) { return } res.readMore() if settingsTimer != nil { settingsTimer.Stop() settingsTimer = nil } case m := sc.bodyReadCh: sc.noteBodyRead(m.st, m.n) case msg := sc.serveMsgCh: switch v := msg.(type) { case func(int): v(loopNum) // for testing \tcase *http2serverMessage: switch v { case http2settingsTimerMsg: sc.logf(\"timeout waiting for SETTINGS frames from %v\", sc.conn.RemoteAddr()) return case http2idleTimerMsg: sc.vlogf(\"connection is idle\") sc.goAway(http2ErrCodeNo) case http2shutdownTimerMsg: sc.vlogf(\"GOAWAY close timer fired; closing conn from %v\", sc.conn.RemoteAddr()) return case http2gracefulShutdownMsg: sc.startGracefulShutdownInternal() default: panic(\"unknown timer\") } case *http2startPushRequest: sc.startPush(v) default: panic(fmt.Sprintf(\"unexpected type %T\", v)) } } // If the peer is causing us to generate a lot of control frames, \t// but not reading them from us, assume they are trying to make us \t// run out of memory. \tif sc.queuedControlFrames  sc.srv.maxQueuedControlFrames() { sc.vlogf(\"http2: too many control frames in send queue, closing connection\") return } // Start the shutdown timer after sending a GOAWAY. When sending GOAWAY \t// with no error code (graceful shutdown), don't start the timer until \t// all open streams have been completed. \tsentGoAway := sc.inGoAway \u0026\u0026 !sc.needToSendGoAway \u0026\u0026 !sc.writingFrame gracefulShutdownComplete := sc.goAwayCode == http2ErrCodeNo \u0026\u0026 sc.curOpenStreams() == 0 if sentGoAway \u0026\u0026 sc.shutdownTimer == nil \u0026\u0026 (sc.goAwayCode != http2ErrCodeNo || gracefulShutdownComplete) { sc.shutDownIn(http2goAwayTimeout) } } } http2serverConn.readFrames 通过framer读取frame后，写入readFrameCh管道，等待主的goroutine处理\n// readFrames is the loop that reads incoming frames. // It takes care to only read one frame at a time, blocking until the // consumer is done with the frame. // It's run on its own goroutine. func (sc *http2serverConn) readFrames() { gate := make(http2gate) gateDone := gate.Done for { f, err := sc.framer.ReadFrame() select { case sc.readFrameCh  http2readFrameResult{f, err, gateDone}: case sc.doneServing: return } select { case gate: case sc.doneServing: return } if http2terminalReadFrameError(err) { return } } } http2serverConn.processFrameFromReader func (sc *http2serverConn) processFrameFromReader(res http2readFrameResult) bool { sc.serveG.check() err := res.err if err != nil { if err == http2ErrFrameTooLarge { sc.goAway(http2ErrCodeFrameSize) return true // goAway will close the loop \t} clientGone := err == io.EOF || err == io.ErrUnexpectedEOF || http2isClosedConnError(err) if clientGone { return false } } else { f := res.f if http2VerboseLogs { sc.vlogf(\"http2: server read frame %v\", http2summarizeFrame(f)) } // 处理具体的frame \terr = sc.processFrame(f) if err == nil { return true } } switch ev := err.(type) { case http2StreamError: sc.resetStream(ev) return true case http2goAwayFlowError: sc.goAway(http2ErrCodeFlowControl) return true case http2ConnectionError: sc.logf(\"http2: server connection error from %v: %v\", sc.conn.RemoteAddr(), ev) sc.goAway(http2ErrCode(ev)) return true // goAway will handle shutdown \tdefault: if res.err != nil { sc.vlogf(\"http2: server closing client connection; error reading frame from client %s: %v\", sc.conn.RemoteAddr(), err) } else { sc.logf(\"http2: server closing client connection: %v\", err) } return false } } http2serverConn.processFrame 根据不同的frame类型处理\nfunc (sc *http2serverConn) processFrame(f http2Frame) error { sc.serveG.check() // First frame received must be SETTINGS. \tif !sc.sawFirstSettings { if _, ok := f.(*http2SettingsFrame); !ok { return http2ConnectionError(http2ErrCodeProtocol) } sc.sawFirstSettings = true } switch f := f.(type) { case *http2SettingsFrame: // 包含setting信息的frame \treturn sc.processSettings(f) case *http2MetaHeadersFrame: // \treturn sc.processHeaders(f) case *http2WindowUpdateFrame: return sc.processWindowUpdate(f) case *http2PingFrame: return sc.processPing(f) case *http2DataFrame: return sc.processData(f) case *http2RSTStreamFrame: return sc.processResetStream(f) case *http2PriorityFrame: return sc.processPriority(f) case *http2GoAwayFrame: return sc.processGoAway(f) case *http2PushPromiseFrame: // A client cannot push. Thus, servers MUST treat the receipt of a PUSH_PROMISE \t// frame as a connection error (Section 5.4.1) of type PROTOCOL_ERROR. \treturn http2ConnectionError(http2ErrCodeProtocol) default: sc.vlogf(\"http2: server ignoring frame: %v\", f.Header()) return nil } } http2serverConn.processData 这里只展开processData方法看看如何处理frame的数据\nfunc (sc *http2serverConn) processData(f *http2DataFrame) error { sc.serveG.check() if sc.inGoAway \u0026\u0026 sc.goAwayCode != http2ErrCodeNo { return nil } data := f.Data() id := f.Header().StreamID state, st := sc.state(id) if id == 0 || state == http2stateIdle { return http2ConnectionError(http2ErrCodeProtocol) } if st == nil || state != http2stateOpen || st.gotTrailerHeader || st.resetQueued { // 流量控制 \tif sc.inflow.available() int32(f.Length) { return http2streamError(id, http2ErrCodeFlowControl) } sc.inflow.take(int32(f.Length)) sc.sendWindowUpdate(nil, int(f.Length)) // conn-level  if st != nil \u0026\u0026 st.resetQueued { return nil } return http2streamError(id, http2ErrCodeStreamClosed) } if st.body == nil { panic(\"internal error: should have a body in this state\") } if st.declBodyBytes != -1 \u0026\u0026 st.bodyBytes+int64(len(data))  st.declBodyBytes { st.body.CloseWithError(fmt.Errorf(\"sender tried to send more than declared Content-Length of %d bytes\", st.declBodyBytes)) return http2streamError(id, http2ErrCodeProtocol) } if f.Length  0 { // 流量控制 \tif st.inflow.available() int32(f.Length) { return http2streamError(id, http2ErrCodeFlowControl) } st.inflow.take(int32(f.Length)) if len(data)  0 { // 将数据写入buf中，等待上层读取 \twrote, err := st.body.Write(data) if err != nil { sc.sendWindowUpdate(nil, int(f.Length)-wrote) return http2streamError(id, http2ErrCodeStreamClosed) } if wrote != len(data) { panic(\"internal error: bad Writer\") } st.bodyBytes += int64(len(data)) } // Return any padded flow control now, since we won't \t// refund it later on body reads. \tif pad := int32(f.Length) - int32(len(data)); pad  0 { sc.sendWindowUpdate32(nil, pad) sc.sendWindowUpdate32(st, pad) } } if f.StreamEnded() { st.endStream() } return nil } http2serverConn.scheduleFrameWrite frame写回给client时是带有一定策略的, 目前有http2priorityWriteScheduler和http2randomWriteScheduler两种scheduler来调度frame的写回\n// scheduleFrameWrite tickles the frame writing scheduler. // // If a frame is already being written, nothing happens. This will be called again // when the frame is done being written. // // If a frame isn't being written and we need to send one, the best frame // to send is selected by writeSched. // // If a frame isn't being written and there's nothing else to send, we // flush the write buffer. func (sc *http2serverConn) scheduleFrameWrite() { sc.serveG.check() if sc.writingFrame || sc.inFrameScheduleLoop { return } sc.inFrameScheduleLoop = true for !sc.writingFrameAsync { if sc.needToSendGoAway { sc.needToSendGoAway = false sc.startFrameWrite(http2FrameWriteRequest{ write: \u0026http2writeGoAway{ maxStreamID: sc.maxClientStreamID, code: sc.goAwayCode, }, }) continue } if sc.needToSendSettingsAck { sc.needToSendSettingsAck = false sc.startFrameWrite(http2FrameWriteRequest{write: http2writeSettingsAck{}}) continue } if !sc.inGoAway || sc.goAwayCode == http2ErrCodeNo { // 这里应该有类似优先级队列的结构维护着需要写回的数据 \tif wr, ok := sc.writeSched.Pop(); ok { if wr.isControl() { sc.queuedControlFrames-- } sc.startFrameWrite(wr) continue } } if sc.needsFrameFlush { sc.startFrameWrite(http2FrameWriteRequest{write: http2flushFrameWriter{}}) sc.needsFrameFlush = false // after startFrameWrite, since it sets this true \tcontinue } break } sc.inFrameScheduleLoop = false } client端 http2ClientConn.roundTrip func (cc *http2ClientConn) RoundTrip(req *Request) (*Response, error) { resp, _, err := cc.roundTrip(req) return resp, err } func (cc *http2ClientConn) roundTrip(req *Request) (res *Response, gotErrAfterReqBodyWrite bool, err error) { // 检查连接头 \tif err := http2checkConnHeaders(req); err != nil { return nil, false, err } if cc.idleTimer != nil { cc.idleTimer.Stop() } trailers, err := http2commaSeparatedTrailers(req) if err != nil { return nil, false, err } hasTrailers := trailers != \"\" cc.mu.Lock() // 每一个conn里能承载的steam数量被maxConcurrentStreams控制，没有空闲stream时需要等待 \tif err := cc.awaitOpenSlotForRequest(req); err != nil { cc.mu.Unlock() return nil, false, err } body := req.Body // 计算请求的contentLen \tcontentLen := http2actualContentLength(req) hasBody := contentLen != 0 // TODO(bradfitz): this is a copy of the logic in net/http. Unify somewhere? \tvar requestedGzip bool if !cc.t.disableCompression() \u0026\u0026 req.Header.Get(\"Accept-Encoding\") == \"\" \u0026\u0026 req.Header.Get(\"Range\") == \"\" \u0026\u0026 req.Method != \"HEAD\" { // Request gzip only, not deflate. Deflate is ambiguous and \t// not as universally supported anyway. \t// See: https://zlib.net/zlib_faq.html#faq39 \t// \t// Note that we don't request this for HEAD requests, \t// due to a bug in nginx: \t// http://trac.nginx.org/nginx/ticket/358 \t// https://golang.org/issue/5522 \t// \t// We don't request gzip if the request is for a range, since \t// auto-decoding a portion of a gzipped document will just fail \t// anyway. See https://golang.org/issue/8923 \trequestedGzip = true } // we send: HEADERS{1}, CONTINUATION{0,} + DATA{0,} (DATA is \t// sent by writeRequestBody below, along with any Trailers, \t// again in form HEADERS{1}, CONTINUATION{0,})  // 头部压缩 \thdrs, err := cc.encodeHeaders(req, requestedGzip, trailers, contentLen) if err != nil { cc.mu.Unlock() return nil, false, err } // 每个请求有一个独立的stream \tcs := cc.newStream() cs.req = req cs.trace = httptrace.ContextClientTrace(req.Context()) cs.requestedGzip = requestedGzip bodyWriter := cc.t.getBodyWriterState(cs, body) cs.on100 = bodyWriter.on100 defer func() { cc.wmu.Lock() werr := cc.werr cc.wmu.Unlock() if werr != nil { cc.Close() } }() cc.wmu.Lock() endStream := !hasBody \u0026\u0026 !hasTrailers // 往stream里写入header, 里面会通过conn上的framer往conn里写入 \twerr := cc.writeHeaders(cs.ID, endStream, int(cc.maxFrameSize), hdrs) cc.wmu.Unlock() http2traceWroteHeaders(cs.trace) cc.mu.Unlock() if werr != nil { if hasBody { req.Body.Close() // per RoundTripper contract \tbodyWriter.cancel() } // 移除这个stream，并通过cond broadcase所有等着的请求 \tcc.forgetStreamID(cs.ID) // Don't bother sending a RST_STREAM (our write already failed; \t// no need to keep writing) \thttp2traceWroteRequest(cs.trace, werr) return nil, false, werr } var respHeaderTimer chan time.Time if hasBody { // 如果没有设置timer，则直接开启一个协程执行异步写入操作  // 否则好像等着一个什么100 continue？？ \tbodyWriter.scheduleBodyWrite() } else { // 没有body写入，则等待response在超时时间内回来 \thttp2traceWroteRequest(cs.trace, nil) if d := cc.responseHeaderTimeout(); d != 0 { timer := time.NewTimer(d) defer timer.Stop() respHeaderTimer = timer.C } } readLoopResCh := cs.resc bodyWritten := false ctx := req.Context() handleReadLoopResponse := func(re http2resAndError) (*Response, bool, error) { res := re.res if re.err != nil || res.StatusCode  299 { // On error or status code 3xx, 4xx, 5xx, etc abort any \t// ongoing write, assuming that the server doesn't care \t// about our request body. If the server replied with 1xx or \t// 2xx, however, then assume the server DOES potentially \t// want our body (e.g. full-duplex streaming: \t// golang.org/issue/13444). If it turns out the server \t// doesn't, they'll RST_STREAM us soon enough. This is a \t// heuristic to avoid adding knobs to Transport. Hopefully \t// we can keep it. \tbodyWriter.cancel() cs.abortRequestBodyWrite(http2errStopReqBodyWrite) if hasBody \u0026\u0026 !bodyWritten { bodyWriter.resc } } if re.err != nil { cc.forgetStreamID(cs.ID) return nil, cs.getStartedWrite(), re.err } res.Request = req res.TLS = cc.tlsState return res, false, nil } // 循环处理chan \tfor { select { case re := readLoopResCh: // 读取response \treturn handleReadLoopResponse(re) case respHeaderTimer: // 如果response超时了 \tif !hasBody || bodyWritten { // 如果没有body，或者body已经写入，则reset stream \tcc.writeStreamReset(cs.ID, http2ErrCodeCancel, nil) } else { // 终止写入 \tbodyWriter.cancel() cs.abortRequestBodyWrite(http2errStopReqBodyWriteAndCancel) bodyWriter.resc } cc.forgetStreamID(cs.ID) // 向上报超时错误 \treturn nil, cs.getStartedWrite(), http2errTimeout case ctx.Done(): if !hasBody || bodyWritten { cc.writeStreamReset(cs.ID, http2ErrCodeCancel, nil) } else { bodyWriter.cancel() cs.abortRequestBodyWrite(http2errStopReqBodyWriteAndCancel) bodyWriter.resc } cc.forgetStreamID(cs.ID) return nil, cs.getStartedWrite(), ctx.Err() case req.Cancel: // 如果请求被取消 \tif !hasBody || bodyWritten { cc.writeStreamReset(cs.ID, http2ErrCodeCancel, nil) } else { bodyWriter.cancel() cs.abortRequestBodyWrite(http2errStopReqBodyWriteAndCancel) bodyWriter.resc } cc.forgetStreamID(cs.ID) return nil, cs.getStartedWrite(), http2errRequestCanceled case cs.peerReset: // 如果对端重置 \t// processResetStream already removed the \t// stream from the streams map; no need for \t// forgetStreamID. \treturn nil, cs.getStartedWrite(), cs.resetErr case err := bodyWriter.resc: bodyWritten = true // Prefer the read loop's response, if available. Issue 16102. \tselect { case re := readLoopResCh: return handleReadLoopResponse(re) default: } if err != nil { cc.forgetStreamID(cs.ID) return nil, cs.getStartedWrite(), err } if d := cc.responseHeaderTimeout(); d != 0 { timer := time.NewTimer(d) defer timer.Stop() respHeaderTimer = timer.C } } } } http2Transport.newClientConn func (t *http2Transport) newClientConn(c net.Conn, singleUse bool) (*http2ClientConn, error) { cc := \u0026http2ClientConn{ t: t, tconn: c, readerDone: make(chan struct{}), nextStreamID: 1, maxFrameSize: 16  10, // spec default \tinitialWindowSize: 65535, // spec default \tmaxConcurrentStreams: 1000, // \"infinite\", per spec. 1000 seems good enough. \tpeerMaxHeaderListSize: 0xffffffffffffffff, // \"infinite\", per spec. Use 2^64-1 instead. \tstreams: make(map[uint32]*http2clientStream), singleUse: singleUse, wantSettingsAck: true, pings: make(map[[8]byte]chan struct{}), } if d := t.idleConnTimeout(); d != 0 { cc.idleTimeout = d cc.idleTimer = time.AfterFunc(d, cc.onIdleTimeout) } if http2VerboseLogs { t.vlogf(\"http2: Transport creating client conn %p to %v\", cc, c.RemoteAddr()) } cc.cond = sync.NewCond(\u0026cc.mu) cc.flow.add(int32(http2initialWindowSize)) // TODO: adjust this writer size to account for frame size + \t// MTU + crypto/tls record padding.  // 将net.Conn赋给h2c的write buffer \tcc.bw = bufio.NewWriter(http2stickyErrWriter{c, \u0026cc.werr}) // 将net.Conn赋给h2c的read buffer \tcc.br = bufio.NewReader(c) // 将readBuffer同rightBuffer都交给framer管理 \tcc.fr = http2NewFramer(cc.bw, cc.br) cc.fr.ReadMetaHeaders = hpack.NewDecoder(http2initialHeaderTableSize, nil) cc.fr.MaxHeaderListSize = t.maxHeaderListSize() // TODO: SetMaxDynamicTableSize, SetMaxDynamicTableSizeLimit on \t// henc in response to SETTINGS frames? \tcc.henc = hpack.NewEncoder(\u0026cc.hbuf) if t.AllowHTTP { cc.nextStreamID = 3 } if cs, ok := c.(http2connectionStater); ok { state := cs.ConnectionState() cc.tlsState = \u0026state } initialSettings := []http2Setting{ {ID: http2SettingEnablePush, Val: 0}, {ID: http2SettingInitialWindowSize, Val: http2transportDefaultStreamFlow}, } if max := t.maxHeaderListSize(); max != 0 { initialSettings = append(initialSettings, http2Setting{ID: http2SettingMaxHeaderListSize, Val: max}) } // 发送请求前言 \"PRI * HTTP/2.0\\r\\n\\r\\nSM\\r\\n\\r\\n\" \tcc.bw.Write(http2clientPreface) // 写入初始化设置 \tcc.fr.WriteSettings(initialSettings...) cc.fr.WriteWindowUpdate(0, http2transportDefaultConnFlow) cc.inflow.add(http2transportDefaultConnFlow + http2initialWindowSize) cc.bw.Flush() if cc.werr != nil { cc.Close() return nil, cc.werr } go cc.readLoop() return cc, nil }  initialWindowSize流量控制窗口的默认大小为65535 maxConcurrentStreams最大并发的stream 连接创建后，会写入前言，初始化设置(是否打开serverPush，初始化的窗口大小) 开启readLoop循环读取conn里来的数据  http2ClientConn.readLoop // readLoop runs in its own goroutine and reads and dispatches frames. func (cc *http2ClientConn) readLoop() { rl := \u0026http2clientConnReadLoop{cc: cc} defer rl.cleanup() cc.readerErr = rl.run() if ce, ok := cc.readerErr.(http2ConnectionError); ok { cc.wmu.Lock() cc.fr.WriteGoAway(0, http2ErrCode(ce), nil) cc.wmu.Unlock() } }  用http2clientConnReadLoop封装对conn读取的操作  http2clientConnReadLoop.run func (rl *http2clientConnReadLoop) run() error { cc := rl.cc rl.closeWhenIdle = cc.t.disableKeepAlives() || cc.singleUse gotReply := false // ever saw a HEADERS reply \tgotSettings := false readIdleTimeout := cc.t.ReadIdleTimeout var t *time.Timer if readIdleTimeout != 0 { t = time.AfterFunc(readIdleTimeout, cc.healthCheck) defer t.Stop() } for { // 循环从conn中读取frame \tf, err := cc.fr.ReadFrame() if t != nil { t.Reset(readIdleTimeout) } if err != nil { cc.vlogf(\"http2: Transport readFrame error on conn %p: (%T) %v\", cc, err, err) } if se, ok := err.(http2StreamError); ok { if cs := cc.streamByID(se.StreamID, false); cs != nil { cs.cc.writeStreamReset(cs.ID, se.Code, err) cs.cc.forgetStreamID(cs.ID) if se.Cause == nil { se.Cause = cc.fr.errDetail } rl.endStreamError(cs, se) } continue } else if err != nil { return err } if http2VerboseLogs { cc.vlogf(\"http2: Transport received %s\", http2summarizeFrame(f)) } if !gotSettings { if _, ok := f.(*http2SettingsFrame); !ok { cc.logf(\"protocol error: received %T before a SETTINGS frame\", f) return http2ConnectionError(http2ErrCodeProtocol) } gotSettings = true } maybeIdle := false // whether frame might transition us to idle  switch f := f.(type) { case *http2MetaHeadersFrame: err = rl.processHeaders(f) maybeIdle = true gotReply = true case *http2DataFrame: // 数据frame， \terr = rl.processData(f) maybeIdle = true case *http2GoAwayFrame: // 远端已关闭 \terr = rl.processGoAway(f) maybeIdle = true case *http2RSTStreamFrame: // 重置一个stream \terr = rl.processResetStream(f) maybeIdle = true case *http2SettingsFrame: // 可以通过这个frame调整maxFrameSize，maxConcurrentStreams，peerMaxHeaderListSize \terr = rl.processSettings(f) case *http2PushPromiseFrame: // 直接告诉对端不要发这种frame \terr = rl.processPushPromise(f) case *http2WindowUpdateFrame: // 底下通过修改window size来实现流量控制 \terr = rl.processWindowUpdate(f) case *http2PingFrame: // 用来保活的心跳包 \terr = rl.processPing(f) default: cc.logf(\"Transport: unhandled response frame type %T\", f) } if err != nil { if http2VerboseLogs { cc.vlogf(\"http2: Transport conn %p received error from processing frame %v: %v\", cc, http2summarizeFrame(f), err) } return err } if rl.closeWhenIdle \u0026\u0026 gotReply \u0026\u0026 maybeIdle { cc.closeIfIdle() } } }   循环从conn中读取frame\n  针对不同种类的frame有不同的处理\n MetaHeadersFrame DataFrame GoAwayFrame RSTStreamFrame SettingsFrame PushPromiseFrame WindowUpdateFrame PingFrame    http2Framer.ReadFrame // 固定的frame header长度 const http2frameHeaderLen = 9 // ReadFrame reads a single frame. The returned Frame is only valid // until the next call to ReadFrame. // // If the frame is larger than previously set with SetMaxReadFrameSize, the // returned error is ErrFrameTooLarge. Other errors may be of type // ConnectionError, StreamError, or anything else from the underlying // reader. func (fr *http2Framer) ReadFrame() (http2Frame, error) { fr.errDetail = nil if fr.lastFrame != nil { fr.lastFrame.invalidate() } // 先读出frame header \tfh, err := http2readFrameHeader(fr.headerBuf[:], fr.r) if err != nil { return nil, err } if fh.Length  fr.maxReadSize { return nil, http2ErrFrameTooLarge } // 读出frame的payload \tpayload := fr.getReadBuf(fh.Length) if _, err := io.ReadFull(fr.r, payload); err != nil { return nil, err } // 根据frame类型拿到对应的frameParser，处理后拿到frame \tf, err := http2typeFrameParser(fh.Type)(fr.frameCache, fh, payload) if err != nil { if ce, ok := err.(http2connError); ok { return nil, fr.connError(ce.Code, ce.Reason) } return nil, err } // 检查frame的顺序以及streamId是否一致 \tif err := fr.checkFrameOrder(f); err != nil { return nil, err } if fr.logReads { fr.debugReadLoggerf(\"http2: Framer %p: read %v\", fr, http2summarizeFrame(f)) } if fh.Type == http2FrameHeaders \u0026\u0026 fr.ReadMetaHeaders != nil { return fr.readMetaFrame(f.(*http2HeadersFrame)) } return f, nil } 主要数据结构 server-conn type http2serverConn struct { // Immutable: \tsrv *http2Server hs *Server conn net.Conn bw *http2bufferedWriter // writing to conn \thandler Handler baseCtx context.Context framer *http2Framer doneServing chan struct{} // closed when serverConn.serve ends \treadFrameCh chan http2readFrameResult // written by serverConn.readFrames \twantWriteFrameCh chan http2FrameWriteRequest // from handlers - serve \twroteFrameCh chan http2frameWriteResult // from writeFrameAsync - serve, tickles more frame writes \tbodyReadCh chan http2bodyReadMsg // from handlers - serve \tserveMsgCh chan interface{} // misc messages \u0026 code to send to / run on the serve loop \tflow http2flow // conn-wide (not stream-specific) outbound flow control \tinflow http2flow // conn-wide inbound flow control \ttlsState *tls.ConnectionState // shared by all handlers, like net/http \tremoteAddrStr string writeSched http2WriteScheduler // Everything following is owned by the serve loop; use serveG.check(): \tserveG http2goroutineLock // used to verify funcs are on serve() \tpushEnabled bool sawFirstSettings bool // got the initial SETTINGS frame after the preface \tneedToSendSettingsAck bool unackedSettings int // how many SETTINGS have we sent without ACKs? \tqueuedControlFrames int // control frames in the writeSched queue \tclientMaxStreams uint32 // SETTINGS_MAX_CONCURRENT_STREAMS from client (our PUSH_PROMISE limit) \tadvMaxStreams uint32 // our SETTINGS_MAX_CONCURRENT_STREAMS advertised the client \tcurClientStreams uint32 // number of open streams initiated by the client \tcurPushedStreams uint32 // number of open streams initiated by server push \tmaxClientStreamID uint32 // max ever seen from client (odd), or 0 if there have been no client requests \tmaxPushPromiseID uint32 // ID of the last push promise (even), or 0 if there have been no pushes \tstreams map[uint32]*http2stream initialStreamSendWindowSize int32 maxFrameSize int32 headerTableSize uint32 peerMaxHeaderListSize uint32 // zero means unknown (default) \tcanonHeader map[string]string // http2-lower-case - Go-Canonical-Case \twritingFrame bool // started writing a frame (on serve goroutine or separate) \twritingFrameAsync bool // started a frame on its own goroutine but haven't heard back on wroteFrameCh \tneedsFrameFlush bool // last frame write wasn't a flush \tinGoAway bool // we've started to or sent GOAWAY \tinFrameScheduleLoop bool // whether we're in the scheduleFrameWrite loop \tneedToSendGoAway bool // we need to schedule a GOAWAY frame write \tgoAwayCode http2ErrCode shutdownTimer *time.Timer // nil until used \tidleTimer *time.Timer // nil if unused  // Owned by the writeFrameAsync goroutine: \theaderWriteBuf bytes.Buffer hpackEncoder *hpack.Encoder // Used by startGracefulShutdown. \tshutdownOnce sync.Once } client-conn // ClientConn is the state of a single HTTP/2 client connection to an // HTTP/2 server. type http2ClientConn struct { t *http2Transport tconn net.Conn // 底层的连接 \ttlsState *tls.ConnectionState // nil only for specialized impls \treused uint32 // whether conn is being reused; atomic \tsingleUse bool // whether being used for a single http.Request  // readLoop goroutine fields: \treaderDone chan struct{} // closed on error \treaderErr error // set before readerDone is closed  idleTimeout time.Duration // 处理超时相关 \tidleTimer *time.Timer mu sync.Mutex // guards following \tcond *sync.Cond // hold mu; broadcast on flow/closed changes \tflow http2flow // conn级别的流量控制窗口 \tinflow http2flow // conn级别的流量控制窗口 \tclosing bool closed bool wantSettingsAck bool // we sent a SETTINGS frame and haven't heard back \tgoAway *http2GoAwayFrame // if non-nil, the GoAwayFrame we received \tgoAwayDebug string // goAway frame's debug data, retained as a string \tstreams map[uint32]*http2clientStream // client-initiated \tnextStreamID uint32 pendingRequests int // requests blocked and waiting to be sent because len(streams) == maxConcurrentStreams \tpings map[[8]byte]chan struct{} // in flight ping data to notification channel \tbw *bufio.Writer br *bufio.Reader fr *http2Framer // 用来写入stream里的frame \tlastActive time.Time lastIdle time.Time // time last idle \t// Settings from peer: (also guarded by mu) \tmaxFrameSize uint32 // 最大能写入的frame大小 \tmaxConcurrentStreams uint32 peerMaxHeaderListSize uint64 initialWindowSize uint32 hbuf bytes.Buffer // HPACK encoder writes into this \thenc *hpack.Encoder freeBuf [][]byte wmu sync.Mutex // held while writing; acquire AFTER mu if holding both \twerr error // first write error that has occurred } server-stream // stream represents a stream. This is the minimal metadata needed by // the serve goroutine. Most of the actual stream state is owned by // the http.Handler's goroutine in the responseWriter. Because the // responseWriter's responseWriterState is recycled at the end of a // handler, this struct intentionally has no pointer to the // *responseWriter{,State} itself, as the Handler ending nils out the // responseWriter's state field. type http2stream struct { // immutable: \tsc *http2serverConn id uint32 body *http2pipe // non-nil if expecting DATA frames \tcw http2closeWaiter // closed wait stream transitions to closed state \tctx context.Context cancelCtx func() // owned by serverConn's serve loop: \tbodyBytes int64 // body bytes seen so far \tdeclBodyBytes int64 // or -1 if undeclared \tflow http2flow // limits writing from Handler to client \tinflow http2flow // what the client is allowed to POST/etc to us \tstate http2streamState resetQueued bool // RST_STREAM queued for write; set by sc.resetStream \tgotTrailerHeader bool // HEADER frame for trailers was seen \twroteHeaders bool // whether we wrote headers (not status 100) \twriteDeadline *time.Timer // nil if unused  trailer Header // accumulated trailers \treqTrailer Header // handler's Request.Trailer } client-stream // clientStream is the state for a single HTTP/2 stream. One of these // is created for each Transport.RoundTrip call. type http2clientStream struct { cc *http2ClientConn // 所属的连接 \treq *Request // 发起stream的源请求 \ttrace *httptrace.ClientTrace // 追踪相关 \tID uint32 // 唯一id \tresc chan http2resAndError bufPipe http2pipe // 每次从dataFrame里读到的内容会写到这里 \tstartedWrite bool // started request body write; guarded by cc.mu \trequestedGzip bool // 是否经由gzip压缩过 \ton100 func() // optional code to run if get a 100 continue response  flow http2flow // guarded by cc.mu 用来控制流量窗口的大小 \tinflow http2flow // guarded by cc.mu 用来控制流量窗口的大小 \tbytesRemain int64 // -1 means unknown; owned by transportResponseBody.Read \treadErr error // sticky read error; owned by transportResponseBody.Read \tstopReqBody error // if non-nil, stop writing req body; guarded by cc.mu \tdidReset bool // whether we sent a RST_STREAM to the server; guarded by cc.mu  peerReset chan struct{} // closed on peer reset \tresetErr error // populated before peerReset is closed  done chan struct{} // closed when stream remove from cc.streams map; close calls guarded by cc.mu  // owned by clientConnReadLoop: \tfirstByte bool // got the first response byte \tpastHeaders bool // got first MetaHeadersFrame (actual headers) \tpastTrailers bool // got optional second MetaHeadersFrame (trailers) \tnum1xx uint8 // number of 1xx responses seen  trailer Header // accumulated trailers \tresTrailer *Header // client's Response.Trailer } frames frame-header\n// A FrameHeader is the 9 byte header of all HTTP/2 frames. // // See http://http2.github.io/http2-spec/#FrameHeader type http2FrameHeader struct { valid bool // caller can access []byte fields in the Frame  // Type is the 1 byte frame type. There are ten standard frame \t// types, but extension frame types may be written by WriteRawFrame \t// and will be returned by ReadFrame (as UnknownFrame). \tType http2FrameType // Flags are the 1 byte of 8 potential bit flags per frame. \t// They are specific to the frame type. \tFlags http2Flags // Length is the length of the frame, not including the 9 byte header. \t// The maximum size is one byte less than 16MB (uint24), but only \t// frames up to 16KB are allowed without peer agreement. \tLength uint32 // StreamID is which stream this frame is for. Certain frames \t// are not stream-specific, in which case this field is 0. \tStreamID uint32 } settings-frame // A SettingsFrame conveys configuration parameters that affect how // endpoints communicate, such as preferences and constraints on peer // behavior. // // See http://http2.github.io/http2-spec/#SETTINGS type http2SettingsFrame struct { http2FrameHeader p []byte } meta-headers // A MetaHeadersFrame is the representation of one HEADERS frame and // zero or more contiguous CONTINUATION frames and the decoding of // their HPACK-encoded contents. // // This type of frame does not appear on the wire and is only returned // by the Framer when Framer.ReadMetaHeaders is set. type http2MetaHeadersFrame struct { *http2HeadersFrame // Fields are the fields contained in the HEADERS and \t// CONTINUATION frames. The underlying slice is owned by the \t// Framer and must not be retained after the next call to \t// ReadFrame. \t// \t// Fields are guaranteed to be in the correct http2 order and \t// not have unknown pseudo header fields or invalid header \t// field names or values. Required pseudo header fields may be \t// missing, however. Use the MetaHeadersFrame.Pseudo accessor \t// method access pseudo headers. \tFields []hpack.HeaderField // Truncated is whether the max header list size limit was hit \t// and Fields is incomplete. The hpack decoder state is still \t// valid, however. \tTruncated bool } window-update // A WindowUpdateFrame is used to implement flow control. // See http://http2.github.io/http2-spec/#rfc.section.6.9 type http2WindowUpdateFrame struct { http2FrameHeader Increment uint32 // never read with high bit set } ping // A PingFrame is a mechanism for measuring a minimal round trip time // from the sender, as well as determining whether an idle connection // is still functional. // See http://http2.github.io/http2-spec/#rfc.section.6.7 type http2PingFrame struct { http2FrameHeader Data [8]byte } data // A DataFrame conveys arbitrary, variable-length sequences of octets // associated with a stream. // See http://http2.github.io/http2-spec/#rfc.section.6.1 type http2DataFrame struct { http2FrameHeader data []byte } rst-stream // A RSTStreamFrame allows for abnormal termination of a stream. // See http://http2.github.io/http2-spec/#rfc.section.6.4 type http2RSTStreamFrame struct { http2FrameHeader ErrCode http2ErrCode } priority // A PriorityFrame specifies the sender-advised priority of a stream. // See http://http2.github.io/http2-spec/#rfc.section.6.3 type http2PriorityFrame struct { http2FrameHeader http2PriorityParam } go-away // A GoAwayFrame informs the remote peer to stop creating streams on this connection. // See http://http2.github.io/http2-spec/#rfc.section.6.8 type http2GoAwayFrame struct { http2FrameHeader LastStreamID uint32 ErrCode http2ErrCode debugData []byte } push-promise // A PushPromiseFrame is used to initiate a server stream. // See http://http2.github.io/http2-spec/#rfc.section.6.6 type http2PushPromiseFrame struct { http2FrameHeader PromiseID uint32 headerFragBuf []byte // not owned } ",
+  "wordCount" : "4590",
+  "inLanguage": "en",
+  "datePublished": "2022-03-25T00:00:00Z",
+  "dateModified": "2022-03-25T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "Lambert Xiao"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lambertxiao.github.io/posts/golang/golang-http2%E7%9A%84%E5%AE%9E%E7%8E%B0/doc/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lambert's blog",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lambertxiao.github.io/avatar.jpeg"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      golang-http2实现
+    </h1>
+    <div class="post-meta"><span title='2022-03-25 00:00:00 +0000 UTC'>March 25, 2022</span>&nbsp;·&nbsp;22 min&nbsp;·&nbsp;Lambert Xiao&nbsp;|&nbsp;<a href="https://github.com/adityatelange/hugo-PaperMod/tree/exampleSite/content/posts/golang/golang-http2%e7%9a%84%e5%ae%9e%e7%8e%b0/doc.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+</div>
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#%e4%b8%be%e4%b8%aa%e4%be%8b%e5%ad%90" aria-label="举个例子">举个例子</a><ul>
+                        
+                <li>
+                    <a href="#%e6%80%8e%e4%b9%88%e6%8e%a5%e6%94%b6%e4%b8%80%e4%b8%aahttp2%e8%af%b7%e6%b1%82" aria-label="怎么接收一个http2请求">怎么接收一个http2请求</a></li>
+                <li>
+                    <a href="#%e6%80%8e%e4%b9%88%e5%8f%91%e8%b5%b7%e4%b8%80%e4%b8%aahttp2%e8%af%b7%e6%b1%82" aria-label="怎么发起一个http2请求">怎么发起一个http2请求</a></li></ul>
+                </li>
+                <li>
+                    <a href="#%e6%ba%90%e7%a0%81%e8%a7%a3%e6%9e%90" aria-label="源码解析">源码解析</a><ul>
+                        
+                <li>
+                    <a href="#server%e7%ab%af" aria-label="server端">server端</a><ul>
+                        
+                <li>
+                    <a href="#http2serverserveconn" aria-label="http2Server.ServeConn">http2Server.ServeConn</a></li>
+                <li>
+                    <a href="#http2serverconnserve" aria-label="http2serverConn.serve">http2serverConn.serve</a></li>
+                <li>
+                    <a href="#http2serverconnreadframes" aria-label="http2serverConn.readFrames">http2serverConn.readFrames</a></li>
+                <li>
+                    <a href="#http2serverconnprocessframefromreader" aria-label="http2serverConn.processFrameFromReader">http2serverConn.processFrameFromReader</a></li>
+                <li>
+                    <a href="#http2serverconnprocessframe" aria-label="http2serverConn.processFrame">http2serverConn.processFrame</a></li>
+                <li>
+                    <a href="#http2serverconnprocessdata" aria-label="http2serverConn.processData">http2serverConn.processData</a></li>
+                <li>
+                    <a href="#http2serverconnscheduleframewrite" aria-label="http2serverConn.scheduleFrameWrite">http2serverConn.scheduleFrameWrite</a></li></ul>
+                </li>
+                <li>
+                    <a href="#client%e7%ab%af" aria-label="client端">client端</a><ul>
+                        
+                <li>
+                    <a href="#http2clientconnroundtrip" aria-label="http2ClientConn.roundTrip">http2ClientConn.roundTrip</a></li>
+                <li>
+                    <a href="#http2transportnewclientconn" aria-label="http2Transport.newClientConn">http2Transport.newClientConn</a></li>
+                <li>
+                    <a href="#http2clientconnreadloop" aria-label="http2ClientConn.readLoop">http2ClientConn.readLoop</a></li>
+                <li>
+                    <a href="#http2clientconnreadlooprun" aria-label="http2clientConnReadLoop.run">http2clientConnReadLoop.run</a></li>
+                <li>
+                    <a href="#http2framerreadframe" aria-label="http2Framer.ReadFrame">http2Framer.ReadFrame</a></li></ul>
+                </li>
+                <li>
+                    <a href="#%e4%b8%bb%e8%a6%81%e6%95%b0%e6%8d%ae%e7%bb%93%e6%9e%84" aria-label="主要数据结构">主要数据结构</a><ul>
+                        
+                <li>
+                    <a href="#server-conn" aria-label="server-conn">server-conn</a></li>
+                <li>
+                    <a href="#client-conn" aria-label="client-conn">client-conn</a></li>
+                <li>
+                    <a href="#server-stream" aria-label="server-stream">server-stream</a></li>
+                <li>
+                    <a href="#client-stream" aria-label="client-stream">client-stream</a></li>
+                <li>
+                    <a href="#frames" aria-label="frames">frames</a><ul>
+                        
+                <li>
+                    <a href="#settings-frame" aria-label="settings-frame">settings-frame</a></li>
+                <li>
+                    <a href="#meta-headers" aria-label="meta-headers">meta-headers</a></li>
+                <li>
+                    <a href="#window-update" aria-label="window-update">window-update</a></li>
+                <li>
+                    <a href="#ping" aria-label="ping">ping</a></li>
+                <li>
+                    <a href="#data" aria-label="data">data</a></li>
+                <li>
+                    <a href="#rst-stream" aria-label="rst-stream">rst-stream</a></li>
+                <li>
+                    <a href="#priority" aria-label="priority">priority</a></li>
+                <li>
+                    <a href="#go-away" aria-label="go-away">go-away</a></li>
+                <li>
+                    <a href="#push-promise" aria-label="push-promise">push-promise</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+            </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h2 id="举个例子">举个例子<a hidden class="anchor" aria-hidden="true" href="#举个例子">#</a></h2>
+<h3 id="怎么接收一个http2请求">怎么接收一个http2请求<a hidden class="anchor" aria-hidden="true" href="#怎么接收一个http2请求">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> main() {
+	mux <span style="color:#39c">:=</span> http.NewServeMux()
+	mux.HandleFunc(<span style="color:#cd0000">&#34;/&#34;</span>, <span style="color:#00cd00">func</span>(w http.ResponseWriter, r <span style="color:#39c">*</span>http.Request) {
+		fmt.Fprint(w, <span style="color:#cd0000">&#34;Hello h2c&#34;</span>)
+	})
+
+	s <span style="color:#39c">:=</span> <span style="color:#39c">&amp;</span>http.Server{
+		Addr:    <span style="color:#cd0000">&#34;127.0.0.1:8080&#34;</span>,
+		Handler: mux,
+	}
+	log.Fatal(s.ListenAndServeTLS(<span style="color:#cd0000">&#34;server.crt&#34;</span>, <span style="color:#cd0000">&#34;server.key&#34;</span>))
+}
+
+</code></pre></div><p>需要注意的是，http2是必须和tls一起开启，可看源码 <code>/go/src/net/http/server.go</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (c <span style="color:#39c">*</span>conn) serve(ctx context.Context) {
+	<span style="color:#39c">...</span>
+
+	<span style="color:#cdcd00">if</span> tlsConn, ok <span style="color:#39c">:=</span> c.rwc.(<span style="color:#39c">*</span>tls.Conn); ok {
+		<span style="color:#39c">...</span>
+		<span style="color:#cdcd00">if</span> proto <span style="color:#39c">:=</span> c.tlsState.NegotiatedProtocol; validNextProto(proto) {
+			<span style="color:#000080">// 这里的fn就是http2的handler, 通过http2ConfigureServer方法注册
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">if</span> fn <span style="color:#39c">:=</span> c.server.TLSNextProto[proto]; fn <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+				h <span style="color:#39c">:=</span> initALPNRequest{ctx, tlsConn, serverHandler{c.server}}
+				c.setState(c.rwc, StateActive, skipHooks)
+				fn(c.server, tlsConn, h)
+			}
+			<span style="color:#cdcd00">return</span>
+		}
+	}
+
+	<span style="color:#000080">// HTTP/1.x from here on.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// 以下走http1.x的逻辑
+</span><span style="color:#000080"></span>	<span style="color:#39c">...</span>
+}
+</code></pre></div><p>通过openssl工具生成证书</p>
+<pre><code>openssl req -newkey rsa:2048 -nodes -keyout server.key -x509 -days 365 -out server.crt
+</code></pre><h3 id="怎么发起一个http2请求">怎么发起一个http2请求<a hidden class="anchor" aria-hidden="true" href="#怎么发起一个http2请求">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> main() {
+	client <span style="color:#39c">:=</span> http.Client{
+		Transport: <span style="color:#39c">&amp;</span>http.Transport{
+			ForceAttemptHTTP2: <span style="color:#cdcd00">true</span>,
+			TLSClientConfig:   <span style="color:#39c">&amp;</span>tls.Config{InsecureSkipVerify: <span style="color:#cdcd00">true</span>},
+		},
+	}
+	resp, err <span style="color:#39c">:=</span> client.Get(<span style="color:#cd0000">&#34;https://127.0.0.1:8080&#34;</span>)
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cd00cd">panic</span>(err)
+	}
+	rdata, err <span style="color:#39c">:=</span> ioutil.ReadAll(resp.Body)
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cd00cd">panic</span>(err)
+	}
+	fmt.Println(resp.Proto, <span style="color:#cd00cd">string</span>(rdata))
+}
+</code></pre></div><ol>
+<li>需要自定义一个Transport</li>
+<li>打开ForceAttemptHTTP2</li>
+<li>由于服务端的整数是自己生成的，所以需要设置跳过校验</li>
+<li>最后resp里的proto会是 <code>HTTP/2.0</code></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// ForceAttemptHTTP2的定义
+</span><span style="color:#000080"></span>
+<span style="color:#00cd00">type</span> Transport <span style="color:#00cd00">struct</span> {
+	<span style="color:#39c">...</span>
+
+	<span style="color:#000080">// ForceAttemptHTTP2 controls whether HTTP/2 is enabled when a non-zero
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Dial, DialTLS, or DialContext func or TLSClientConfig is provided.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// By default, use of any those fields conservatively disables HTTP/2.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// To use a custom dialer or TLS config and still attempt HTTP/2
+</span><span style="color:#000080"></span>	<span style="color:#000080">// upgrades, set this to true.
+</span><span style="color:#000080"></span>	ForceAttemptHTTP2 <span style="color:#00cd00">bool</span>
+}
+</code></pre></div><h2 id="源码解析">源码解析<a hidden class="anchor" aria-hidden="true" href="#源码解析">#</a></h2>
+<p>go中http2相关的源码基本都在 <code>/go/src/net/http/h2_bundle.go</code> 文件中</p>
+<h3 id="server端">server端<a hidden class="anchor" aria-hidden="true" href="#server端">#</a></h3>
+<h4 id="http2serverserveconn">http2Server.ServeConn<a hidden class="anchor" aria-hidden="true" href="#http2serverserveconn">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (s <span style="color:#39c">*</span>http2Server) ServeConn(c net.Conn, opts <span style="color:#39c">*</span>http2ServeConnOpts) {
+	baseCtx, cancel <span style="color:#39c">:=</span> http2serverConnBaseContext(c, opts)
+	<span style="color:#cdcd00">defer</span> cancel()
+
+	sc <span style="color:#39c">:=</span> <span style="color:#39c">&amp;</span>http2serverConn{
+		srv:                         s,
+		hs:                          opts.baseConfig(),
+		conn:                        c,
+		baseCtx:                     baseCtx,
+		remoteAddrStr:               c.RemoteAddr().String(),
+		bw:                          http2newBufferedWriter(c),
+		handler:                     opts.handler(),
+		streams:                     <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">map</span>[<span style="color:#00cd00">uint32</span>]<span style="color:#39c">*</span>http2stream),
+		readFrameCh:                 <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> http2readFrameResult),
+		wantWriteFrameCh:            <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> http2FrameWriteRequest, <span style="color:#cd00cd">8</span>),
+		serveMsgCh:                  <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#00cd00">interface</span>{}, <span style="color:#cd00cd">8</span>),
+		wroteFrameCh:                <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> http2frameWriteResult, <span style="color:#cd00cd">1</span>), <span style="color:#000080">// buffered; one send in writeFrameAsync
+</span><span style="color:#000080"></span>		bodyReadCh:                  <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> http2bodyReadMsg),         <span style="color:#000080">// buffering doesn&#39;t matter either way
+</span><span style="color:#000080"></span>		doneServing:                 <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#00cd00">struct</span>{}),
+		clientMaxStreams:            math.MaxUint32, <span style="color:#000080">// Section 6.5.2: &#34;Initially, there is no limit to this value&#34;
+</span><span style="color:#000080"></span>		advMaxStreams:               s.maxConcurrentStreams(),
+		initialStreamSendWindowSize: http2initialWindowSize,
+		maxFrameSize:                http2initialMaxFrameSize,
+		headerTableSize:             http2initialHeaderTableSize,
+		serveG:                      http2newGoroutineLock(),
+		pushEnabled:                 <span style="color:#cdcd00">true</span>,
+	}
+
+	s.state.registerConn(sc)
+	<span style="color:#cdcd00">defer</span> s.state.unregisterConn(sc)
+
+	<span style="color:#cdcd00">if</span> sc.hs.WriteTimeout <span style="color:#39c">!=</span> <span style="color:#cd00cd">0</span> {
+		sc.conn.SetWriteDeadline(time.Time{})
+	}
+
+	<span style="color:#cdcd00">if</span> s.NewWriteScheduler <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		sc.writeSched = s.NewWriteScheduler()
+	} <span style="color:#cdcd00">else</span> {
+		sc.writeSched = http2NewRandomWriteScheduler()
+	}
+
+	<span style="color:#000080">// These start at the RFC-specified defaults. If there is a higher
+</span><span style="color:#000080"></span>	<span style="color:#000080">// configured value for inflow, that will be updated when we send a
+</span><span style="color:#000080"></span>	<span style="color:#000080">// WINDOW_UPDATE shortly after sending SETTINGS.
+</span><span style="color:#000080"></span>	sc.flow.add(http2initialWindowSize)
+	sc.inflow.add(http2initialWindowSize)
+	sc.hpackEncoder = hpack.NewEncoder(<span style="color:#39c">&amp;</span>sc.headerWriteBuf)
+
+	fr <span style="color:#39c">:=</span> http2NewFramer(sc.bw, c)
+	fr.ReadMetaHeaders = hpack.NewDecoder(http2initialHeaderTableSize, <span style="color:#cdcd00">nil</span>)
+	fr.MaxHeaderListSize = sc.maxHeaderListSize()
+	fr.SetMaxReadFrameSize(s.maxReadFrameSize())
+	sc.framer = fr
+
+	<span style="color:#cdcd00">if</span> tc, ok <span style="color:#39c">:=</span> c.(http2connectionStater); ok {
+		sc.tlsState = <span style="color:#cd00cd">new</span>(tls.ConnectionState)
+		<span style="color:#39c">*</span>sc.tlsState = tc.ConnectionState()
+		
+		<span style="color:#cdcd00">if</span> sc.tlsState.Version &lt; tls.VersionTLS12 {
+			sc.rejectConn(http2ErrCodeInadequateSecurity, <span style="color:#cd0000">&#34;TLS version too low&#34;</span>)
+			<span style="color:#cdcd00">return</span>
+		}
+
+		<span style="color:#cdcd00">if</span> sc.tlsState.ServerName <span style="color:#39c">==</span> <span style="color:#cd0000">&#34;&#34;</span> {
+			
+		}
+
+		<span style="color:#cdcd00">if</span> !s.PermitProhibitedCipherSuites <span style="color:#39c">&amp;&amp;</span> http2isBadCipher(sc.tlsState.CipherSuite) {
+			sc.rejectConn(http2ErrCodeInadequateSecurity, fmt.Sprintf(<span style="color:#cd0000">&#34;Prohibited TLS 1.2 Cipher Suite: %x&#34;</span>, sc.tlsState.CipherSuite))
+			<span style="color:#cdcd00">return</span>
+		}
+	}
+
+	<span style="color:#cdcd00">if</span> hook <span style="color:#39c">:=</span> http2testHookGetServerConn; hook <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		hook(sc)
+	}
+	sc.serve()
+}
+</code></pre></div><ol>
+<li>使用http2serverConn对象封装了对conn的管理</li>
+</ol>
+<h4 id="http2serverconnserve">http2serverConn.serve<a hidden class="anchor" aria-hidden="true" href="#http2serverconnserve">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (sc <span style="color:#39c">*</span>http2serverConn) serve() {
+	sc.serveG.check()
+	<span style="color:#cdcd00">defer</span> sc.notePanic()
+	<span style="color:#cdcd00">defer</span> sc.conn.Close()
+	<span style="color:#cdcd00">defer</span> sc.closeAllStreamsOnConnClose()
+	<span style="color:#cdcd00">defer</span> sc.stopShutdownTimer()
+	<span style="color:#cdcd00">defer</span> <span style="color:#cd00cd">close</span>(sc.doneServing) <span style="color:#000080">// unblocks handlers trying to send
+</span><span style="color:#000080"></span>
+	<span style="color:#cdcd00">if</span> http2VerboseLogs {
+		sc.vlogf(<span style="color:#cd0000">&#34;http2: server connection from %v on %p&#34;</span>, sc.conn.RemoteAddr(), sc.hs)
+	}
+
+	<span style="color:#000080">// server告诉client端当前我的一些设置
+</span><span style="color:#000080"></span>	sc.writeFrame(http2FrameWriteRequest{
+		write: http2writeSettings{
+			{http2SettingMaxFrameSize, sc.srv.maxReadFrameSize()},
+			{http2SettingMaxConcurrentStreams, sc.advMaxStreams},
+			{http2SettingMaxHeaderListSize, sc.maxHeaderListSize()},
+			{http2SettingInitialWindowSize, <span style="color:#cd00cd">uint32</span>(sc.srv.initialStreamRecvWindowSize())},
+		},
+	})
+	sc.unackedSettings<span style="color:#39c">++</span>
+
+	<span style="color:#000080">// Each connection starts with intialWindowSize inflow tokens.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// If a higher value is configured, we add more tokens.
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> diff <span style="color:#39c">:=</span> sc.srv.initialConnRecvWindowSize() <span style="color:#39c">-</span> http2initialWindowSize; diff &gt; <span style="color:#cd00cd">0</span> {
+		sc.sendWindowUpdate(<span style="color:#cdcd00">nil</span>, <span style="color:#cd00cd">int</span>(diff))
+	}
+
+	<span style="color:#000080">// 读取客户端发的前言
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> sc.readPreface(); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		sc.condlogf(err, <span style="color:#cd0000">&#34;http2: server: error reading preface from client %v: %v&#34;</span>, sc.conn.RemoteAddr(), err)
+		<span style="color:#cdcd00">return</span>
+	}
+	
+	<span style="color:#000080">// 这里理应是通过更新conn的状态来出发某些callback
+</span><span style="color:#000080"></span>	sc.setConnState(StateActive)
+	sc.setConnState(StateIdle)
+
+	<span style="color:#cdcd00">if</span> sc.srv.IdleTimeout <span style="color:#39c">!=</span> <span style="color:#cd00cd">0</span> {
+		sc.idleTimer = time.AfterFunc(sc.srv.IdleTimeout, sc.onIdleTimer)
+		<span style="color:#cdcd00">defer</span> sc.idleTimer.Stop()
+	}
+
+	<span style="color:#000080">// 在新的goroutine中处理后面的frame
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">go</span> sc.readFrames() <span style="color:#000080">// closed by defer sc.conn.Close above
+</span><span style="color:#000080"></span>
+	settingsTimer <span style="color:#39c">:=</span> time.AfterFunc(http2firstSettingsTimeout, sc.onSettingsTimer)
+	<span style="color:#cdcd00">defer</span> settingsTimer.Stop()
+
+	<span style="color:#000080">// 在主的serve goroutine处理各种事件
+</span><span style="color:#000080"></span>	loopNum <span style="color:#39c">:=</span> <span style="color:#cd00cd">0</span>
+	<span style="color:#cdcd00">for</span> {
+		loopNum<span style="color:#39c">++</span>
+		<span style="color:#cdcd00">select</span> {
+		<span style="color:#cdcd00">case</span> wr <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>sc.wantWriteFrameCh:
+			<span style="color:#cdcd00">if</span> se, ok <span style="color:#39c">:=</span> wr.write.(http2StreamError); ok {
+				sc.resetStream(se)
+				<span style="color:#cdcd00">break</span>
+			}
+			sc.writeFrame(wr)
+		<span style="color:#cdcd00">case</span> res <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>sc.wroteFrameCh:
+			<span style="color:#000080">// 读取上层需要返回的内容，以frame的形式写回给客户端
+</span><span style="color:#000080"></span>			sc.wroteFrame(res)
+		<span style="color:#cdcd00">case</span> res <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>sc.readFrameCh:
+			<span style="color:#000080">// 这里即为framer读出的frame
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">if</span> !sc.processFrameFromReader(res) {
+				<span style="color:#cdcd00">return</span>
+			}
+			res.readMore()
+			<span style="color:#cdcd00">if</span> settingsTimer <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+				settingsTimer.Stop()
+				settingsTimer = <span style="color:#cdcd00">nil</span>
+			}
+		<span style="color:#cdcd00">case</span> m <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>sc.bodyReadCh:
+			sc.noteBodyRead(m.st, m.n)
+		<span style="color:#cdcd00">case</span> msg <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>sc.serveMsgCh:
+			<span style="color:#cdcd00">switch</span> v <span style="color:#39c">:=</span> msg.(<span style="color:#00cd00">type</span>) {
+			<span style="color:#cdcd00">case</span> <span style="color:#00cd00">func</span>(<span style="color:#00cd00">int</span>):
+				v(loopNum) <span style="color:#000080">// for testing
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2serverMessage:
+				<span style="color:#cdcd00">switch</span> v {
+				<span style="color:#cdcd00">case</span> http2settingsTimerMsg:
+					sc.logf(<span style="color:#cd0000">&#34;timeout waiting for SETTINGS frames from %v&#34;</span>, sc.conn.RemoteAddr())
+					<span style="color:#cdcd00">return</span>
+				<span style="color:#cdcd00">case</span> http2idleTimerMsg:
+					sc.vlogf(<span style="color:#cd0000">&#34;connection is idle&#34;</span>)
+					sc.goAway(http2ErrCodeNo)
+				<span style="color:#cdcd00">case</span> http2shutdownTimerMsg:
+					sc.vlogf(<span style="color:#cd0000">&#34;GOAWAY close timer fired; closing conn from %v&#34;</span>, sc.conn.RemoteAddr())
+					<span style="color:#cdcd00">return</span>
+				<span style="color:#cdcd00">case</span> http2gracefulShutdownMsg:
+					sc.startGracefulShutdownInternal()
+				<span style="color:#cdcd00">default</span>:
+					<span style="color:#cd00cd">panic</span>(<span style="color:#cd0000">&#34;unknown timer&#34;</span>)
+				}
+			<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2startPushRequest:
+				sc.startPush(v)
+			<span style="color:#cdcd00">default</span>:
+				<span style="color:#cd00cd">panic</span>(fmt.Sprintf(<span style="color:#cd0000">&#34;unexpected type %T&#34;</span>, v))
+			}
+		}
+
+		<span style="color:#000080">// If the peer is causing us to generate a lot of control frames,
+</span><span style="color:#000080"></span>		<span style="color:#000080">// but not reading them from us, assume they are trying to make us
+</span><span style="color:#000080"></span>		<span style="color:#000080">// run out of memory.
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">if</span> sc.queuedControlFrames &gt; sc.srv.maxQueuedControlFrames() {
+			sc.vlogf(<span style="color:#cd0000">&#34;http2: too many control frames in send queue, closing connection&#34;</span>)
+			<span style="color:#cdcd00">return</span>
+		}
+
+		<span style="color:#000080">// Start the shutdown timer after sending a GOAWAY. When sending GOAWAY
+</span><span style="color:#000080"></span>		<span style="color:#000080">// with no error code (graceful shutdown), don&#39;t start the timer until
+</span><span style="color:#000080"></span>		<span style="color:#000080">// all open streams have been completed.
+</span><span style="color:#000080"></span>		sentGoAway <span style="color:#39c">:=</span> sc.inGoAway <span style="color:#39c">&amp;&amp;</span> !sc.needToSendGoAway <span style="color:#39c">&amp;&amp;</span> !sc.writingFrame
+		gracefulShutdownComplete <span style="color:#39c">:=</span> sc.goAwayCode <span style="color:#39c">==</span> http2ErrCodeNo <span style="color:#39c">&amp;&amp;</span> sc.curOpenStreams() <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span>
+		<span style="color:#cdcd00">if</span> sentGoAway <span style="color:#39c">&amp;&amp;</span> sc.shutdownTimer <span style="color:#39c">==</span> <span style="color:#cdcd00">nil</span> <span style="color:#39c">&amp;&amp;</span> (sc.goAwayCode <span style="color:#39c">!=</span> http2ErrCodeNo <span style="color:#39c">||</span> gracefulShutdownComplete) {
+			sc.shutDownIn(http2goAwayTimeout)
+		}
+	}
+}
+
+</code></pre></div><h4 id="http2serverconnreadframes">http2serverConn.readFrames<a hidden class="anchor" aria-hidden="true" href="#http2serverconnreadframes">#</a></h4>
+<p>通过framer读取frame后，写入readFrameCh管道，等待主的goroutine处理</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// readFrames is the loop that reads incoming frames.
+</span><span style="color:#000080">// It takes care to only read one frame at a time, blocking until the
+</span><span style="color:#000080">// consumer is done with the frame.
+</span><span style="color:#000080">// It&#39;s run on its own goroutine.
+</span><span style="color:#000080"></span><span style="color:#00cd00">func</span> (sc <span style="color:#39c">*</span>http2serverConn) readFrames() {
+	gate <span style="color:#39c">:=</span> <span style="color:#cd00cd">make</span>(http2gate)
+	gateDone <span style="color:#39c">:=</span> gate.Done
+	<span style="color:#cdcd00">for</span> {
+		f, err <span style="color:#39c">:=</span> sc.framer.ReadFrame()
+		<span style="color:#cdcd00">select</span> {
+		<span style="color:#cdcd00">case</span> sc.readFrameCh <span style="color:#39c">&lt;-</span> http2readFrameResult{f, err, gateDone}:
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">&lt;-</span>sc.doneServing:
+			<span style="color:#cdcd00">return</span>
+		}
+		<span style="color:#cdcd00">select</span> {
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">&lt;-</span>gate:
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">&lt;-</span>sc.doneServing:
+			<span style="color:#cdcd00">return</span>
+		}
+		<span style="color:#cdcd00">if</span> http2terminalReadFrameError(err) {
+			<span style="color:#cdcd00">return</span>
+		}
+	}
+}
+</code></pre></div><h4 id="http2serverconnprocessframefromreader">http2serverConn.processFrameFromReader<a hidden class="anchor" aria-hidden="true" href="#http2serverconnprocessframefromreader">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (sc <span style="color:#39c">*</span>http2serverConn) processFrameFromReader(res http2readFrameResult) <span style="color:#00cd00">bool</span> {
+	sc.serveG.check()
+	err <span style="color:#39c">:=</span> res.err
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">if</span> err <span style="color:#39c">==</span> http2ErrFrameTooLarge {
+			sc.goAway(http2ErrCodeFrameSize)
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">true</span> <span style="color:#000080">// goAway will close the loop
+</span><span style="color:#000080"></span>		}
+		clientGone <span style="color:#39c">:=</span> err <span style="color:#39c">==</span> io.EOF <span style="color:#39c">||</span> err <span style="color:#39c">==</span> io.ErrUnexpectedEOF <span style="color:#39c">||</span> http2isClosedConnError(err)
+		<span style="color:#cdcd00">if</span> clientGone {
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">false</span>
+		}
+	} <span style="color:#cdcd00">else</span> {
+		f <span style="color:#39c">:=</span> res.f
+		<span style="color:#cdcd00">if</span> http2VerboseLogs {
+			sc.vlogf(<span style="color:#cd0000">&#34;http2: server read frame %v&#34;</span>, http2summarizeFrame(f))
+		}
+		<span style="color:#000080">// 处理具体的frame
+</span><span style="color:#000080"></span>		err = sc.processFrame(f)
+		<span style="color:#cdcd00">if</span> err <span style="color:#39c">==</span> <span style="color:#cdcd00">nil</span> {
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">true</span>
+		}
+	}
+
+	<span style="color:#cdcd00">switch</span> ev <span style="color:#39c">:=</span> err.(<span style="color:#00cd00">type</span>) {
+	<span style="color:#cdcd00">case</span> http2StreamError:
+		sc.resetStream(ev)
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">true</span>
+	<span style="color:#cdcd00">case</span> http2goAwayFlowError:
+		sc.goAway(http2ErrCodeFlowControl)
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">true</span>
+	<span style="color:#cdcd00">case</span> http2ConnectionError:
+		sc.logf(<span style="color:#cd0000">&#34;http2: server connection error from %v: %v&#34;</span>, sc.conn.RemoteAddr(), ev)
+		sc.goAway(http2ErrCode(ev))
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">true</span> <span style="color:#000080">// goAway will handle shutdown
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">default</span>:
+		<span style="color:#cdcd00">if</span> res.err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			sc.vlogf(<span style="color:#cd0000">&#34;http2: server closing client connection; error reading frame from client %s: %v&#34;</span>, sc.conn.RemoteAddr(), err)
+		} <span style="color:#cdcd00">else</span> {
+			sc.logf(<span style="color:#cd0000">&#34;http2: server closing client connection: %v&#34;</span>, err)
+		}
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">false</span>
+	}
+}
+</code></pre></div><h4 id="http2serverconnprocessframe">http2serverConn.processFrame<a hidden class="anchor" aria-hidden="true" href="#http2serverconnprocessframe">#</a></h4>
+<p>根据不同的frame类型处理</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (sc <span style="color:#39c">*</span>http2serverConn) processFrame(f http2Frame) <span style="color:#00cd00">error</span> {
+	sc.serveG.check()
+
+	<span style="color:#000080">// First frame received must be SETTINGS.
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> !sc.sawFirstSettings {
+		<span style="color:#cdcd00">if</span> _, ok <span style="color:#39c">:=</span> f.(<span style="color:#39c">*</span>http2SettingsFrame); !ok {
+			<span style="color:#cdcd00">return</span> http2ConnectionError(http2ErrCodeProtocol)
+		}
+		sc.sawFirstSettings = <span style="color:#cdcd00">true</span>
+	}
+
+	<span style="color:#cdcd00">switch</span> f <span style="color:#39c">:=</span> f.(<span style="color:#00cd00">type</span>) {
+	<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2SettingsFrame:
+		<span style="color:#000080">// 包含setting信息的frame
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">return</span> sc.processSettings(f)
+	<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2MetaHeadersFrame:
+		<span style="color:#000080">// 
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">return</span> sc.processHeaders(f)
+	<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2WindowUpdateFrame:
+		<span style="color:#cdcd00">return</span> sc.processWindowUpdate(f)
+	<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2PingFrame:
+		<span style="color:#cdcd00">return</span> sc.processPing(f)
+	<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2DataFrame:
+		<span style="color:#cdcd00">return</span> sc.processData(f)
+	<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2RSTStreamFrame:
+		<span style="color:#cdcd00">return</span> sc.processResetStream(f)
+	<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2PriorityFrame:
+		<span style="color:#cdcd00">return</span> sc.processPriority(f)
+	<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2GoAwayFrame:
+		<span style="color:#cdcd00">return</span> sc.processGoAway(f)
+	<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2PushPromiseFrame:
+		<span style="color:#000080">// A client cannot push. Thus, servers MUST treat the receipt of a PUSH_PROMISE
+</span><span style="color:#000080"></span>		<span style="color:#000080">// frame as a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">return</span> http2ConnectionError(http2ErrCodeProtocol)
+	<span style="color:#cdcd00">default</span>:
+		sc.vlogf(<span style="color:#cd0000">&#34;http2: server ignoring frame: %v&#34;</span>, f.Header())
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>
+	}
+}
+</code></pre></div><h4 id="http2serverconnprocessdata">http2serverConn.processData<a hidden class="anchor" aria-hidden="true" href="#http2serverconnprocessdata">#</a></h4>
+<p>这里只展开processData方法看看如何处理frame的数据</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">
+<span style="color:#00cd00">func</span> (sc <span style="color:#39c">*</span>http2serverConn) processData(f <span style="color:#39c">*</span>http2DataFrame) <span style="color:#00cd00">error</span> {
+	sc.serveG.check()
+	<span style="color:#cdcd00">if</span> sc.inGoAway <span style="color:#39c">&amp;&amp;</span> sc.goAwayCode <span style="color:#39c">!=</span> http2ErrCodeNo {
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>
+	}
+	data <span style="color:#39c">:=</span> f.Data()
+
+	id <span style="color:#39c">:=</span> f.Header().StreamID
+	state, st <span style="color:#39c">:=</span> sc.state(id)
+	<span style="color:#cdcd00">if</span> id <span style="color:#39c">==</span> <span style="color:#cd00cd">0</span> <span style="color:#39c">||</span> state <span style="color:#39c">==</span> http2stateIdle {
+		<span style="color:#cdcd00">return</span> http2ConnectionError(http2ErrCodeProtocol)
+	}
+
+	<span style="color:#cdcd00">if</span> st <span style="color:#39c">==</span> <span style="color:#cdcd00">nil</span> <span style="color:#39c">||</span> state <span style="color:#39c">!=</span> http2stateOpen <span style="color:#39c">||</span> st.gotTrailerHeader <span style="color:#39c">||</span> st.resetQueued {
+		<span style="color:#000080">// 流量控制
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">if</span> sc.inflow.available() &lt; <span style="color:#cd00cd">int32</span>(f.Length) {
+			<span style="color:#cdcd00">return</span> http2streamError(id, http2ErrCodeFlowControl)
+		}
+	
+		sc.inflow.take(<span style="color:#cd00cd">int32</span>(f.Length))
+		sc.sendWindowUpdate(<span style="color:#cdcd00">nil</span>, <span style="color:#cd00cd">int</span>(f.Length)) <span style="color:#000080">// conn-level
+</span><span style="color:#000080"></span>
+		<span style="color:#cdcd00">if</span> st <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> <span style="color:#39c">&amp;&amp;</span> st.resetQueued {
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>
+		}
+		<span style="color:#cdcd00">return</span> http2streamError(id, http2ErrCodeStreamClosed)
+	}
+	<span style="color:#cdcd00">if</span> st.body <span style="color:#39c">==</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cd00cd">panic</span>(<span style="color:#cd0000">&#34;internal error: should have a body in this state&#34;</span>)
+	}
+
+	<span style="color:#cdcd00">if</span> st.declBodyBytes <span style="color:#39c">!=</span> <span style="color:#39c">-</span><span style="color:#cd00cd">1</span> <span style="color:#39c">&amp;&amp;</span> st.bodyBytes<span style="color:#39c">+</span><span style="color:#cd00cd">int64</span>(<span style="color:#cd00cd">len</span>(data)) &gt; st.declBodyBytes {
+		st.body.CloseWithError(fmt.Errorf(<span style="color:#cd0000">&#34;sender tried to send more than declared Content-Length of %d bytes&#34;</span>, st.declBodyBytes))
+		<span style="color:#cdcd00">return</span> http2streamError(id, http2ErrCodeProtocol)
+	}
+	<span style="color:#cdcd00">if</span> f.Length &gt; <span style="color:#cd00cd">0</span> {
+		<span style="color:#000080">// 流量控制
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">if</span> st.inflow.available() &lt; <span style="color:#cd00cd">int32</span>(f.Length) {
+			<span style="color:#cdcd00">return</span> http2streamError(id, http2ErrCodeFlowControl)
+		}
+		st.inflow.take(<span style="color:#cd00cd">int32</span>(f.Length))
+
+		<span style="color:#cdcd00">if</span> <span style="color:#cd00cd">len</span>(data) &gt; <span style="color:#cd00cd">0</span> {
+			<span style="color:#000080">// 将数据写入buf中，等待上层读取
+</span><span style="color:#000080"></span>			wrote, err <span style="color:#39c">:=</span> st.body.Write(data)
+			<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+				sc.sendWindowUpdate(<span style="color:#cdcd00">nil</span>, <span style="color:#cd00cd">int</span>(f.Length)<span style="color:#39c">-</span>wrote)
+				<span style="color:#cdcd00">return</span> http2streamError(id, http2ErrCodeStreamClosed)
+			}
+			<span style="color:#cdcd00">if</span> wrote <span style="color:#39c">!=</span> <span style="color:#cd00cd">len</span>(data) {
+				<span style="color:#cd00cd">panic</span>(<span style="color:#cd0000">&#34;internal error: bad Writer&#34;</span>)
+			}
+			st.bodyBytes <span style="color:#39c">+=</span> <span style="color:#cd00cd">int64</span>(<span style="color:#cd00cd">len</span>(data))
+		}
+
+		<span style="color:#000080">// Return any padded flow control now, since we won&#39;t
+</span><span style="color:#000080"></span>		<span style="color:#000080">// refund it later on body reads.
+</span><span style="color:#000080"></span>		<span style="color:#cdcd00">if</span> pad <span style="color:#39c">:=</span> <span style="color:#cd00cd">int32</span>(f.Length) <span style="color:#39c">-</span> <span style="color:#cd00cd">int32</span>(<span style="color:#cd00cd">len</span>(data)); pad &gt; <span style="color:#cd00cd">0</span> {
+			sc.sendWindowUpdate32(<span style="color:#cdcd00">nil</span>, pad)
+			sc.sendWindowUpdate32(st, pad)
+		}
+	}
+	<span style="color:#cdcd00">if</span> f.StreamEnded() {
+		st.endStream()
+	}
+	<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>
+}
+</code></pre></div><h4 id="http2serverconnscheduleframewrite">http2serverConn.scheduleFrameWrite<a hidden class="anchor" aria-hidden="true" href="#http2serverconnscheduleframewrite">#</a></h4>
+<p>frame写回给client时是带有一定策略的, 目前有http2priorityWriteScheduler和http2randomWriteScheduler两种scheduler来调度frame的写回</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// scheduleFrameWrite tickles the frame writing scheduler.
+</span><span style="color:#000080">//
+</span><span style="color:#000080">// If a frame is already being written, nothing happens. This will be called again
+</span><span style="color:#000080">// when the frame is done being written.
+</span><span style="color:#000080">//
+</span><span style="color:#000080">// If a frame isn&#39;t being written and we need to send one, the best frame
+</span><span style="color:#000080">// to send is selected by writeSched.
+</span><span style="color:#000080">//
+</span><span style="color:#000080">// If a frame isn&#39;t being written and there&#39;s nothing else to send, we
+</span><span style="color:#000080">// flush the write buffer.
+</span><span style="color:#000080"></span><span style="color:#00cd00">func</span> (sc <span style="color:#39c">*</span>http2serverConn) scheduleFrameWrite() {
+	sc.serveG.check()
+	<span style="color:#cdcd00">if</span> sc.writingFrame <span style="color:#39c">||</span> sc.inFrameScheduleLoop {
+		<span style="color:#cdcd00">return</span>
+	}
+	sc.inFrameScheduleLoop = <span style="color:#cdcd00">true</span>
+	<span style="color:#cdcd00">for</span> !sc.writingFrameAsync {
+		<span style="color:#cdcd00">if</span> sc.needToSendGoAway {
+			sc.needToSendGoAway = <span style="color:#cdcd00">false</span>
+			sc.startFrameWrite(http2FrameWriteRequest{
+				write: <span style="color:#39c">&amp;</span>http2writeGoAway{
+					maxStreamID: sc.maxClientStreamID,
+					code:        sc.goAwayCode,
+				},
+			})
+			<span style="color:#cdcd00">continue</span>
+		}
+		<span style="color:#cdcd00">if</span> sc.needToSendSettingsAck {
+			sc.needToSendSettingsAck = <span style="color:#cdcd00">false</span>
+			sc.startFrameWrite(http2FrameWriteRequest{write: http2writeSettingsAck{}})
+			<span style="color:#cdcd00">continue</span>
+		}
+		<span style="color:#cdcd00">if</span> !sc.inGoAway <span style="color:#39c">||</span> sc.goAwayCode <span style="color:#39c">==</span> http2ErrCodeNo {
+			<span style="color:#000080">// 这里应该有类似优先级队列的结构维护着需要写回的数据
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">if</span> wr, ok <span style="color:#39c">:=</span> sc.writeSched.Pop(); ok {
+				<span style="color:#cdcd00">if</span> wr.isControl() {
+					sc.queuedControlFrames<span style="color:#39c">--</span>
+				}
+				sc.startFrameWrite(wr)
+				<span style="color:#cdcd00">continue</span>
+			}
+		}
+		<span style="color:#cdcd00">if</span> sc.needsFrameFlush {
+			sc.startFrameWrite(http2FrameWriteRequest{write: http2flushFrameWriter{}})
+			sc.needsFrameFlush = <span style="color:#cdcd00">false</span> <span style="color:#000080">// after startFrameWrite, since it sets this true
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">continue</span>
+		}
+		<span style="color:#cdcd00">break</span>
+	}
+	sc.inFrameScheduleLoop = <span style="color:#cdcd00">false</span>
+}
+</code></pre></div><h3 id="client端">client端<a hidden class="anchor" aria-hidden="true" href="#client端">#</a></h3>
+<h4 id="http2clientconnroundtrip">http2ClientConn.roundTrip<a hidden class="anchor" aria-hidden="true" href="#http2clientconnroundtrip">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (cc <span style="color:#39c">*</span>http2ClientConn) RoundTrip(req <span style="color:#39c">*</span>Request) (<span style="color:#39c">*</span>Response, <span style="color:#00cd00">error</span>) {
+	resp, _, err <span style="color:#39c">:=</span> cc.roundTrip(req)
+	<span style="color:#cdcd00">return</span> resp, err
+}
+
+
+<span style="color:#00cd00">func</span> (cc <span style="color:#39c">*</span>http2ClientConn) roundTrip(req <span style="color:#39c">*</span>Request) (res <span style="color:#39c">*</span>Response, gotErrAfterReqBodyWrite <span style="color:#00cd00">bool</span>, err <span style="color:#00cd00">error</span>) {
+    <span style="color:#000080">// 检查连接头
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> http2checkConnHeaders(req); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, <span style="color:#cdcd00">false</span>, err
+	}
+	<span style="color:#cdcd00">if</span> cc.idleTimer <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		cc.idleTimer.Stop()
+	}
+
+	trailers, err <span style="color:#39c">:=</span> http2commaSeparatedTrailers(req)
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, <span style="color:#cdcd00">false</span>, err
+	}
+	hasTrailers <span style="color:#39c">:=</span> trailers <span style="color:#39c">!=</span> <span style="color:#cd0000">&#34;&#34;</span>
+
+	cc.mu.Lock()
+    <span style="color:#000080">// 每一个conn里能承载的steam数量被maxConcurrentStreams控制，没有空闲stream时需要等待
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> cc.awaitOpenSlotForRequest(req); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		cc.mu.Unlock()
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, <span style="color:#cdcd00">false</span>, err
+	}
+
+	body <span style="color:#39c">:=</span> req.Body
+    <span style="color:#000080">// 计算请求的contentLen
+</span><span style="color:#000080"></span>	contentLen <span style="color:#39c">:=</span> http2actualContentLength(req)
+	hasBody <span style="color:#39c">:=</span> contentLen <span style="color:#39c">!=</span> <span style="color:#cd00cd">0</span>
+
+	<span style="color:#000080">// TODO(bradfitz): this is a copy of the logic in net/http. Unify somewhere?
+</span><span style="color:#000080"></span>	<span style="color:#00cd00">var</span> requestedGzip <span style="color:#00cd00">bool</span>
+	<span style="color:#cdcd00">if</span> !cc.t.disableCompression() <span style="color:#39c">&amp;&amp;</span>
+		req.Header.Get(<span style="color:#cd0000">&#34;Accept-Encoding&#34;</span>) <span style="color:#39c">==</span> <span style="color:#cd0000">&#34;&#34;</span> <span style="color:#39c">&amp;&amp;</span>
+		req.Header.Get(<span style="color:#cd0000">&#34;Range&#34;</span>) <span style="color:#39c">==</span> <span style="color:#cd0000">&#34;&#34;</span> <span style="color:#39c">&amp;&amp;</span>
+		req.Method <span style="color:#39c">!=</span> <span style="color:#cd0000">&#34;HEAD&#34;</span> {
+		<span style="color:#000080">// Request gzip only, not deflate. Deflate is ambiguous and
+</span><span style="color:#000080"></span>		<span style="color:#000080">// not as universally supported anyway.
+</span><span style="color:#000080"></span>		<span style="color:#000080">// See: https://zlib.net/zlib_faq.html#faq39
+</span><span style="color:#000080"></span>		<span style="color:#000080">//
+</span><span style="color:#000080"></span>		<span style="color:#000080">// Note that we don&#39;t request this for HEAD requests,
+</span><span style="color:#000080"></span>		<span style="color:#000080">// due to a bug in nginx:
+</span><span style="color:#000080"></span>		<span style="color:#000080">//   http://trac.nginx.org/nginx/ticket/358
+</span><span style="color:#000080"></span>		<span style="color:#000080">//   https://golang.org/issue/5522
+</span><span style="color:#000080"></span>		<span style="color:#000080">//
+</span><span style="color:#000080"></span>		<span style="color:#000080">// We don&#39;t request gzip if the request is for a range, since
+</span><span style="color:#000080"></span>		<span style="color:#000080">// auto-decoding a portion of a gzipped document will just fail
+</span><span style="color:#000080"></span>		<span style="color:#000080">// anyway. See https://golang.org/issue/8923
+</span><span style="color:#000080"></span>		requestedGzip = <span style="color:#cdcd00">true</span>
+	}
+
+	<span style="color:#000080">// we send: HEADERS{1}, CONTINUATION{0,} + DATA{0,} (DATA is
+</span><span style="color:#000080"></span>	<span style="color:#000080">// sent by writeRequestBody below, along with any Trailers,
+</span><span style="color:#000080"></span>	<span style="color:#000080">// again in form HEADERS{1}, CONTINUATION{0,})
+</span><span style="color:#000080"></span>    <span style="color:#000080">// 头部压缩
+</span><span style="color:#000080"></span>	hdrs, err <span style="color:#39c">:=</span> cc.encodeHeaders(req, requestedGzip, trailers, contentLen)
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		cc.mu.Unlock()
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, <span style="color:#cdcd00">false</span>, err
+	}
+
+    <span style="color:#000080">// 每个请求有一个独立的stream
+</span><span style="color:#000080"></span>	cs <span style="color:#39c">:=</span> cc.newStream()
+	cs.req = req
+	cs.trace = httptrace.ContextClientTrace(req.Context())
+	cs.requestedGzip = requestedGzip
+	bodyWriter <span style="color:#39c">:=</span> cc.t.getBodyWriterState(cs, body)
+	cs.on100 = bodyWriter.on100
+
+	<span style="color:#cdcd00">defer</span> <span style="color:#00cd00">func</span>() {
+		cc.wmu.Lock()
+		werr <span style="color:#39c">:=</span> cc.werr
+		cc.wmu.Unlock()
+		<span style="color:#cdcd00">if</span> werr <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			cc.Close()
+		}
+	}()
+
+	cc.wmu.Lock()
+	endStream <span style="color:#39c">:=</span> !hasBody <span style="color:#39c">&amp;&amp;</span> !hasTrailers
+
+    <span style="color:#000080">// 往stream里写入header, 里面会通过conn上的framer往conn里写入
+</span><span style="color:#000080"></span>	werr <span style="color:#39c">:=</span> cc.writeHeaders(cs.ID, endStream, <span style="color:#cd00cd">int</span>(cc.maxFrameSize), hdrs)
+	cc.wmu.Unlock()
+	http2traceWroteHeaders(cs.trace)
+	cc.mu.Unlock()
+
+	<span style="color:#cdcd00">if</span> werr <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">if</span> hasBody {
+			req.Body.Close() <span style="color:#000080">// per RoundTripper contract
+</span><span style="color:#000080"></span>			bodyWriter.cancel()
+		}
+        <span style="color:#000080">// 移除这个stream，并通过cond broadcase所有等着的请求
+</span><span style="color:#000080"></span>		cc.forgetStreamID(cs.ID)
+		<span style="color:#000080">// Don&#39;t bother sending a RST_STREAM (our write already failed;
+</span><span style="color:#000080"></span>		<span style="color:#000080">// no need to keep writing)
+</span><span style="color:#000080"></span>		http2traceWroteRequest(cs.trace, werr)
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, <span style="color:#cdcd00">false</span>, werr
+	}
+
+	<span style="color:#00cd00">var</span> respHeaderTimer <span style="color:#39c">&lt;-</span><span style="color:#00cd00">chan</span> time.Time
+	<span style="color:#cdcd00">if</span> hasBody {
+        <span style="color:#000080">// 如果没有设置timer，则直接开启一个协程执行异步写入操作
+</span><span style="color:#000080"></span>        <span style="color:#000080">// 否则好像等着一个什么100 continue？？
+</span><span style="color:#000080"></span>		bodyWriter.scheduleBodyWrite()
+	} <span style="color:#cdcd00">else</span> {
+        <span style="color:#000080">// 没有body写入，则等待response在超时时间内回来
+</span><span style="color:#000080"></span>		http2traceWroteRequest(cs.trace, <span style="color:#cdcd00">nil</span>)
+		<span style="color:#cdcd00">if</span> d <span style="color:#39c">:=</span> cc.responseHeaderTimeout(); d <span style="color:#39c">!=</span> <span style="color:#cd00cd">0</span> {
+			timer <span style="color:#39c">:=</span> time.NewTimer(d)
+			<span style="color:#cdcd00">defer</span> timer.Stop()
+			respHeaderTimer = timer.C
+		}
+	}
+
+	readLoopResCh <span style="color:#39c">:=</span> cs.resc
+	bodyWritten <span style="color:#39c">:=</span> <span style="color:#cdcd00">false</span>
+	ctx <span style="color:#39c">:=</span> req.Context()
+
+	handleReadLoopResponse <span style="color:#39c">:=</span> <span style="color:#00cd00">func</span>(re http2resAndError) (<span style="color:#39c">*</span>Response, <span style="color:#00cd00">bool</span>, <span style="color:#00cd00">error</span>) {
+		res <span style="color:#39c">:=</span> re.res
+		<span style="color:#cdcd00">if</span> re.err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> <span style="color:#39c">||</span> res.StatusCode &gt; <span style="color:#cd00cd">299</span> {
+			<span style="color:#000080">// On error or status code 3xx, 4xx, 5xx, etc abort any
+</span><span style="color:#000080"></span>			<span style="color:#000080">// ongoing write, assuming that the server doesn&#39;t care
+</span><span style="color:#000080"></span>			<span style="color:#000080">// about our request body. If the server replied with 1xx or
+</span><span style="color:#000080"></span>			<span style="color:#000080">// 2xx, however, then assume the server DOES potentially
+</span><span style="color:#000080"></span>			<span style="color:#000080">// want our body (e.g. full-duplex streaming:
+</span><span style="color:#000080"></span>			<span style="color:#000080">// golang.org/issue/13444). If it turns out the server
+</span><span style="color:#000080"></span>			<span style="color:#000080">// doesn&#39;t, they&#39;ll RST_STREAM us soon enough. This is a
+</span><span style="color:#000080"></span>			<span style="color:#000080">// heuristic to avoid adding knobs to Transport. Hopefully
+</span><span style="color:#000080"></span>			<span style="color:#000080">// we can keep it.
+</span><span style="color:#000080"></span>			bodyWriter.cancel()
+			cs.abortRequestBodyWrite(http2errStopReqBodyWrite)
+			<span style="color:#cdcd00">if</span> hasBody <span style="color:#39c">&amp;&amp;</span> !bodyWritten {
+				<span style="color:#39c">&lt;-</span>bodyWriter.resc
+			}
+		}
+		<span style="color:#cdcd00">if</span> re.err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			cc.forgetStreamID(cs.ID)
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, cs.getStartedWrite(), re.err
+		}
+		res.Request = req
+		res.TLS = cc.tlsState
+		<span style="color:#cdcd00">return</span> res, <span style="color:#cdcd00">false</span>, <span style="color:#cdcd00">nil</span>
+	}
+
+    <span style="color:#000080">// 循环处理chan
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">for</span> {
+		<span style="color:#cdcd00">select</span> {
+		<span style="color:#cdcd00">case</span> re <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>readLoopResCh:
+            <span style="color:#000080">// 读取response
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">return</span> handleReadLoopResponse(re)
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">&lt;-</span>respHeaderTimer:
+            <span style="color:#000080">// 如果response超时了
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">if</span> !hasBody <span style="color:#39c">||</span> bodyWritten {
+                <span style="color:#000080">// 如果没有body，或者body已经写入，则reset stream
+</span><span style="color:#000080"></span>				cc.writeStreamReset(cs.ID, http2ErrCodeCancel, <span style="color:#cdcd00">nil</span>)
+			} <span style="color:#cdcd00">else</span> {
+                <span style="color:#000080">// 终止写入
+</span><span style="color:#000080"></span>				bodyWriter.cancel()
+				cs.abortRequestBodyWrite(http2errStopReqBodyWriteAndCancel)
+				<span style="color:#39c">&lt;-</span>bodyWriter.resc
+			}
+			cc.forgetStreamID(cs.ID)
+            <span style="color:#000080">// 向上报超时错误
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, cs.getStartedWrite(), http2errTimeout
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">&lt;-</span>ctx.Done():
+			<span style="color:#cdcd00">if</span> !hasBody <span style="color:#39c">||</span> bodyWritten {
+				cc.writeStreamReset(cs.ID, http2ErrCodeCancel, <span style="color:#cdcd00">nil</span>)
+			} <span style="color:#cdcd00">else</span> {
+				bodyWriter.cancel()
+				cs.abortRequestBodyWrite(http2errStopReqBodyWriteAndCancel)
+				<span style="color:#39c">&lt;-</span>bodyWriter.resc
+			}
+			cc.forgetStreamID(cs.ID)
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, cs.getStartedWrite(), ctx.Err()
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">&lt;-</span>req.Cancel:
+            <span style="color:#000080">// 如果请求被取消
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">if</span> !hasBody <span style="color:#39c">||</span> bodyWritten {
+				cc.writeStreamReset(cs.ID, http2ErrCodeCancel, <span style="color:#cdcd00">nil</span>)
+			} <span style="color:#cdcd00">else</span> {
+				bodyWriter.cancel()
+				cs.abortRequestBodyWrite(http2errStopReqBodyWriteAndCancel)
+				<span style="color:#39c">&lt;-</span>bodyWriter.resc
+			}
+			cc.forgetStreamID(cs.ID)
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, cs.getStartedWrite(), http2errRequestCanceled
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">&lt;-</span>cs.peerReset:
+            <span style="color:#000080">// 如果对端重置
+</span><span style="color:#000080"></span>			<span style="color:#000080">// processResetStream already removed the
+</span><span style="color:#000080"></span>			<span style="color:#000080">// stream from the streams map; no need for
+</span><span style="color:#000080"></span>			<span style="color:#000080">// forgetStreamID.
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, cs.getStartedWrite(), cs.resetErr
+		<span style="color:#cdcd00">case</span> err <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>bodyWriter.resc:
+			bodyWritten = <span style="color:#cdcd00">true</span>
+			<span style="color:#000080">// Prefer the read loop&#39;s response, if available. Issue 16102.
+</span><span style="color:#000080"></span>			<span style="color:#cdcd00">select</span> {
+			<span style="color:#cdcd00">case</span> re <span style="color:#39c">:=</span> <span style="color:#39c">&lt;-</span>readLoopResCh:
+				<span style="color:#cdcd00">return</span> handleReadLoopResponse(re)
+			<span style="color:#cdcd00">default</span>:
+			}
+			<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+				cc.forgetStreamID(cs.ID)
+				<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, cs.getStartedWrite(), err
+			}
+			<span style="color:#cdcd00">if</span> d <span style="color:#39c">:=</span> cc.responseHeaderTimeout(); d <span style="color:#39c">!=</span> <span style="color:#cd00cd">0</span> {
+				timer <span style="color:#39c">:=</span> time.NewTimer(d)
+				<span style="color:#cdcd00">defer</span> timer.Stop()
+				respHeaderTimer = timer.C
+			}
+		}
+	}
+}
+</code></pre></div><h4 id="http2transportnewclientconn">http2Transport.newClientConn<a hidden class="anchor" aria-hidden="true" href="#http2transportnewclientconn">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (t <span style="color:#39c">*</span>http2Transport) newClientConn(c net.Conn, singleUse <span style="color:#00cd00">bool</span>) (<span style="color:#39c">*</span>http2ClientConn, <span style="color:#00cd00">error</span>) {
+	cc <span style="color:#39c">:=</span> <span style="color:#39c">&amp;</span>http2ClientConn{
+		t:                     t,
+		tconn:                 c,
+		readerDone:            <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">chan</span> <span style="color:#00cd00">struct</span>{}),
+		nextStreamID:          <span style="color:#cd00cd">1</span>,
+		maxFrameSize:          <span style="color:#cd00cd">16</span> <span style="color:#39c">&lt;&lt;</span> <span style="color:#cd00cd">10</span>,           <span style="color:#000080">// spec default
+</span><span style="color:#000080"></span>		initialWindowSize:     <span style="color:#cd00cd">65535</span>,              <span style="color:#000080">// spec default
+</span><span style="color:#000080"></span>		maxConcurrentStreams:  <span style="color:#cd00cd">1000</span>,               <span style="color:#000080">// &#34;infinite&#34;, per spec. 1000 seems good enough.
+</span><span style="color:#000080"></span>		peerMaxHeaderListSize: <span style="color:#cd00cd">0xffffffffffffffff</span>, <span style="color:#000080">// &#34;infinite&#34;, per spec. Use 2^64-1 instead.
+</span><span style="color:#000080"></span>		streams:               <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">map</span>[<span style="color:#00cd00">uint32</span>]<span style="color:#39c">*</span>http2clientStream),
+		singleUse:             singleUse,
+		wantSettingsAck:       <span style="color:#cdcd00">true</span>,
+		pings:                 <span style="color:#cd00cd">make</span>(<span style="color:#00cd00">map</span>[[<span style="color:#cd00cd">8</span>]<span style="color:#00cd00">byte</span>]<span style="color:#00cd00">chan</span> <span style="color:#00cd00">struct</span>{}),
+	}
+	<span style="color:#cdcd00">if</span> d <span style="color:#39c">:=</span> t.idleConnTimeout(); d <span style="color:#39c">!=</span> <span style="color:#cd00cd">0</span> {
+		cc.idleTimeout = d
+		cc.idleTimer = time.AfterFunc(d, cc.onIdleTimeout)
+	}
+	<span style="color:#cdcd00">if</span> http2VerboseLogs {
+		t.vlogf(<span style="color:#cd0000">&#34;http2: Transport creating client conn %p to %v&#34;</span>, cc, c.RemoteAddr())
+	}
+
+	cc.cond = sync.NewCond(<span style="color:#39c">&amp;</span>cc.mu)
+	cc.flow.add(<span style="color:#cd00cd">int32</span>(http2initialWindowSize))
+
+	<span style="color:#000080">// TODO: adjust this writer size to account for frame size +
+</span><span style="color:#000080"></span>	<span style="color:#000080">// MTU + crypto/tls record padding.
+</span><span style="color:#000080"></span>
+    <span style="color:#000080">// 将net.Conn赋给h2c的write buffer
+</span><span style="color:#000080"></span>	cc.bw = bufio.NewWriter(http2stickyErrWriter{c, <span style="color:#39c">&amp;</span>cc.werr})
+    <span style="color:#000080">// 将net.Conn赋给h2c的read buffer
+</span><span style="color:#000080"></span>	cc.br = bufio.NewReader(c)
+    <span style="color:#000080">// 将readBuffer同rightBuffer都交给framer管理
+</span><span style="color:#000080"></span>	cc.fr = http2NewFramer(cc.bw, cc.br)
+	cc.fr.ReadMetaHeaders = hpack.NewDecoder(http2initialHeaderTableSize, <span style="color:#cdcd00">nil</span>)
+	cc.fr.MaxHeaderListSize = t.maxHeaderListSize()
+
+	<span style="color:#000080">// TODO: SetMaxDynamicTableSize, SetMaxDynamicTableSizeLimit on
+</span><span style="color:#000080"></span>	<span style="color:#000080">// henc in response to SETTINGS frames?
+</span><span style="color:#000080"></span>	cc.henc = hpack.NewEncoder(<span style="color:#39c">&amp;</span>cc.hbuf)
+
+	<span style="color:#cdcd00">if</span> t.AllowHTTP {
+		cc.nextStreamID = <span style="color:#cd00cd">3</span>
+	}
+
+	<span style="color:#cdcd00">if</span> cs, ok <span style="color:#39c">:=</span> c.(http2connectionStater); ok {
+		state <span style="color:#39c">:=</span> cs.ConnectionState()
+		cc.tlsState = <span style="color:#39c">&amp;</span>state
+	}
+
+	initialSettings <span style="color:#39c">:=</span> []http2Setting{
+		{ID: http2SettingEnablePush, Val: <span style="color:#cd00cd">0</span>},
+		{ID: http2SettingInitialWindowSize, Val: http2transportDefaultStreamFlow},
+	}
+	<span style="color:#cdcd00">if</span> max <span style="color:#39c">:=</span> t.maxHeaderListSize(); max <span style="color:#39c">!=</span> <span style="color:#cd00cd">0</span> {
+		initialSettings = <span style="color:#cd00cd">append</span>(initialSettings, http2Setting{ID: http2SettingMaxHeaderListSize, Val: max})
+	}
+
+    <span style="color:#000080">// 发送请求前言 &#34;PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n&#34;
+</span><span style="color:#000080"></span>	cc.bw.Write(http2clientPreface)
+    <span style="color:#000080">// 写入初始化设置
+</span><span style="color:#000080"></span>	cc.fr.WriteSettings(initialSettings<span style="color:#39c">...</span>)
+	cc.fr.WriteWindowUpdate(<span style="color:#cd00cd">0</span>, http2transportDefaultConnFlow)
+	cc.inflow.add(http2transportDefaultConnFlow <span style="color:#39c">+</span> http2initialWindowSize)
+	cc.bw.Flush()
+	<span style="color:#cdcd00">if</span> cc.werr <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		cc.Close()
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, cc.werr
+	}
+
+	<span style="color:#cdcd00">go</span> cc.readLoop()
+	<span style="color:#cdcd00">return</span> cc, <span style="color:#cdcd00">nil</span>
+}
+</code></pre></div><ol>
+<li>initialWindowSize流量控制窗口的默认大小为65535</li>
+<li>maxConcurrentStreams最大并发的stream</li>
+<li>连接创建后，会写入前言，初始化设置(是否打开serverPush，初始化的窗口大小)</li>
+<li>开启readLoop循环读取conn里来的数据</li>
+</ol>
+<h4 id="http2clientconnreadloop">http2ClientConn.readLoop<a hidden class="anchor" aria-hidden="true" href="#http2clientconnreadloop">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// readLoop runs in its own goroutine and reads and dispatches frames.
+</span><span style="color:#000080"></span><span style="color:#00cd00">func</span> (cc <span style="color:#39c">*</span>http2ClientConn) readLoop() {
+	rl <span style="color:#39c">:=</span> <span style="color:#39c">&amp;</span>http2clientConnReadLoop{cc: cc}
+	<span style="color:#cdcd00">defer</span> rl.cleanup()
+	cc.readerErr = rl.run()
+	<span style="color:#cdcd00">if</span> ce, ok <span style="color:#39c">:=</span> cc.readerErr.(http2ConnectionError); ok {
+		cc.wmu.Lock()
+		cc.fr.WriteGoAway(<span style="color:#cd00cd">0</span>, http2ErrCode(ce), <span style="color:#cdcd00">nil</span>)
+		cc.wmu.Unlock()
+	}
+}
+</code></pre></div><ol>
+<li>用http2clientConnReadLoop封装对conn读取的操作</li>
+</ol>
+<h4 id="http2clientconnreadlooprun">http2clientConnReadLoop.run<a hidden class="anchor" aria-hidden="true" href="#http2clientconnreadlooprun">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">func</span> (rl <span style="color:#39c">*</span>http2clientConnReadLoop) run() <span style="color:#00cd00">error</span> {
+	cc <span style="color:#39c">:=</span> rl.cc
+	rl.closeWhenIdle = cc.t.disableKeepAlives() <span style="color:#39c">||</span> cc.singleUse
+	gotReply <span style="color:#39c">:=</span> <span style="color:#cdcd00">false</span> <span style="color:#000080">// ever saw a HEADERS reply
+</span><span style="color:#000080"></span>	gotSettings <span style="color:#39c">:=</span> <span style="color:#cdcd00">false</span>
+	readIdleTimeout <span style="color:#39c">:=</span> cc.t.ReadIdleTimeout
+	<span style="color:#00cd00">var</span> t <span style="color:#39c">*</span>time.Timer
+	<span style="color:#cdcd00">if</span> readIdleTimeout <span style="color:#39c">!=</span> <span style="color:#cd00cd">0</span> {
+		t = time.AfterFunc(readIdleTimeout, cc.healthCheck)
+		<span style="color:#cdcd00">defer</span> t.Stop()
+	}
+	<span style="color:#cdcd00">for</span> {
+        <span style="color:#000080">// 循环从conn中读取frame
+</span><span style="color:#000080"></span>		f, err <span style="color:#39c">:=</span> cc.fr.ReadFrame()
+		<span style="color:#cdcd00">if</span> t <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			t.Reset(readIdleTimeout)
+		}
+		<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			cc.vlogf(<span style="color:#cd0000">&#34;http2: Transport readFrame error on conn %p: (%T) %v&#34;</span>, cc, err, err)
+		}
+		<span style="color:#cdcd00">if</span> se, ok <span style="color:#39c">:=</span> err.(http2StreamError); ok {
+			<span style="color:#cdcd00">if</span> cs <span style="color:#39c">:=</span> cc.streamByID(se.StreamID, <span style="color:#cdcd00">false</span>); cs <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+				cs.cc.writeStreamReset(cs.ID, se.Code, err)
+				cs.cc.forgetStreamID(cs.ID)
+				<span style="color:#cdcd00">if</span> se.Cause <span style="color:#39c">==</span> <span style="color:#cdcd00">nil</span> {
+					se.Cause = cc.fr.errDetail
+				}
+				rl.endStreamError(cs, se)
+			}
+			<span style="color:#cdcd00">continue</span>
+		} <span style="color:#cdcd00">else</span> <span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			<span style="color:#cdcd00">return</span> err
+		}
+		<span style="color:#cdcd00">if</span> http2VerboseLogs {
+			cc.vlogf(<span style="color:#cd0000">&#34;http2: Transport received %s&#34;</span>, http2summarizeFrame(f))
+		}
+		<span style="color:#cdcd00">if</span> !gotSettings {
+			<span style="color:#cdcd00">if</span> _, ok <span style="color:#39c">:=</span> f.(<span style="color:#39c">*</span>http2SettingsFrame); !ok {
+				cc.logf(<span style="color:#cd0000">&#34;protocol error: received %T before a SETTINGS frame&#34;</span>, f)
+				<span style="color:#cdcd00">return</span> http2ConnectionError(http2ErrCodeProtocol)
+			}
+			gotSettings = <span style="color:#cdcd00">true</span>
+		}
+		maybeIdle <span style="color:#39c">:=</span> <span style="color:#cdcd00">false</span> <span style="color:#000080">// whether frame might transition us to idle
+</span><span style="color:#000080"></span>
+		<span style="color:#cdcd00">switch</span> f <span style="color:#39c">:=</span> f.(<span style="color:#00cd00">type</span>) {
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2MetaHeadersFrame:
+			err = rl.processHeaders(f)
+			maybeIdle = <span style="color:#cdcd00">true</span>
+			gotReply = <span style="color:#cdcd00">true</span>
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2DataFrame:
+            <span style="color:#000080">// 数据frame，
+</span><span style="color:#000080"></span>			err = rl.processData(f)
+			maybeIdle = <span style="color:#cdcd00">true</span>
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2GoAwayFrame:
+            <span style="color:#000080">// 远端已关闭
+</span><span style="color:#000080"></span>			err = rl.processGoAway(f)
+			maybeIdle = <span style="color:#cdcd00">true</span>
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2RSTStreamFrame:
+            <span style="color:#000080">// 重置一个stream
+</span><span style="color:#000080"></span>			err = rl.processResetStream(f)
+			maybeIdle = <span style="color:#cdcd00">true</span>
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2SettingsFrame:
+            <span style="color:#000080">// 可以通过这个frame调整maxFrameSize，maxConcurrentStreams，peerMaxHeaderListSize
+</span><span style="color:#000080"></span>			err = rl.processSettings(f)
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2PushPromiseFrame:
+            <span style="color:#000080">// 直接告诉对端不要发这种frame
+</span><span style="color:#000080"></span>			err = rl.processPushPromise(f)
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2WindowUpdateFrame:
+            <span style="color:#000080">// 底下通过修改window size来实现流量控制
+</span><span style="color:#000080"></span>			err = rl.processWindowUpdate(f)
+		<span style="color:#cdcd00">case</span> <span style="color:#39c">*</span>http2PingFrame:
+            <span style="color:#000080">// 用来保活的心跳包
+</span><span style="color:#000080"></span>			err = rl.processPing(f)
+		<span style="color:#cdcd00">default</span>:
+			cc.logf(<span style="color:#cd0000">&#34;Transport: unhandled response frame type %T&#34;</span>, f)
+		}
+		<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+			<span style="color:#cdcd00">if</span> http2VerboseLogs {
+				cc.vlogf(<span style="color:#cd0000">&#34;http2: Transport conn %p received error from processing frame %v: %v&#34;</span>, cc, http2summarizeFrame(f), err)
+			}
+			<span style="color:#cdcd00">return</span> err
+		}
+		<span style="color:#cdcd00">if</span> rl.closeWhenIdle <span style="color:#39c">&amp;&amp;</span> gotReply <span style="color:#39c">&amp;&amp;</span> maybeIdle {
+			cc.closeIfIdle()
+		}
+	}
+}
+</code></pre></div><ol>
+<li>
+<p>循环从conn中读取frame</p>
+</li>
+<li>
+<p>针对不同种类的frame有不同的处理</p>
+<ul>
+<li>MetaHeadersFrame</li>
+<li>DataFrame</li>
+<li>GoAwayFrame</li>
+<li>RSTStreamFrame</li>
+<li>SettingsFrame</li>
+<li>PushPromiseFrame</li>
+<li>WindowUpdateFrame</li>
+<li>PingFrame</li>
+</ul>
+</li>
+</ol>
+<h4 id="http2framerreadframe">http2Framer.ReadFrame<a hidden class="anchor" aria-hidden="true" href="#http2framerreadframe">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// 固定的frame header长度
+</span><span style="color:#000080"></span><span style="color:#00cd00">const</span> http2frameHeaderLen = <span style="color:#cd00cd">9</span>
+
+<span style="color:#000080">// ReadFrame reads a single frame. The returned Frame is only valid
+</span><span style="color:#000080">// until the next call to ReadFrame.
+</span><span style="color:#000080">//
+</span><span style="color:#000080">// If the frame is larger than previously set with SetMaxReadFrameSize, the
+</span><span style="color:#000080">// returned error is ErrFrameTooLarge. Other errors may be of type
+</span><span style="color:#000080">// ConnectionError, StreamError, or anything else from the underlying
+</span><span style="color:#000080">// reader.
+</span><span style="color:#000080"></span><span style="color:#00cd00">func</span> (fr <span style="color:#39c">*</span>http2Framer) ReadFrame() (http2Frame, <span style="color:#00cd00">error</span>) {
+	fr.errDetail = <span style="color:#cdcd00">nil</span>
+	<span style="color:#cdcd00">if</span> fr.lastFrame <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		fr.lastFrame.invalidate()
+	}
+    <span style="color:#000080">// 先读出frame header
+</span><span style="color:#000080"></span>	fh, err <span style="color:#39c">:=</span> http2readFrameHeader(fr.headerBuf[:], fr.r)
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+	}
+	<span style="color:#cdcd00">if</span> fh.Length &gt; fr.maxReadSize {
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, http2ErrFrameTooLarge
+	}
+
+    <span style="color:#000080">// 读出frame的payload
+</span><span style="color:#000080"></span>	payload <span style="color:#39c">:=</span> fr.getReadBuf(fh.Length)
+	<span style="color:#cdcd00">if</span> _, err <span style="color:#39c">:=</span> io.ReadFull(fr.r, payload); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+	}
+    <span style="color:#000080">// 根据frame类型拿到对应的frameParser，处理后拿到frame
+</span><span style="color:#000080"></span>	f, err <span style="color:#39c">:=</span> http2typeFrameParser(fh.Type)(fr.frameCache, fh, payload)
+	<span style="color:#cdcd00">if</span> err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">if</span> ce, ok <span style="color:#39c">:=</span> err.(http2connError); ok {
+			<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, fr.connError(ce.Code, ce.Reason)
+		}
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+	}
+
+    <span style="color:#000080">// 检查frame的顺序以及streamId是否一致
+</span><span style="color:#000080"></span>	<span style="color:#cdcd00">if</span> err <span style="color:#39c">:=</span> fr.checkFrameOrder(f); err <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> <span style="color:#cdcd00">nil</span>, err
+	}
+	<span style="color:#cdcd00">if</span> fr.logReads {
+		fr.debugReadLoggerf(<span style="color:#cd0000">&#34;http2: Framer %p: read %v&#34;</span>, fr, http2summarizeFrame(f))
+	}
+	<span style="color:#cdcd00">if</span> fh.Type <span style="color:#39c">==</span> http2FrameHeaders <span style="color:#39c">&amp;&amp;</span> fr.ReadMetaHeaders <span style="color:#39c">!=</span> <span style="color:#cdcd00">nil</span> {
+		<span style="color:#cdcd00">return</span> fr.readMetaFrame(f.(<span style="color:#39c">*</span>http2HeadersFrame))
+	}
+	<span style="color:#cdcd00">return</span> f, <span style="color:#cdcd00">nil</span>
+}
+</code></pre></div><h3 id="主要数据结构">主要数据结构<a hidden class="anchor" aria-hidden="true" href="#主要数据结构">#</a></h3>
+<h4 id="server-conn">server-conn<a hidden class="anchor" aria-hidden="true" href="#server-conn">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00cd00">type</span> http2serverConn <span style="color:#00cd00">struct</span> {
+	<span style="color:#000080">// Immutable:
+</span><span style="color:#000080"></span>	srv              <span style="color:#39c">*</span>http2Server
+	hs               <span style="color:#39c">*</span>Server
+	conn             net.Conn
+	bw               <span style="color:#39c">*</span>http2bufferedWriter <span style="color:#000080">// writing to conn
+</span><span style="color:#000080"></span>	handler          Handler
+	baseCtx          context.Context
+	framer           <span style="color:#39c">*</span>http2Framer
+	doneServing      <span style="color:#00cd00">chan</span> <span style="color:#00cd00">struct</span>{}               <span style="color:#000080">// closed when serverConn.serve ends
+</span><span style="color:#000080"></span>	readFrameCh      <span style="color:#00cd00">chan</span> http2readFrameResult   <span style="color:#000080">// written by serverConn.readFrames
+</span><span style="color:#000080"></span>	wantWriteFrameCh <span style="color:#00cd00">chan</span> http2FrameWriteRequest <span style="color:#000080">// from handlers -&gt; serve
+</span><span style="color:#000080"></span>	wroteFrameCh     <span style="color:#00cd00">chan</span> http2frameWriteResult  <span style="color:#000080">// from writeFrameAsync -&gt; serve, tickles more frame writes
+</span><span style="color:#000080"></span>	bodyReadCh       <span style="color:#00cd00">chan</span> http2bodyReadMsg       <span style="color:#000080">// from handlers -&gt; serve
+</span><span style="color:#000080"></span>	serveMsgCh       <span style="color:#00cd00">chan</span> <span style="color:#00cd00">interface</span>{}            <span style="color:#000080">// misc messages &amp; code to send to / run on the serve loop
+</span><span style="color:#000080"></span>	flow             http2flow                   <span style="color:#000080">// conn-wide (not stream-specific) outbound flow control
+</span><span style="color:#000080"></span>	inflow           http2flow                   <span style="color:#000080">// conn-wide inbound flow control
+</span><span style="color:#000080"></span>	tlsState         <span style="color:#39c">*</span>tls.ConnectionState        <span style="color:#000080">// shared by all handlers, like net/http
+</span><span style="color:#000080"></span>	remoteAddrStr    <span style="color:#00cd00">string</span>
+	writeSched       http2WriteScheduler
+
+	<span style="color:#000080">// Everything following is owned by the serve loop; use serveG.check():
+</span><span style="color:#000080"></span>	serveG                      http2goroutineLock <span style="color:#000080">// used to verify funcs are on serve()
+</span><span style="color:#000080"></span>	pushEnabled                 <span style="color:#00cd00">bool</span>
+	sawFirstSettings            <span style="color:#00cd00">bool</span> <span style="color:#000080">// got the initial SETTINGS frame after the preface
+</span><span style="color:#000080"></span>	needToSendSettingsAck       <span style="color:#00cd00">bool</span>
+	unackedSettings             <span style="color:#00cd00">int</span>    <span style="color:#000080">// how many SETTINGS have we sent without ACKs?
+</span><span style="color:#000080"></span>	queuedControlFrames         <span style="color:#00cd00">int</span>    <span style="color:#000080">// control frames in the writeSched queue
+</span><span style="color:#000080"></span>	clientMaxStreams            <span style="color:#00cd00">uint32</span> <span style="color:#000080">// SETTINGS_MAX_CONCURRENT_STREAMS from client (our PUSH_PROMISE limit)
+</span><span style="color:#000080"></span>	advMaxStreams               <span style="color:#00cd00">uint32</span> <span style="color:#000080">// our SETTINGS_MAX_CONCURRENT_STREAMS advertised the client
+</span><span style="color:#000080"></span>	curClientStreams            <span style="color:#00cd00">uint32</span> <span style="color:#000080">// number of open streams initiated by the client
+</span><span style="color:#000080"></span>	curPushedStreams            <span style="color:#00cd00">uint32</span> <span style="color:#000080">// number of open streams initiated by server push
+</span><span style="color:#000080"></span>	maxClientStreamID           <span style="color:#00cd00">uint32</span> <span style="color:#000080">// max ever seen from client (odd), or 0 if there have been no client requests
+</span><span style="color:#000080"></span>	maxPushPromiseID            <span style="color:#00cd00">uint32</span> <span style="color:#000080">// ID of the last push promise (even), or 0 if there have been no pushes
+</span><span style="color:#000080"></span>	streams                     <span style="color:#00cd00">map</span>[<span style="color:#00cd00">uint32</span>]<span style="color:#39c">*</span>http2stream
+	initialStreamSendWindowSize <span style="color:#00cd00">int32</span>
+	maxFrameSize                <span style="color:#00cd00">int32</span>
+	headerTableSize             <span style="color:#00cd00">uint32</span>
+	peerMaxHeaderListSize       <span style="color:#00cd00">uint32</span>            <span style="color:#000080">// zero means unknown (default)
+</span><span style="color:#000080"></span>	canonHeader                 <span style="color:#00cd00">map</span>[<span style="color:#00cd00">string</span>]<span style="color:#00cd00">string</span> <span style="color:#000080">// http2-lower-case -&gt; Go-Canonical-Case
+</span><span style="color:#000080"></span>	writingFrame                <span style="color:#00cd00">bool</span>              <span style="color:#000080">// started writing a frame (on serve goroutine or separate)
+</span><span style="color:#000080"></span>	writingFrameAsync           <span style="color:#00cd00">bool</span>              <span style="color:#000080">// started a frame on its own goroutine but haven&#39;t heard back on wroteFrameCh
+</span><span style="color:#000080"></span>	needsFrameFlush             <span style="color:#00cd00">bool</span>              <span style="color:#000080">// last frame write wasn&#39;t a flush
+</span><span style="color:#000080"></span>	inGoAway                    <span style="color:#00cd00">bool</span>              <span style="color:#000080">// we&#39;ve started to or sent GOAWAY
+</span><span style="color:#000080"></span>	inFrameScheduleLoop         <span style="color:#00cd00">bool</span>              <span style="color:#000080">// whether we&#39;re in the scheduleFrameWrite loop
+</span><span style="color:#000080"></span>	needToSendGoAway            <span style="color:#00cd00">bool</span>              <span style="color:#000080">// we need to schedule a GOAWAY frame write
+</span><span style="color:#000080"></span>	goAwayCode                  http2ErrCode
+	shutdownTimer               <span style="color:#39c">*</span>time.Timer <span style="color:#000080">// nil until used
+</span><span style="color:#000080"></span>	idleTimer                   <span style="color:#39c">*</span>time.Timer <span style="color:#000080">// nil if unused
+</span><span style="color:#000080"></span>
+	<span style="color:#000080">// Owned by the writeFrameAsync goroutine:
+</span><span style="color:#000080"></span>	headerWriteBuf bytes.Buffer
+	hpackEncoder   <span style="color:#39c">*</span>hpack.Encoder
+
+	<span style="color:#000080">// Used by startGracefulShutdown.
+</span><span style="color:#000080"></span>	shutdownOnce sync.Once
+}
+</code></pre></div><h4 id="client-conn">client-conn<a hidden class="anchor" aria-hidden="true" href="#client-conn">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// ClientConn is the state of a single HTTP/2 client connection to an
+</span><span style="color:#000080">// HTTP/2 server.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> http2ClientConn <span style="color:#00cd00">struct</span> {
+	t         <span style="color:#39c">*</span>http2Transport
+	tconn     net.Conn             <span style="color:#000080">// 底层的连接
+</span><span style="color:#000080"></span>	tlsState  <span style="color:#39c">*</span>tls.ConnectionState <span style="color:#000080">// nil only for specialized impls
+</span><span style="color:#000080"></span>	reused    <span style="color:#00cd00">uint32</span>               <span style="color:#000080">// whether conn is being reused; atomic
+</span><span style="color:#000080"></span>	singleUse <span style="color:#00cd00">bool</span>                 <span style="color:#000080">// whether being used for a single http.Request
+</span><span style="color:#000080"></span>
+	<span style="color:#000080">// readLoop goroutine fields:
+</span><span style="color:#000080"></span>	readerDone <span style="color:#00cd00">chan</span> <span style="color:#00cd00">struct</span>{} <span style="color:#000080">// closed on error
+</span><span style="color:#000080"></span>	readerErr  <span style="color:#00cd00">error</span>         <span style="color:#000080">// set before readerDone is closed
+</span><span style="color:#000080"></span>
+	idleTimeout time.Duration <span style="color:#000080">// 处理超时相关
+</span><span style="color:#000080"></span>	idleTimer   <span style="color:#39c">*</span>time.Timer
+
+	mu              sync.Mutex <span style="color:#000080">// guards following
+</span><span style="color:#000080"></span>	cond            <span style="color:#39c">*</span>sync.Cond <span style="color:#000080">// hold mu; broadcast on flow/closed changes
+</span><span style="color:#000080"></span>	flow            http2flow  <span style="color:#000080">// conn级别的流量控制窗口
+</span><span style="color:#000080"></span>	inflow          http2flow  <span style="color:#000080">// conn级别的流量控制窗口
+</span><span style="color:#000080"></span>	closing         <span style="color:#00cd00">bool</span>
+	closed          <span style="color:#00cd00">bool</span>
+	wantSettingsAck <span style="color:#00cd00">bool</span>                          <span style="color:#000080">// we sent a SETTINGS frame and haven&#39;t heard back
+</span><span style="color:#000080"></span>	goAway          <span style="color:#39c">*</span>http2GoAwayFrame             <span style="color:#000080">// if non-nil, the GoAwayFrame we received
+</span><span style="color:#000080"></span>	goAwayDebug     <span style="color:#00cd00">string</span>                        <span style="color:#000080">// goAway frame&#39;s debug data, retained as a string
+</span><span style="color:#000080"></span>	streams         <span style="color:#00cd00">map</span>[<span style="color:#00cd00">uint32</span>]<span style="color:#39c">*</span>http2clientStream <span style="color:#000080">// client-initiated
+</span><span style="color:#000080"></span>	nextStreamID    <span style="color:#00cd00">uint32</span>
+	pendingRequests <span style="color:#00cd00">int</span>                       <span style="color:#000080">// requests blocked and waiting to be sent because len(streams) == maxConcurrentStreams
+</span><span style="color:#000080"></span>	pings           <span style="color:#00cd00">map</span>[[<span style="color:#cd00cd">8</span>]<span style="color:#00cd00">byte</span>]<span style="color:#00cd00">chan</span> <span style="color:#00cd00">struct</span>{} <span style="color:#000080">// in flight ping data to notification channel
+</span><span style="color:#000080"></span>	bw              <span style="color:#39c">*</span>bufio.Writer
+	br              <span style="color:#39c">*</span>bufio.Reader
+	fr              <span style="color:#39c">*</span>http2Framer <span style="color:#000080">// 用来写入stream里的frame
+</span><span style="color:#000080"></span>	lastActive      time.Time
+	lastIdle        time.Time <span style="color:#000080">// time last idle
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Settings from peer: (also guarded by mu)
+</span><span style="color:#000080"></span>	maxFrameSize          <span style="color:#00cd00">uint32</span> <span style="color:#000080">// 最大能写入的frame大小
+</span><span style="color:#000080"></span>	maxConcurrentStreams  <span style="color:#00cd00">uint32</span>
+	peerMaxHeaderListSize <span style="color:#00cd00">uint64</span>
+	initialWindowSize     <span style="color:#00cd00">uint32</span>
+
+	hbuf    bytes.Buffer <span style="color:#000080">// HPACK encoder writes into this
+</span><span style="color:#000080"></span>	henc    <span style="color:#39c">*</span>hpack.Encoder
+	freeBuf [][]<span style="color:#00cd00">byte</span>
+
+	wmu  sync.Mutex <span style="color:#000080">// held while writing; acquire AFTER mu if holding both
+</span><span style="color:#000080"></span>	werr <span style="color:#00cd00">error</span>      <span style="color:#000080">// first write error that has occurred
+</span><span style="color:#000080"></span>}
+</code></pre></div><h4 id="server-stream">server-stream<a hidden class="anchor" aria-hidden="true" href="#server-stream">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// stream represents a stream. This is the minimal metadata needed by
+</span><span style="color:#000080">// the serve goroutine. Most of the actual stream state is owned by
+</span><span style="color:#000080">// the http.Handler&#39;s goroutine in the responseWriter. Because the
+</span><span style="color:#000080">// responseWriter&#39;s responseWriterState is recycled at the end of a
+</span><span style="color:#000080">// handler, this struct intentionally has no pointer to the
+</span><span style="color:#000080">// *responseWriter{,State} itself, as the Handler ending nils out the
+</span><span style="color:#000080">// responseWriter&#39;s state field.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> http2stream <span style="color:#00cd00">struct</span> {
+	<span style="color:#000080">// immutable:
+</span><span style="color:#000080"></span>	sc        <span style="color:#39c">*</span>http2serverConn
+	id        <span style="color:#00cd00">uint32</span>
+	body      <span style="color:#39c">*</span>http2pipe       <span style="color:#000080">// non-nil if expecting DATA frames
+</span><span style="color:#000080"></span>	cw        http2closeWaiter <span style="color:#000080">// closed wait stream transitions to closed state
+</span><span style="color:#000080"></span>	ctx       context.Context
+	cancelCtx <span style="color:#00cd00">func</span>()
+
+	<span style="color:#000080">// owned by serverConn&#39;s serve loop:
+</span><span style="color:#000080"></span>	bodyBytes        <span style="color:#00cd00">int64</span>     <span style="color:#000080">// body bytes seen so far
+</span><span style="color:#000080"></span>	declBodyBytes    <span style="color:#00cd00">int64</span>     <span style="color:#000080">// or -1 if undeclared
+</span><span style="color:#000080"></span>	flow             http2flow <span style="color:#000080">// limits writing from Handler to client
+</span><span style="color:#000080"></span>	inflow           http2flow <span style="color:#000080">// what the client is allowed to POST/etc to us
+</span><span style="color:#000080"></span>	state            http2streamState
+	resetQueued      <span style="color:#00cd00">bool</span>        <span style="color:#000080">// RST_STREAM queued for write; set by sc.resetStream
+</span><span style="color:#000080"></span>	gotTrailerHeader <span style="color:#00cd00">bool</span>        <span style="color:#000080">// HEADER frame for trailers was seen
+</span><span style="color:#000080"></span>	wroteHeaders     <span style="color:#00cd00">bool</span>        <span style="color:#000080">// whether we wrote headers (not status 100)
+</span><span style="color:#000080"></span>	writeDeadline    <span style="color:#39c">*</span>time.Timer <span style="color:#000080">// nil if unused
+</span><span style="color:#000080"></span>
+	trailer    Header <span style="color:#000080">// accumulated trailers
+</span><span style="color:#000080"></span>	reqTrailer Header <span style="color:#000080">// handler&#39;s Request.Trailer
+</span><span style="color:#000080"></span>}
+</code></pre></div><h4 id="client-stream">client-stream<a hidden class="anchor" aria-hidden="true" href="#client-stream">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// clientStream is the state for a single HTTP/2 stream. One of these
+</span><span style="color:#000080">// is created for each Transport.RoundTrip call.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> http2clientStream <span style="color:#00cd00">struct</span> {
+	cc            <span style="color:#39c">*</span>http2ClientConn <span style="color:#000080">// 所属的连接
+</span><span style="color:#000080"></span>	req           <span style="color:#39c">*</span>Request  <span style="color:#000080">// 发起stream的源请求
+</span><span style="color:#000080"></span>	trace         <span style="color:#39c">*</span>httptrace.ClientTrace <span style="color:#000080">// 追踪相关
+</span><span style="color:#000080"></span>	ID            <span style="color:#00cd00">uint32</span> <span style="color:#000080">// 唯一id
+</span><span style="color:#000080"></span>	resc          <span style="color:#00cd00">chan</span> http2resAndError
+	bufPipe       http2pipe <span style="color:#000080">// 每次从dataFrame里读到的内容会写到这里
+</span><span style="color:#000080"></span>	startedWrite  <span style="color:#00cd00">bool</span>      <span style="color:#000080">// started request body write; guarded by cc.mu
+</span><span style="color:#000080"></span>	requestedGzip <span style="color:#00cd00">bool</span> <span style="color:#000080">// 是否经由gzip压缩过
+</span><span style="color:#000080"></span>	on100         <span style="color:#00cd00">func</span>() <span style="color:#000080">// optional code to run if get a 100 continue response
+</span><span style="color:#000080"></span>
+	flow        http2flow <span style="color:#000080">// guarded by cc.mu 用来控制流量窗口的大小
+</span><span style="color:#000080"></span>	inflow      http2flow <span style="color:#000080">// guarded by cc.mu 用来控制流量窗口的大小
+</span><span style="color:#000080"></span>	bytesRemain <span style="color:#00cd00">int64</span>     <span style="color:#000080">// -1 means unknown; owned by transportResponseBody.Read
+</span><span style="color:#000080"></span>	readErr     <span style="color:#00cd00">error</span>     <span style="color:#000080">// sticky read error; owned by transportResponseBody.Read
+</span><span style="color:#000080"></span>	stopReqBody <span style="color:#00cd00">error</span>     <span style="color:#000080">// if non-nil, stop writing req body; guarded by cc.mu
+</span><span style="color:#000080"></span>	didReset    <span style="color:#00cd00">bool</span>      <span style="color:#000080">// whether we sent a RST_STREAM to the server; guarded by cc.mu
+</span><span style="color:#000080"></span>
+	peerReset <span style="color:#00cd00">chan</span> <span style="color:#00cd00">struct</span>{} <span style="color:#000080">// closed on peer reset
+</span><span style="color:#000080"></span>	resetErr  <span style="color:#00cd00">error</span>         <span style="color:#000080">// populated before peerReset is closed
+</span><span style="color:#000080"></span>
+	done <span style="color:#00cd00">chan</span> <span style="color:#00cd00">struct</span>{} <span style="color:#000080">// closed when stream remove from cc.streams map; close calls guarded by cc.mu
+</span><span style="color:#000080"></span>
+	<span style="color:#000080">// owned by clientConnReadLoop:
+</span><span style="color:#000080"></span>	firstByte    <span style="color:#00cd00">bool</span>  <span style="color:#000080">// got the first response byte
+</span><span style="color:#000080"></span>	pastHeaders  <span style="color:#00cd00">bool</span>  <span style="color:#000080">// got first MetaHeadersFrame (actual headers)
+</span><span style="color:#000080"></span>	pastTrailers <span style="color:#00cd00">bool</span>  <span style="color:#000080">// got optional second MetaHeadersFrame (trailers)
+</span><span style="color:#000080"></span>	num1xx       <span style="color:#00cd00">uint8</span> <span style="color:#000080">// number of 1xx responses seen
+</span><span style="color:#000080"></span>
+	trailer    Header  <span style="color:#000080">// accumulated trailers
+</span><span style="color:#000080"></span>	resTrailer <span style="color:#39c">*</span>Header <span style="color:#000080">// client&#39;s Response.Trailer
+</span><span style="color:#000080"></span>}
+</code></pre></div><h4 id="frames">frames<a hidden class="anchor" aria-hidden="true" href="#frames">#</a></h4>
+<p>frame-header</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// A FrameHeader is the 9 byte header of all HTTP/2 frames.
+</span><span style="color:#000080">//
+</span><span style="color:#000080">// See http://http2.github.io/http2-spec/#FrameHeader
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> http2FrameHeader <span style="color:#00cd00">struct</span> {
+	valid <span style="color:#00cd00">bool</span> <span style="color:#000080">// caller can access []byte fields in the Frame
+</span><span style="color:#000080"></span>
+	<span style="color:#000080">// Type is the 1 byte frame type. There are ten standard frame
+</span><span style="color:#000080"></span>	<span style="color:#000080">// types, but extension frame types may be written by WriteRawFrame
+</span><span style="color:#000080"></span>	<span style="color:#000080">// and will be returned by ReadFrame (as UnknownFrame).
+</span><span style="color:#000080"></span>	Type http2FrameType
+
+	<span style="color:#000080">// Flags are the 1 byte of 8 potential bit flags per frame.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// They are specific to the frame type.
+</span><span style="color:#000080"></span>	Flags http2Flags
+
+	<span style="color:#000080">// Length is the length of the frame, not including the 9 byte header.
+</span><span style="color:#000080"></span>	<span style="color:#000080">// The maximum size is one byte less than 16MB (uint24), but only
+</span><span style="color:#000080"></span>	<span style="color:#000080">// frames up to 16KB are allowed without peer agreement.
+</span><span style="color:#000080"></span>	Length <span style="color:#00cd00">uint32</span>
+
+	<span style="color:#000080">// StreamID is which stream this frame is for. Certain frames
+</span><span style="color:#000080"></span>	<span style="color:#000080">// are not stream-specific, in which case this field is 0.
+</span><span style="color:#000080"></span>	StreamID <span style="color:#00cd00">uint32</span>
+}
+</code></pre></div><h5 id="settings-frame">settings-frame<a hidden class="anchor" aria-hidden="true" href="#settings-frame">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// A SettingsFrame conveys configuration parameters that affect how
+</span><span style="color:#000080">// endpoints communicate, such as preferences and constraints on peer
+</span><span style="color:#000080">// behavior.
+</span><span style="color:#000080">//
+</span><span style="color:#000080">// See http://http2.github.io/http2-spec/#SETTINGS
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> http2SettingsFrame <span style="color:#00cd00">struct</span> {
+	http2FrameHeader
+	p []<span style="color:#00cd00">byte</span>
+}
+</code></pre></div><h5 id="meta-headers">meta-headers<a hidden class="anchor" aria-hidden="true" href="#meta-headers">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// A MetaHeadersFrame is the representation of one HEADERS frame and
+</span><span style="color:#000080">// zero or more contiguous CONTINUATION frames and the decoding of
+</span><span style="color:#000080">// their HPACK-encoded contents.
+</span><span style="color:#000080">//
+</span><span style="color:#000080">// This type of frame does not appear on the wire and is only returned
+</span><span style="color:#000080">// by the Framer when Framer.ReadMetaHeaders is set.
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> http2MetaHeadersFrame <span style="color:#00cd00">struct</span> {
+	<span style="color:#39c">*</span>http2HeadersFrame
+
+	<span style="color:#000080">// Fields are the fields contained in the HEADERS and
+</span><span style="color:#000080"></span>	<span style="color:#000080">// CONTINUATION frames. The underlying slice is owned by the
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Framer and must not be retained after the next call to
+</span><span style="color:#000080"></span>	<span style="color:#000080">// ReadFrame.
+</span><span style="color:#000080"></span>	<span style="color:#000080">//
+</span><span style="color:#000080"></span>	<span style="color:#000080">// Fields are guaranteed to be in the correct http2 order and
+</span><span style="color:#000080"></span>	<span style="color:#000080">// not have unknown pseudo header fields or invalid header
+</span><span style="color:#000080"></span>	<span style="color:#000080">// field names or values. Required pseudo header fields may be
+</span><span style="color:#000080"></span>	<span style="color:#000080">// missing, however. Use the MetaHeadersFrame.Pseudo accessor
+</span><span style="color:#000080"></span>	<span style="color:#000080">// method access pseudo headers.
+</span><span style="color:#000080"></span>	Fields []hpack.HeaderField
+
+	<span style="color:#000080">// Truncated is whether the max header list size limit was hit
+</span><span style="color:#000080"></span>	<span style="color:#000080">// and Fields is incomplete. The hpack decoder state is still
+</span><span style="color:#000080"></span>	<span style="color:#000080">// valid, however.
+</span><span style="color:#000080"></span>	Truncated <span style="color:#00cd00">bool</span>
+}
+</code></pre></div><h5 id="window-update">window-update<a hidden class="anchor" aria-hidden="true" href="#window-update">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// A WindowUpdateFrame is used to implement flow control.
+</span><span style="color:#000080">// See http://http2.github.io/http2-spec/#rfc.section.6.9
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> http2WindowUpdateFrame <span style="color:#00cd00">struct</span> {
+	http2FrameHeader
+	Increment <span style="color:#00cd00">uint32</span> <span style="color:#000080">// never read with high bit set
+</span><span style="color:#000080"></span>}
+</code></pre></div><h5 id="ping">ping<a hidden class="anchor" aria-hidden="true" href="#ping">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// A PingFrame is a mechanism for measuring a minimal round trip time
+</span><span style="color:#000080">// from the sender, as well as determining whether an idle connection
+</span><span style="color:#000080">// is still functional.
+</span><span style="color:#000080">// See http://http2.github.io/http2-spec/#rfc.section.6.7
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> http2PingFrame <span style="color:#00cd00">struct</span> {
+	http2FrameHeader
+	Data [<span style="color:#cd00cd">8</span>]<span style="color:#00cd00">byte</span>
+}
+</code></pre></div><h5 id="data">data<a hidden class="anchor" aria-hidden="true" href="#data">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// A DataFrame conveys arbitrary, variable-length sequences of octets
+</span><span style="color:#000080">// associated with a stream.
+</span><span style="color:#000080">// See http://http2.github.io/http2-spec/#rfc.section.6.1
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> http2DataFrame <span style="color:#00cd00">struct</span> {
+	http2FrameHeader
+	data []<span style="color:#00cd00">byte</span>
+}
+</code></pre></div><h5 id="rst-stream">rst-stream<a hidden class="anchor" aria-hidden="true" href="#rst-stream">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// A RSTStreamFrame allows for abnormal termination of a stream.
+</span><span style="color:#000080">// See http://http2.github.io/http2-spec/#rfc.section.6.4
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> http2RSTStreamFrame <span style="color:#00cd00">struct</span> {
+	http2FrameHeader
+	ErrCode http2ErrCode
+}
+</code></pre></div><h5 id="priority">priority<a hidden class="anchor" aria-hidden="true" href="#priority">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// A PriorityFrame specifies the sender-advised priority of a stream.
+</span><span style="color:#000080">// See http://http2.github.io/http2-spec/#rfc.section.6.3
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> http2PriorityFrame <span style="color:#00cd00">struct</span> {
+	http2FrameHeader
+	http2PriorityParam
+}
+</code></pre></div><h5 id="go-away">go-away<a hidden class="anchor" aria-hidden="true" href="#go-away">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// A GoAwayFrame informs the remote peer to stop creating streams on this connection.
+</span><span style="color:#000080">// See http://http2.github.io/http2-spec/#rfc.section.6.8
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> http2GoAwayFrame <span style="color:#00cd00">struct</span> {
+	http2FrameHeader
+	LastStreamID <span style="color:#00cd00">uint32</span>
+	ErrCode      http2ErrCode
+	debugData    []<span style="color:#00cd00">byte</span>
+}
+</code></pre></div><h5 id="push-promise">push-promise<a hidden class="anchor" aria-hidden="true" href="#push-promise">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000080">// A PushPromiseFrame is used to initiate a server stream.
+</span><span style="color:#000080">// See http://http2.github.io/http2-spec/#rfc.section.6.6
+</span><span style="color:#000080"></span><span style="color:#00cd00">type</span> http2PushPromiseFrame <span style="color:#00cd00">struct</span> {
+	http2FrameHeader
+	PromiseID     <span style="color:#00cd00">uint32</span>
+	headerFragBuf []<span style="color:#00cd00">byte</span> <span style="color:#000080">// not owned
+</span><span style="color:#000080"></span>}
+</code></pre></div>
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lambertxiao.github.io/tags/http2/">http2</a></li>
+      <li><a href="https://lambertxiao.github.io/tags/%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/">网络知识</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8F%AA%E5%87%BA%E7%8E%B0%E4%B8%80%E6%AC%A1%E7%9A%84%E6%95%B0%E5%AD%97/doc/">
+    <span class="title">« Prev Page</span>
+    <br>
+    <span>算法-只出现一次的数字</span>
+  </a>
+  <a class="next" href="https://lambertxiao.github.io/posts/golang/golang-runtime/doc/">
+    <span class="title">Next Page »</span>
+    <br>
+    <span>golang-runtime</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share golang-http2实现 on twitter"
+        href="https://twitter.com/intent/tweet/?text=golang-http2%e5%ae%9e%e7%8e%b0&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fgolang%2fgolang-http2%25E7%259A%2584%25E5%25AE%259E%25E7%258E%25B0%2fdoc%2f&amp;hashtags=http2%2c%e7%bd%91%e7%bb%9c%e7%9f%a5%e8%af%86">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share golang-http2实现 on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fgolang%2fgolang-http2%25E7%259A%2584%25E5%25AE%259E%25E7%258E%25B0%2fdoc%2f&amp;title=golang-http2%e5%ae%9e%e7%8e%b0&amp;summary=golang-http2%e5%ae%9e%e7%8e%b0&amp;source=https%3a%2f%2flambertxiao.github.io%2fposts%2fgolang%2fgolang-http2%25E7%259A%2584%25E5%25AE%259E%25E7%258E%25B0%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share golang-http2实现 on reddit"
+        href="https://reddit.com/submit?url=https%3a%2f%2flambertxiao.github.io%2fposts%2fgolang%2fgolang-http2%25E7%259A%2584%25E5%25AE%259E%25E7%258E%25B0%2fdoc%2f&title=golang-http2%e5%ae%9e%e7%8e%b0">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share golang-http2实现 on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flambertxiao.github.io%2fposts%2fgolang%2fgolang-http2%25E7%259A%2584%25E5%25AE%259E%25E7%258E%25B0%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share golang-http2实现 on whatsapp"
+        href="https://api.whatsapp.com/send?text=golang-http2%e5%ae%9e%e7%8e%b0%20-%20https%3a%2f%2flambertxiao.github.io%2fposts%2fgolang%2fgolang-http2%25E7%259A%2584%25E5%25AE%259E%25E7%258E%25B0%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share golang-http2实现 on telegram"
+        href="https://telegram.me/share/url?text=golang-http2%e5%ae%9e%e7%8e%b0&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2fgolang%2fgolang-http2%25E7%259A%2584%25E5%25AE%259E%25E7%258E%25B0%2fdoc%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_KY25sRiRtb" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

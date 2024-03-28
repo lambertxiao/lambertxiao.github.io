@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>文件系统 on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/categories/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/</link>
+    <description>Recent content in 文件系统 on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Tue, 22 Nov 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/categories/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>文件系统之ext2</title>
+      <link>https://lambertxiao.github.io/posts/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F-ext2/doc/</link>
+      <pubDate>Tue, 22 Nov 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F-ext2/doc/</guid>
+      <description>麻雀虽小，但五脏俱全</description>
+    </item>
+    
+  </channel>
+</rss>

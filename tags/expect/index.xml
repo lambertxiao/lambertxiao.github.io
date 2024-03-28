@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>expect on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/expect/</link>
+    <description>Recent content in expect on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Tue, 09 Jun 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/expect/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>expect的简单使用</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2020-06-09-expect%E7%9A%84%E7%AE%80%E5%8D%95%E4%BD%BF%E7%94%A8/</link>
+      <pubDate>Tue, 09 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2020-06-09-expect%E7%9A%84%E7%AE%80%E5%8D%95%E4%BD%BF%E7%94%A8/</guid>
+      <description>使用expect可以帮我们完成一些需要交互的终端命令，比如，在用密码ssh登录服务器时，总是需要手动输入密码，可以用以下方法实现自动登录
+#!/usr/bin/expect -f  set username [lindex $argv 0] set host [lindex $argv 1] set port [lindex $argv 2] set password [lindex $argv 3] spawn ssh -p $port &amp;#34;$username@$host&amp;#34; expect &amp;#34;password&amp;#34; send &amp;#34;$password\r&amp;#34; interact 外部调用
+/usr/bin/expect -f login_with_password.sh $user $publicIp $port $password </description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>进程 on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/%E8%BF%9B%E7%A8%8B/</link>
+    <description>Recent content in 进程 on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Sun, 15 Oct 2023 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/%E8%BF%9B%E7%A8%8B/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>进程的内存是怎么布局的</title>
+      <link>https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/</link>
+      <pubDate>Sun, 15 Oct 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/</guid>
+      <description>今天来探讨一下 linux 环境下进程的内存布局</description>
+    </item>
+    
+  </channel>
+</rss>

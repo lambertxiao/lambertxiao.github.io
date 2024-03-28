@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>golang on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/golang/</link>
+    <description>Recent content in golang on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Tue, 14 Jun 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/golang/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Golang-Coredump设置</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-coredump%E8%AE%BE%E7%BD%AE/doc/</link>
+      <pubDate>Tue, 14 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-coredump%E8%AE%BE%E7%BD%AE/doc/</guid>
+      <description>定位crash问题少不了</description>
+    </item>
+    
+    <item>
+      <title>golang-pprof使用</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-pprof%E4%BD%BF%E7%94%A8/doc/</link>
+      <pubDate>Wed, 08 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-pprof%E4%BD%BF%E7%94%A8/doc/</guid>
+      <description>pprof能做什么 pprof能提供正在运行的go程序的各项维度指标，可以帮助我们很好的了解程序的运行状态，如内存的使用，cpu的消耗，是否发现死锁等
+pprof提供的profile    profile 解释     cpu 默认进行 30s 的 CPU Profiling，得到一个分析用的 profile 文件   goroutine 查看当前所有运行的 goroutines 堆栈跟踪   block 查看导致阻塞同步的堆栈跟踪   heap 查看活动对象的内存分配情况   mutex 查看导致互斥锁的竞争持有者的堆栈跟踪   threadcreate 查看创建新OS线程的堆栈跟踪    怎么拿到对应的profile文件 当在服务里引入pprof包之后，可能通过http访问的方式拿到profile文件
+wget - O analysis.pprof http://${ip}:${port}/debug/pprof/${profile} 怎么分析 以heap.pprof举例
+// 查看常驻内存的使用情况 go tool pprof -inuse_space heap.pprof // 查看常驻对象的使用情况 go tool pprof -inuse_objects heap.pprof // 查看内存临时分配情况 go tool pprof -alloc_space heap.</description>
+    </item>
+    
+    <item>
+      <title>golang-runtime</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-runtime/doc/</link>
+      <pubDate>Fri, 25 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-runtime/doc/</guid>
+      <description>func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool) func deferproc(siz int32, fn *funcval) </description>
+    </item>
+    
+    <item>
+      <title>Golang-epoll</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-epoll/doc/</link>
+      <pubDate>Thu, 24 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-epoll/doc/</guid>
+      <description>go怎么用的epoll</description>
+    </item>
+    
+    <item>
+      <title>Golang-函数栈帧布局</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E5%87%BD%E6%95%B0%E6%A0%88%E5%B8%A7%E5%B8%83%E5%B1%80/doc/</link>
+      <pubDate>Sat, 12 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E5%87%BD%E6%95%B0%E6%A0%88%E5%B8%A7%E5%B8%83%E5%B1%80/doc/</guid>
+      <description>学会golang函数栈帧布局让你团灭各种defer面试题</description>
+    </item>
+    
+    <item>
+      <title>Golang-sync.Pool结构之poolDequeue</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-sync.pool%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0/1-pooldequeue/</link>
+      <pubDate>Wed, 09 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-sync.pool%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0/1-pooldequeue/</guid>
+      <description>环形队列，无锁，CAS</description>
+    </item>
+    
+    <item>
+      <title>Golang-Defer底层实现机制</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-defer%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/doc/</link>
+      <pubDate>Tue, 08 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-defer%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/doc/</guid>
+      <description>麻了呀，面试面到了答不出来</description>
+    </item>
+    
+    <item>
+      <title>Golang-Sync.Pool底层结构</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-sync.pool%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0/pool/</link>
+      <pubDate>Tue, 08 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-sync.pool%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0/pool/</guid>
+      <description>sync.Pool在项目中被频繁用到，那么它底下是怎么实现的呢</description>
+    </item>
+    
+    <item>
+      <title>Golang-实现限流器</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E5%AE%9E%E7%8E%B0%E9%99%90%E6%B5%81%E5%99%A8/doc/</link>
+      <pubDate>Tue, 08 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E5%AE%9E%E7%8E%B0%E9%99%90%E6%B5%81%E5%99%A8/doc/</guid>
+      <description>麻了呀，面试问到限流器相关的知识答不出来</description>
+    </item>
+    
+    <item>
+      <title>Golang-Channel的底层结构</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-channel%E7%9A%84%E5%BA%95%E5%B1%82%E7%BB%93%E6%9E%84/channel%E7%9A%84%E5%BA%95%E5%B1%82%E7%BB%93%E6%9E%84/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-channel%E7%9A%84%E5%BA%95%E5%B1%82%E7%BB%93%E6%9E%84/channel%E7%9A%84%E5%BA%95%E5%B1%82%E7%BB%93%E6%9E%84/</guid>
+      <description>一把锁+一个环形数组+两个等待队列</description>
+    </item>
+    
+    <item>
+      <title>Golang-小知识</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E5%B0%8F%E7%9F%A5%E8%AF%86/golang%E5%B0%8F%E7%9F%A5%E8%AF%86/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E5%B0%8F%E7%9F%A5%E8%AF%86/golang%E5%B0%8F%E7%9F%A5%E8%AF%86/</guid>
+      <description>面试前总得背一背吧</description>
+    </item>
+    
+    <item>
+      <title>Golang-线程模型</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B/golang%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B/golang%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B/</guid>
+      <description>M(内核线程)、P(处理器)、G(协程)</description>
+    </item>
+    
+    <item>
+      <title>Golang垃圾回收</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/golang%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/golang%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</guid>
+      <description>三色标记法</description>
+    </item>
+    
+    <item>
+      <title>TCMalloc</title>
+      <link>https://lambertxiao.github.io/posts/tcmalloc/tcmalloc/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/tcmalloc/tcmalloc/</guid>
+      <description>Golang的内存分配算法都是跟我学的</description>
+    </item>
+    
+    <item>
+      <title>Java和Golang的区别</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-01-java-golang-defference/</link>
+      <pubDate>Tue, 22 May 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-01-java-golang-defference/</guid>
+      <description>Golang与Java的区别 1. 结构体 -&amp;gt; 类 // 包名即为包含该文件的目录名字 package collection // 声明一个结构体，类似Java中的类 type Stack struct { data []string } // 声明一个Push函数，并通过一个Stack的指针对象实现该方法 // 类似声明了Stack的成员方法 func (s *Stack) Push(x string) { s.data = append(s.data, x) } func (s *Stack) Pop() string { n := len(s.data) - 1 res := s.data[n] s.data[n] = &amp;#34;&amp;#34; // to avoid memory leak  s.data = s.data[:n] return res } func (s *Stack) Size() int { return len(s.data) }   结构体对应Java里的类, 但结构体里只能有变量，不能有方法</description>
+    </item>
+    
+  </channel>
+</rss>

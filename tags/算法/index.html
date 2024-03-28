@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>算法 | Lambert&#39;s blog</title>
+<meta name="keywords" content="" />
+<meta name="description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod">
+<meta name="author" content="Theme PaperMod">
+<link rel="canonical" href="https://lambertxiao.github.io/tags/%E7%AE%97%E6%B3%95/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" type="application/rss+xml" href="https://lambertxiao.github.io/tags/%E7%AE%97%E6%B3%95/index.xml">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="算法" />
+<meta property="og:description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://lambertxiao.github.io/tags/%E7%AE%97%E6%B3%95/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="算法"/>
+<meta name="twitter:description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod"/>
+
+</head>
+
+<body class="list" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main"> 
+<header class="page-header"><div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/tags/">Tags</a></div>
+  <h1>算法</h1>
+</header>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>网络-ssdp协议
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>基于udp&#43;http协议，在upnp中被使用到</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-06-21 00:00:00 +0000 UTC'>June 21, 2022</span>&nbsp;·&nbsp;3 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 网络-ssdp协议" href="https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C-ssdp%E5%8D%8F%E8%AE%AE/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-两数之和变种
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>面试流利说遇到了，做得磕磕绊绊</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-06-07 00:00:00 +0000 UTC'>June 7, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-两数之和变种" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%B8%A4%E6%95%B0%E4%B9%8B%E5%92%8C%E5%8F%98%E7%A7%8D/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-设计数据结构
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>双向队列，跳表等</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-04-04 00:00:00 +0000 UTC'>April 4, 2022</span>&nbsp;·&nbsp;6 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-设计数据结构" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E8%AE%BE%E8%AE%A1%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-只出现一次的数字
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>挺恶心的位运行</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-27 00:00:00 +0000 UTC'>March 27, 2022</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-只出现一次的数字" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8F%AA%E5%87%BA%E7%8E%B0%E4%B8%80%E6%AC%A1%E7%9A%84%E6%95%B0%E5%AD%97/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-全O(1)的数据结构
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>写在字节4面后</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-23 00:00:00 +0000 UTC'>March 23, 2022</span>&nbsp;·&nbsp;3 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-全O(1)的数据结构" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%85%A8o1%E7%9A%84%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-BFS
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>200. 岛屿数量 200. 岛屿数量 给你一个由 ‘1’（陆地）和 ‘0’（水）组成的的二维网格，请你计算网格中岛屿的数量。
+岛屿总是被水包围，并且每座岛屿只能由水平方向和/或竖直方向上相邻的陆地连接形成。
+此外，你可以假设该网格的四条边均被水包围。
+func numIslands(grid [][]byte) int { m, n := len(grid), len(grid[0]) bfs := func(i, j int) { // 从[i, j]位置开始扩散  q := [][]int{{i, j}} for len(q) != 0 { e := q[0] q = q[1:] x, y := e[0], e[1] if x &gt;= 0 &amp;&amp; x &lt; m &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; n &amp;&amp; grid[x][y] == &#39;1&#39; { grid[x][y] = &#39;0&#39; q = append(q, []int{x&#43;1, y}) q = append(q, []int{x-1, y}) q = append(q, []int{x, y&#43;1}) q = append(q, []int{x, y-1}) } } } cnt := 0 for i := 0; i &lt; m; i&#43;&#43; { for j := 0; j &lt; n; j&#43;&#43; { if grid[i][j] == &#39;0&#39; { continue } bfs(i, j) // 为什么找到了一块陆地就可以增加一个岛屿数呢，  // 是因为在bfs方法中会将跟这块陆地相连的其他陆地染色，不会再次重复计算  cnt&#43;&#43; } } return cnt } 301....</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-BFS" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-bfs/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-DFS
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>22. 括号生成 22. 括号生成 数字 n 代表生成括号的对数，请你设计一个函数，用于能够生成所有可能的并且 有效的 括号组合。
+func generateParenthesis(n int) []string { ans := []string{} var dfs func(lb, rb int, s string) dfs = func(lb, rb int, s string) { if lb &gt; rb { return } if lb == 0 &amp;&amp; rb == 0 { // 括号用完了，并且是合法的  if isValid(s) { ans = append(ans, s) } return } if lb != 0 { dfs(lb - 1, rb, s &#43; &#34;(&#34;) } if rb !...</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;5 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-DFS" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-dfs/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-hash表
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>hash表也算是刷题中的老常客了</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;0 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-hash表" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-hash%E8%A1%A8/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-LRU和LFU
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>经典面试题了属实是</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;3 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-LRU和LFU" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-lru%E5%92%8Clfu/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-topK
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>通常可以使用堆来解决topK的问题</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-topK" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-topk/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-二叉树
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>子串和子序列是一块难啃的骨头，但大多数时候可以通过动态规划来解决</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;11 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-二叉树" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%8F%89%E6%A0%91/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-位运算
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>461. 汉明距离 461. 汉明距离 两个整数之间的 汉明距离 指的是这两个数字对应二进制位不同的位置的数目。
+给你两个整数 x 和 y，计算并返回它们之间的汉明距离。
+func hammingDistance(x int, y int) int { s := x ^ y // 汉明距离即为s中1的数量  res := 0 for s &gt; 0 { // 判断最低位是不是1  res &#43;= s &amp; 1 s &gt;&gt;= 1 } return res } 397. 整数替换 397. 整数替换
+给定一个正整数 n ，你可以做如下操作：
+如果 n 是偶数，则用 n / 2替换 n 。 如果 n 是奇数，则可以用 n &#43; 1或n - 1替换 n 。 返回 n 变为 1 所需的 最小替换次数 。...</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-位运算" href="https://lambertxiao.github.io/posts/golang/golang-%E4%BD%8D%E8%BF%90%E7%AE%97/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-前缀和
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>前缀和也是常见的数组题的解法了吧</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-前缀和" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%89%8D%E7%BC%80%E5%92%8C/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-动态规划
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>55. 跳跃游戏 55. 跳跃游戏 给定一个非负整数数组 nums ，你最初位于数组的 第一个下标 。
+数组中的每个元素代表你在该位置可以跳跃的最大长度。
+判断你是否能够到达最后一个下标。
+func canJump(nums []int) bool { l := len(nums) if l == 0 || l == 1 { return true } // 表示能不能到达第i位下标，true代表可以，false代表不可以  d := make([]bool, l) d[0] = true for i := 1; i &lt; l; i&#43;&#43; { for j := i - 1; j &gt;= 0; j-- { // 能找到一个j就好了  d[i] = d[j] &amp;&amp; (j &#43; nums[j]) &gt;= i if d[i] { break } } if !...</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;4 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-动态规划" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-子串子序列问题
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>子串和子序列是一块难啃的骨头，但大多数时候可以通过动态规划来解决</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;5 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-子串子序列问题" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%AD%90%E4%B8%B2%E5%AD%90%E5%BA%8F%E5%88%97%E9%97%AE%E9%A2%98/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-快慢指针
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>19. 删除链表的倒数第 N 个结点
+给你一个链表，删除链表的倒数第 n 个结点，并且返回链表的头结点。
+func removeNthFromEnd(head *ListNode, n int) *ListNode { // 快慢指针  dummy := &amp;ListNode{} dummy.Next = head s, f := dummy, dummy // faster向前走n&#43;1步，一会可以让slow停在想要删除的节点的前继节点上  for n &gt;= 0 &amp;&amp; f != nil { f = f.Next n-- } for f != nil { f = f.Next s = s.Next } s.Next = s.Next.Next return dummy.Next } </p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-快慢指针" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%BF%AB%E6%85%A2%E6%8C%87%E9%92%88/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-拓扑排序
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>207. 课程表 207. 课程表 你这个学期必须选修 numCourses 门课程，记为 0 到 numCourses - 1 。
+在选修某些课程之前需要一些先修课程。 先修课程按数组 prerequisites 给出，其中 prerequisites[i] = [ai, bi] ，表示如果要学习课程 ai 则 必须 先学习课程 bi 。
+例如，先修课程对 [0, 1] 表示：想要学习课程 0 ，你需要先完成课程 1 。 请你判断是否可能完成所有课程的学习？如果可以，返回 true ；否则，返回 false 。
+func canFinish(numCourses int, prerequisites [][]int) bool { // 入度  indeg := make([]int, numCourses) // 邻接表  g := make(map[int][]int) for _, q := range prerequisites { indeg[q[0]]&#43;&#43; g[q[1]] = append(g[q[1]], q[0]) } q := make([]int, 0, numCourses) // 无入度节点入队  for i := range indeg { if indeg[i] == 0 { q = append(q, i) } } resCount := 0 for len(q) &gt; 0 { head := q[0] q = q[1:] resCount&#43;&#43; for _, i := range g[head] { indeg[i]-- if indeg[i] == 0 { q = append(q, i) } } } return resCount == numCourses } </p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-拓扑排序" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%8B%93%E8%A1%A5%E6%8E%92%E5%BA%8F/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-括号问题
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>20. 有效的括号
+给定一个只包括 ‘(&#39;，&#39;)&#39;，&#39;{&#39;，&#39;}&#39;，&#39;[&#39;，&#39;]’ 的字符串 s ，判断字符串是否有效。
+有效字符串需满足： 左括号必须用相同类型的右括号闭合。 左括号必须以正确的顺序闭合。
+function isValid(s: string): boolean { let stack = [] for (let c of s) { if (c == &#39;(&#39; || c == &#39;{&#39; || c == &#39;[&#39;) { stack.push(c) } if (c == &#39;)&#39; || c == &#39;}&#39; || c == &#39;]&#39;) { let e = stack.pop() if (c != rightof(e)) { return false } } } if (stack.length &gt; 0) { return false } return true }; function rightof(c: string): string { if (c == &#34;{&#34;) { return &#34;}&#34; } if (c == &#34;[&#34;) { return &#34;]&#34; } if (c == &#34;(&#34;) { return &#34;)&#34; } return &#34;&#34; } </p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-括号问题" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%8B%AC%E5%8F%B7%E9%97%AE%E9%A2%98/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-数组
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>与数组相关的算法题可以又各种骚操作</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;12 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-数组" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%95%B0%E7%BB%84/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>算法-滑动窗口
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>LR两指针</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-13 00:00:00 +0000 UTC'>March 13, 2022</span>&nbsp;·&nbsp;3 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to 算法-滑动窗口" href="https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3/doc/"></a>
+</article>
+<footer class="page-footer">
+  <nav class="pagination">
+    <a class="next" href="https://lambertxiao.github.io/tags/%E7%AE%97%E6%B3%95/page/2/">Next Page »</a>
+  </nav>
+</footer>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>TCP on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/tcp/</link>
+    <description>Recent content in TCP on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Tue, 04 Sep 2018 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/tcp/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>TCP协议</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-06-tcp/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-06-tcp/</guid>
+      <description>TCP协议 TCP（Transmission Control Protocol 传输控制协议）是一种面向连接的、可靠的、基于字节流的传输层通信协议，由IETF的RFC 793定义。在简化的计算机网络OSI模型中，它完成第四层传输层所指定的功能，用户数据报协议（UDP）是同一层内另一个重要的传输协议。
+主要特点  面向连接 一对一 可靠交付 全双工 面向字节流  套接字Socket的含义  Socket := IP + Port TCP连接 ：= {Socket1, Socket2} 解释为两个Socket之间的连接  TCP可靠传输的工作原理   停止等待协议
+ 超时重传 超时计时器 保留已发送分组的副本 对数据分组和确认分组的编号 重传时间的设置 确认丢失和确认迟到 信道利用率    连续ARQ协议
+  发送方维持的滑动窗口
+  累计确认
+  容易实现，即使确认丢失也不必重传
+  不能向发送方反映出接收方以及正确接收到的所有分组的信息
+      TCP报文段的首部格式   源端口和目的端口
+  序号
+  确认号ack</description>
+    </item>
+    
+  </channel>
+</rss>

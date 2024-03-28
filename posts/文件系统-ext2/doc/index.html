@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>文件系统之ext2 | Lambert&#39;s blog</title>
+<meta name="keywords" content="文件系统" />
+<meta name="description" content="麻雀虽小，但五脏俱全">
+<meta name="author" content="Lambert Xiao">
+<link rel="canonical" href="https://lambertxiao.github.io/posts/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F-ext2/doc/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js" integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5&#43;kdJvBz5iKbt6B5PJI="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="文件系统之ext2" />
+<meta property="og:description" content="麻雀虽小，但五脏俱全" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://lambertxiao.github.io/posts/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F-ext2/doc/" />
+<meta property="og:image" content="https://lambertxiao.github.io/cover/ext2.png" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-11-22T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2022-11-22T00:00:00&#43;00:00" />
+<meta property="og:see_also" content="https://lambertxiao.github.io/posts/gdb_usage/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/numa/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/uio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/vfio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/virtio/doc/" /><meta property="og:see_also" content="https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://lambertxiao.github.io/cover/ext2.png" />
+<meta name="twitter:title" content="文件系统之ext2"/>
+<meta name="twitter:description" content="麻雀虽小，但五脏俱全"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://lambertxiao.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "文件系统之ext2",
+      "item": "https://lambertxiao.github.io/posts/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F-ext2/doc/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "文件系统之ext2",
+  "name": "文件系统之ext2",
+  "description": "麻雀虽小，但五脏俱全",
+  "keywords": [
+    "文件系统"
+  ],
+  "articleBody": "文件系统之ext2 为什么学习ext2 linux早期的文件系统，虽说功能不是特别强大，但是麻雀虽小却五脏齐全，适合用于学习。\n怎么得到一个ext2的文件系统 这里首先要知道文件系统并不一定需要安装在硬盘上，我们可以通过创建一个块设备，并将块设备格式化为ext2文件系统。\n首先我们通过dd创建一个16M的空白块设备\ndd if=/dev/zero of=mdisk bs=1M count=16 将该块设备进行ext2格式化\nmkfs.ext2 mdisk 此时mdisk这个文件已经被格式化为ext2格式了，我们通过下面的命令确认一下\ndumpe2fs mdisk  dumpe2fs 是linux自带的一个工具，可以查看文件系统的描述信息\n 一般的，我们会得到以下的信息\ndumpe2fs 1.44.5 (15-Dec-2018) Filesystem volume name:  Last mounted on: Filesystem UUID: 6f4abbce-ba88-491b-98c6-82275d98afa6 Filesystem magic number: 0xEF53 Filesystem revision #: 1 (dynamic) Filesystem features: ext_attr resize_inode dir_index filetype sparse_super large_file Filesystem flags: signed_directory_hash Default mount options: user_xattr acl Filesystem state: clean Errors behavior: Continue Filesystem OS type: Linux Inode count: 4096 Block count: 16384 Reserved block count: 819 Free blocks: 15723 Free inodes: 4085 First block: 1 Block size: 1024 Fragment size: 1024 Reserved GDT blocks: 63 Blocks per group: 8192 Fragments per group: 8192 Inodes per group: 2048 Inode blocks per group: 256 Filesystem created: Wed Nov 23 01:06:01 2022 Last mount time: n/a Last write time: Wed Nov 23 01:06:01 2022 Mount count: 0 Maximum mount count: -1 Last checked: Wed Nov 23 01:06:01 2022 Check interval: 0 () Reserved blocks uid: 0 (user root) Reserved blocks gid: 0 (group root) First inode: 11 Inode size:\t128 Default directory hash: half_md4 Directory Hash Seed: f18550d1-7a1e-4c49-b8cc-742790eca888 Group 0: (Blocks 1-8192) Primary superblock at 1, Group descriptors at 2-2 Reserved GDT blocks at 3-65 Block bitmap at 66 (+65) Inode bitmap at 67 (+66) Inode table at 68-323 (+67) 7855 free blocks, 2037 free inodes, 2 directories Free blocks: 338-8192 Free inodes: 12-2048 Group 1: (Blocks 8193-16383) Backup superblock at 8193, Group descriptors at 8194-8194 Reserved GDT blocks at 8195-8257 Block bitmap at 8258 (+65) Inode bitmap at 8259 (+66) Inode table at 8260-8515 (+67) 7868 free blocks, 2048 free inodes, 0 directories Free blocks: 8516-16383 Free inodes: 2049-4096 东西太多看不懂？没关系接下来一一解释。\next2的布局 由图可以看出，ext2会将整个块设备划分为多个块组(Block Group)，每个块组里又划分成6个区域，分别是超级块、块组描述符、数据块位图，inode位图，inode表以及数据块。其中各部分的作用如下\n  超级块\n超级块是文件系统的起始位置，它是整个文件系统的入口。文件系统的挂载（初始化）就是从读取这里的数据开始 的。在超级块中记录了整个文件系统的描述信息，如格式化时指定的文件系统逻辑块大小信息、逻辑块的数量、inode的 数量，根节点的id和文件系统的特性。上面dumpe2fs中输出的描述信息，基本就是超级块的内容。超级块对应对应ext2源码里的 ext2_super_block结构体。\n  块组描述符\n块组描述符的描述信息包括对应块组中数据块位图的位置、inode位图的位置和inode表的位置等信息。另外，还包 括数据块和inode的剩余情况等信息。对应源码里的 ext2_group_desc。\n  块位图\n块位图标识了块组中哪个数据块被使用了，哪个数据块没有被使用。在块位图区中将1字节(Byte）划分为8份，也 就是用1位(bit）对一个逻辑块进行标记。如果该位是0，则表示该位对应的逻辑块未被使用；如果该位是1，则表示该位 对应的逻辑块已经被使用。\n  inode位图\n和块位图类似，标识哪个inode被使用了，哪个inode没有被使用\n  inode表\n记录inode的信息，对应结构体ext2_inode_info\n  数据块\n存放具体的数据以及目录项ext2_dir_entry_2\n  举个例子 回到一开始我们创建的mdisk，通过dumpe2fs我们知道，这个mdisk的块大小为1024个字节，并且被划分了2个块组。\n... Block size: 1024 ... Group 0: (Blocks 1-8192) Primary superblock at 1, Group descriptors at 2-2 Reserved GDT blocks at 3-65 Block bitmap at 66 (+65) Inode bitmap at 67 (+66) Inode table at 68-323 (+67) 7855 free blocks, 2037 free inodes, 2 directories Free blocks: 338-8192 Free inodes: 12-2048 Group 1: (Blocks 8193-16383) Backup superblock at 8193, Group descriptors at 8194-8194 Reserved GDT blocks at 8195-8257 Block bitmap at 8258 (+65) Inode bitmap at 8259 (+66) Inode table at 8260-8515 (+67) 7868 free blocks, 2048 free inodes, 0 directories Free blocks: 8516-16383 Free inodes: 2049-4096 可以简单的看出，Group0的块范围从1~8192(为什么不是从0开始呢？因为第一个block被拿去作为文件系统的启动块了), 其中超级块在Group0的1号block里，块组描述符在2号描述符里，Reserved GDT blocks 意味着ext2还保留了部分块不对外使用。块位图在第66号块里，inode位图在67号块里，inode表在68～323号块里，剩下的338～8192块作为数据块。\n 注意到Group1里的第一个块是Backup superblock, 这是ext2为里防止超级块数据损毁而在其他的块组里做的备份，值得学习\n 接下来，我们借助hexdump工具查看mdisk的内容。\n查看启动块的内容  对于hexdump命令，-s代表偏移多少字节，-n 代表查看多少字节\n # 由于启动块就在第0个block上，所以我们偏移0个字节，往后查看1024个字节的内容 hexdump -s 0 -n 1024 mdisk 返回如下（最左边一列是十六进制的地址，地址后面是十六进制表示的数据，每一行是16个字节）\n0000000 0000 0000 0000 0000 0000 0000 0000 0000 * 0000400 可以看出，启动块此时并没有写入任何数据，1024个字节都是0\n查看超级块的内容 hexdump -s 1024 -n 1024 mdisk 返回\nroot@10-23-47-166:~/workspace/ext2# hexdump -s 1024 -n 1024 mdisk 0000400 1000 0000 4000 0000 0333 0000 3d6b 0000 0000410 0ff5 0000 0001 0000 0000 0000 0000 0000 0000420 2000 0000 2000 0000 0800 0000 0000 0000 0000430 0179 637d 0000 ffff ef53 0001 0001 0000 0000440 0179 637d 0000 0000 0000 0000 0001 0000 0000450 0000 0000 000b 0000 0080 0000 0038 0000 0000460 0002 0000 0003 0000 4a6f cebb 88ba 1b49 0000470 c698 2782 985d a6af 0000 0000 0000 0000 0000480 0000 0000 0000 0000 0000 0000 0000 0000 * 00004c0 0000 0000 0000 0000 0000 0000 0000 003f 00004d0 0000 0000 0000 0000 0000 0000 0000 0000 00004e0 0000 0000 0000 0000 0000 0000 85f1 d150 00004f0 1e7a 494c ccb8 2774 ec90 88a8 0001 0000 0000500 000c 0000 0000 0000 0179 637d 0000 0000 0000510 0000 0000 0000 0000 0000 0000 0000 0000 * 0000560 0001 0000 0000 0000 0000 0000 0000 0000 0000570 0000 0000 0000 0000 0000 0000 0000 0000 * 0000800 我们通过对照源码的ext2_super_block结构体可以看出对应的含义\nstruct ext2_super_block { __le32\ts_inodes_count;\t/* Inodes count */ __le32\ts_blocks_count;\t/* Blocks count */ __le32\ts_r_blocks_count;\t/* Reserved blocks count */ __le32\ts_free_blocks_count;\t/* Free blocks count */ __le32\ts_free_inodes_count;\t/* Free inodes count */ __le32\ts_first_data_block;\t/* First Data Block */ __le32\ts_log_block_size;\t/* Block size */ __le32\ts_log_frag_size;\t/* Fragment size */ __le32\ts_blocks_per_group;\t/* # Blocks per group */ __le32\ts_frags_per_group;\t/* # Fragments per group */ __le32\ts_inodes_per_group;\t/* # Inodes per group */ __le32\ts_mtime;\t/* Mount time */ __le32\ts_wtime;\t/* Write time */ __le16\ts_mnt_count;\t/* Mount count */ __le16\ts_max_mnt_count;\t/* Maximal mount count */ __le16\ts_magic;\t/* Magic signature */ __le16\ts_state;\t/* File system state */ __le16\ts_errors;\t/* Behaviour when detecting errors */ __le16\ts_minor_rev_level; /* minor revision level */ __le32\ts_lastcheck;\t/* time of last check */ __le32\ts_checkinterval;\t/* max. time between checks */ __le32\ts_creator_os;\t/* OS */ __le32\ts_rev_level;\t/* Revision level */ __le16\ts_def_resuid;\t/* Default uid for reserved blocks */ __le16\ts_def_resgid;\t/* Default gid for reserved blocks */ /* * These fields are for EXT2_DYNAMIC_REV superblocks only. * * Note: the difference between the compatible feature set and * the incompatible feature set is that if there is a bit set * in the incompatible feature set that the kernel doesn't * know about, it should refuse to mount the filesystem. * * e2fsck's requirements are more strict; if it doesn't know * about a feature in either the compatible or incompatible * feature set, it must abort and not try to meddle with * things it doesn't understand... */ __le32\ts_first_ino; /* First non-reserved inode */ __le16 s_inode_size; /* size of inode structure */ __le16\ts_block_group_nr; /* block group # of this superblock */ __le32\ts_feature_compat; /* compatible feature set */ __le32\ts_feature_incompat; /* incompatible feature set */ __le32\ts_feature_ro_compat; /* readonly-compatible feature set */ __u8\ts_uuid[16];\t/* 128-bit uuid for volume */ char\ts_volume_name[16]; /* volume name */ char\ts_last_mounted[64]; /* directory where last mounted */ __le32\ts_algorithm_usage_bitmap; /* For compression */ /* * Performance hints. Directory preallocation should only * happen if the EXT2_COMPAT_PREALLOC flag is on. */ __u8\ts_prealloc_blocks;\t/* Nr of blocks to try to preallocate*/ __u8\ts_prealloc_dir_blocks;\t/* Nr to preallocate for dirs */ __u16\ts_padding1; /* * Journaling support valid if EXT3_FEATURE_COMPAT_HAS_JOURNAL set. */ __u8\ts_journal_uuid[16];\t/* uuid of journal superblock */ __u32\ts_journal_inum;\t/* inode number of journal file */ __u32\ts_journal_dev;\t/* device number of journal file */ __u32\ts_last_orphan;\t/* start of list of inodes to delete */ __u32\ts_hash_seed[4];\t/* HTREE hash seed */ __u8\ts_def_hash_version;\t/* Default hash version to use */ __u8\ts_reserved_char_pad; __u16\ts_reserved_word_pad; __le32\ts_default_mount_opts; __le32\ts_first_meta_bg; /* First metablock block group */ __u32\ts_reserved[190];\t/* Padding to the end of the block */ }; 举例说明，对于第一行\n0000400 1000 0000 4000 0000 0333 0000 3d6b 0000 1000 0000 表示inode数量4096（注意右边才是高地址），4000 0000 表示block的数量，即16384。可以看到hexdump里打印的内容和dumpe2fs里的描述信息是一致的。\n查看block bitmap  block bitmap在第66号block上，因此偏移66*1024个字节\n hexdump -s 67584 -n 1024 mdisk 返回\n0010800 ffff ffff ffff ffff ffff ffff ffff ffff * 0010820 ffff ffff ffff ffff ffff 0001 0000 0000 0010830 0000 0000 0000 0000 0000 0000 0000 0000 * 0010c00  一行16个字节，即16*8个位\n 可以看出总共有 (16 * 2 + 10) * 8 + 1 = 337 个位被标记成1，即有337个块被使用了\n查看inode bitmap  block bitmap在第67号block上，因此偏移67*1024个字节\n hexdump -s 68608 -n 1024 mdisk 返回\n0010c00 07ff 0000 0000 0000 0000 0000 0000 0000 0010c10 0000 0000 0000 0000 0000 0000 0000 0000 * 0010d00 ffff ffff ffff ffff ffff ffff ffff ffff * 0011000 十六进制的07ff即二进制的 11111111111, 总用有11个1，代表有11个inode被使用了, 这个适合你可能会有疑问，明明我们什么文件都还没创建，怎么就有11个inode被使用了呢？其实这里是ext2保留了前11个inode作为内部使用。特别是2号inode，是作为整个文件系统的根目录。\n查看inode表 在dumpe2fs的输出中，我们知道了每个inode的大小位128个字节，并且inode表在第68～323号块中。\n查看1号inode的内容\nhexdump -s 69632 -n 128 mdisk 返回\n0011000 0000 0000 0000 0000 0179 637d 0179 637d 0011010 0179 637d 0000 0000 0000 0000 0000 0000 0011020 0000 0000 0000 0000 0000 0000 0000 0000 * 0011080 同上面看超级块的方法类似，我们对照inode结构体ext2_inode来看\n/* * Structure of an inode on the disk */ struct ext2_inode { __le16\ti_mode;\t/* File mode */ __le16\ti_uid;\t/* Low 16 bits of Owner Uid */ __le32\ti_size;\t/* Size in bytes */ __le32\ti_atime;\t/* Access time */ __le32\ti_ctime;\t/* Creation time */ __le32\ti_mtime;\t/* Modification time */ __le32\ti_dtime;\t/* Deletion Time */ __le16\ti_gid;\t/* Low 16 bits of Group Id */ __le16\ti_links_count;\t/* Links count */ __le32\ti_blocks;\t/* Blocks count */ __le32\ti_flags;\t/* File flags */ union { struct { __le32 l_i_reserved1; } linux1; struct { __le32 h_i_translator; } hurd1; struct { __le32 m_i_reserved1; } masix1; } osd1;\t/* OS dependent 1 */ __le32\ti_block[EXT2_N_BLOCKS];/* Pointers to blocks */ __le32\ti_generation;\t/* File version (for NFS) */ __le32\ti_file_acl;\t/* File ACL */ __le32\ti_dir_acl;\t/* Directory ACL */ __le32\ti_faddr;\t/* Fragment address */ union { struct { __u8\tl_i_frag;\t/* Fragment number */ __u8\tl_i_fsize;\t/* Fragment size */ __u16\ti_pad1; __le16\tl_i_uid_high;\t/* these 2 fields */ __le16\tl_i_gid_high;\t/* were reserved2[0] */ __u32\tl_i_reserved2; } linux2; struct { __u8\th_i_frag;\t/* Fragment number */ __u8\th_i_fsize;\t/* Fragment size */ __le16\th_i_mode_high; __le16\th_i_uid_high; __le16\th_i_gid_high; __le32\th_i_author; } hurd2; struct { __u8\tm_i_frag;\t/* Fragment number */ __u8\tm_i_fsize;\t/* Fragment size */ __u16\tm_pad1; __u32\tm_i_reserved2[2]; } masix2; } osd2;\t/* OS dependent 2 */ }; 可以看到 0179 637d 对应 i_atime, 即时间戳 1669136761\n查看数据块 前面我们都是分析ext2文件系统格式化之后自带的数据内容，还没有真正自己往ext2中写入过数据。那么怎么自己往ext2里写入数据呢，我们需要执行以下几个步骤，将mdisk这个块挂载起来\n losetup 命令用于设置循环设备。循环设备可把文件虚拟成区块设备，籍以模拟整个文件系统，让用户得以将其视为硬盘驱动器，光驱或软驱等设备，并挂入当作目录来使用。\n losetup /dev/loop0 mdisk mount /dev/loop0 /mnt/test 此时mdisk即被挂载到/mnt/test目录里，进入目录后我们发现跟普通的目录看不出区别。\ncd 进入 /mnt/test, 创建一个带内容的文件a.txt\nroot@ubuntu:/mnt/test# echo abcd  a.txt root@ubuntu:/mnt/test# ls -ali total 18 2 drwxr-xr-x 3 root root 1024 Nov 23 02:10 . 786437 drwxr-xr-x 3 root root 4096 Nov 21 01:42 .. 12 -rw-r--r-- 1 root root 5 Nov 23 02:10 a.txt 11 drwx------ 2 root root 12288 Nov 23 01:06 lost+found 通过上面的ls命令我们知道了a.txt是inode号为12，那么接下来我们就去mdisk的inode表里找到这个inode。\n每个inode的大小位128个字节，并且inode表在第68～323号块中，因此12号inode所在的偏移为68 * 1024 + 11 * 128 = 71168, 所以hexdump命令如下：\nhexdump -s 71040 -n 128 mdisk 返回\n0011580 81a4 0000 0005 0000 1282 637d 10b3 637d 0011590 10b3 637d 0000 0000 0000 0001 0002 0000 00115a0 0000 0000 0001 0000 0201 0000 0000 0000 00115b0 0000 0000 0000 0000 0000 0000 0000 0000 * 00115e0 0000 0000 baff 4d19 0000 0000 0000 0000 00115f0 0000 0000 0000 0000 0000 0000 0000 0000 0011600 81a4 0000 即是i_mode，转化为八进制即100644, 即 -rw-r--r--; 0005 0000 即是i_size，转化为十进制即5;\ni_block是存着数据块的地址，在偏移40个字节处的位置，即 0201, 十进制即513, 所以算出实际的偏移地址为513 * 1024 = 525312, 而inode的size为5，因此hexdump命令如下：\nhexdump -s 525312 -n 5 -C mdisk 返回\n00080400 61 62 63 64 0a |abcd.| 00080405 可以看出，确实存放着我们之前echo的abcd\n查看inode的子目录 前面提到，ext2_inode里的i_blocks存放的是数据块的地址；对于文件，数据块即是存放文件内容的地方；而对于目录，数据块存放的则是目录项 ext2_dir_entry_2。\n/* * The new version of the directory entry. Since EXT2 structures are * stored in intel byte order, and the name_len field could never be * bigger than 255 chars, it's safe to reclaim the extra byte for the * file_type field. */ struct ext2_dir_entry_2 { __le32\tinode;\t/* Inode number */ __le16\trec_len;\t/* Directory entry length */ __u8\tname_len;\t/* Name length */ __u8\tfile_type; char\tname[];\t/* File name, up to EXT2_NAME_LEN */ }; 我们之前在根目录底下创建过a.txt文件，现在我们就去根目录对应的inode表(2号inode)里去查看它是如何存储的。\n首先查看2号inode表\nhexdump -s 69760 -n 128 mdisk 返回\n0011080 41ed 0000 0400 0000 2d34 637e 2d32 637e 0011090 2d32 637e 0000 0000 0000 0003 0002 0000 00110a0 0000 0000 0001 0000 0144 0000 0000 0000 00110b0 0000 0000 0000 0000 0000 0000 0000 0000 再通过十六进制 0144 算出偏移十进制 324 * 1024 = 331776\n# hexdump -s 331776 -n 128 mdisk -C 00051000 02 00 00 00 0c 00 01 02 2e 00 00 00 02 00 00 00 |................| 00051010 0c 00 02 02 2e 2e 00 00 0b 00 00 00 14 00 0a 02 |................| 00051020 6c 6f 73 74 2b 66 6f 75 6e 64 00 00 0c 00 00 00 |lost+found......| 00051030 d4 03 05 01 61 2e 74 78 74 00 00 00 00 00 00 00 |....a.txt.......| 00051040 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................| * 00051080 可以看到确实是存储着inode对应目录里的子项\next2的文件数据如何管理 在Ext2文件系统中，文件数据的位置信息存储在ext2_inode的1block成员变量中。该变量是一个32位整型数组，共有15个成员，前12个成员中的内容为文件数据的物理地址，后3个成员存储的内容指向磁盘数据块。数据块中存储的数据并不是文件的数据，而是地址数据。由于在这种情況下数据块存储的并非是文件数据，而是inode与文件数据中间的数据，因此被称为间接块 (Indirect Block，简称IB）\n举例，对于小文件来说，通过直接引用就可以完成数据的存储和查找。比如，在格式化时文件逻辑块大小是4KB, 48KB（4Kx12） 以内的文件都可以通过直接引用完成。但是，如果文件大于48KB，直接引用则无法容纳所有的数据，48KB以外的数据先要通过一级间接引用进行存储。以此类推，当超过本级存储空间的最大值时，要启用下一级进行文件数据的管理。\n",
+  "wordCount" : "1879",
+  "inLanguage": "en",
+  "image":"https://lambertxiao.github.io/cover/ext2.png","datePublished": "2022-11-22T00:00:00Z",
+  "dateModified": "2022-11-22T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "Lambert Xiao"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lambertxiao.github.io/posts/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F-ext2/doc/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lambert's blog",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lambertxiao.github.io/avatar.jpeg"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      文件系统之ext2
+    </h1>
+    <div class="post-meta"><span title='2022-11-22 00:00:00 +0000 UTC'>November 22, 2022</span>&nbsp;·&nbsp;9 min&nbsp;·&nbsp;Lambert Xiao&nbsp;|&nbsp;<a href="https://github.com/adityatelange/hugo-PaperMod/tree/exampleSite/content/posts/%e6%96%87%e4%bb%b6%e7%b3%bb%e7%bb%9f-ext2/doc.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+</div>
+  </header> 
+<figure class="entry-cover"><img loading="lazy" src="https://lambertxiao.github.io/cover/ext2.png" alt="">
+        
+</figure><div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#%e6%96%87%e4%bb%b6%e7%b3%bb%e7%bb%9f%e4%b9%8bext2" aria-label="文件系统之ext2">文件系统之ext2</a><ul>
+                        
+                <li>
+                    <a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e5%ad%a6%e4%b9%a0ext2" aria-label="为什么学习ext2">为什么学习ext2</a></li>
+                <li>
+                    <a href="#%e6%80%8e%e4%b9%88%e5%be%97%e5%88%b0%e4%b8%80%e4%b8%aaext2%e7%9a%84%e6%96%87%e4%bb%b6%e7%b3%bb%e7%bb%9f" aria-label="怎么得到一个ext2的文件系统">怎么得到一个ext2的文件系统</a></li>
+                <li>
+                    <a href="#ext2%e7%9a%84%e5%b8%83%e5%b1%80" aria-label="ext2的布局">ext2的布局</a></li>
+                <li>
+                    <a href="#%e4%b8%be%e4%b8%aa%e4%be%8b%e5%ad%90" aria-label="举个例子">举个例子</a><ul>
+                        
+                <li>
+                    <a href="#%e6%9f%a5%e7%9c%8b%e5%90%af%e5%8a%a8%e5%9d%97%e7%9a%84%e5%86%85%e5%ae%b9" aria-label="查看启动块的内容">查看启动块的内容</a></li>
+                <li>
+                    <a href="#%e6%9f%a5%e7%9c%8b%e8%b6%85%e7%ba%a7%e5%9d%97%e7%9a%84%e5%86%85%e5%ae%b9" aria-label="查看超级块的内容">查看超级块的内容</a></li>
+                <li>
+                    <a href="#%e6%9f%a5%e7%9c%8bblock-bitmap" aria-label="查看block bitmap">查看block bitmap</a></li>
+                <li>
+                    <a href="#%e6%9f%a5%e7%9c%8binode-bitmap" aria-label="查看inode bitmap">查看inode bitmap</a></li>
+                <li>
+                    <a href="#%e6%9f%a5%e7%9c%8binode%e8%a1%a8" aria-label="查看inode表">查看inode表</a></li>
+                <li>
+                    <a href="#%e6%9f%a5%e7%9c%8b%e6%95%b0%e6%8d%ae%e5%9d%97" aria-label="查看数据块">查看数据块</a></li>
+                <li>
+                    <a href="#%e6%9f%a5%e7%9c%8binode%e7%9a%84%e5%ad%90%e7%9b%ae%e5%bd%95" aria-label="查看inode的子目录">查看inode的子目录</a></li></ul>
+                </li>
+                <li>
+                    <a href="#ext2%e7%9a%84%e6%96%87%e4%bb%b6%e6%95%b0%e6%8d%ae%e5%a6%82%e4%bd%95%e7%ae%a1%e7%90%86" aria-label="ext2的文件数据如何管理">ext2的文件数据如何管理</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h1 id="文件系统之ext2">文件系统之ext2<a hidden class="anchor" aria-hidden="true" href="#文件系统之ext2">#</a></h1>
+<h2 id="为什么学习ext2">为什么学习ext2<a hidden class="anchor" aria-hidden="true" href="#为什么学习ext2">#</a></h2>
+<p>linux早期的文件系统，虽说功能不是特别强大，但是麻雀虽小却五脏齐全，适合用于学习。</p>
+<h2 id="怎么得到一个ext2的文件系统">怎么得到一个ext2的文件系统<a hidden class="anchor" aria-hidden="true" href="#怎么得到一个ext2的文件系统">#</a></h2>
+<p>这里首先要知道文件系统并不一定需要安装在硬盘上，我们可以通过创建一个块设备，并将块设备格式化为ext2文件系统。</p>
+<p>首先我们通过<code>dd</code>创建一个16M的空白块设备</p>
+<pre><code>dd if=/dev/zero of=mdisk bs=1M count=16
+</code></pre><p>将该块设备进行ext2格式化</p>
+<pre><code>mkfs.ext2 mdisk
+</code></pre><p>此时mdisk这个文件已经被格式化为ext2格式了，我们通过下面的命令确认一下</p>
+<pre><code>dumpe2fs mdisk
+</code></pre><blockquote>
+<p>dumpe2fs 是linux自带的一个工具，可以查看文件系统的描述信息</p>
+</blockquote>
+<p>一般的，我们会得到以下的信息</p>
+<pre><code>dumpe2fs 1.44.5 (15-Dec-2018)
+Filesystem volume name:   &lt;none&gt;
+Last mounted on:          &lt;not available&gt;
+Filesystem UUID:          6f4abbce-ba88-491b-98c6-82275d98afa6
+Filesystem magic number:  0xEF53
+Filesystem revision #:    1 (dynamic)
+Filesystem features:      ext_attr resize_inode dir_index filetype sparse_super large_file
+Filesystem flags:         signed_directory_hash
+Default mount options:    user_xattr acl
+Filesystem state:         clean
+Errors behavior:          Continue
+Filesystem OS type:       Linux
+Inode count:              4096
+Block count:              16384
+Reserved block count:     819
+Free blocks:              15723
+Free inodes:              4085
+First block:              1
+Block size:               1024
+Fragment size:            1024
+Reserved GDT blocks:      63
+Blocks per group:         8192
+Fragments per group:      8192
+Inodes per group:         2048
+Inode blocks per group:   256
+Filesystem created:       Wed Nov 23 01:06:01 2022
+Last mount time:          n/a
+Last write time:          Wed Nov 23 01:06:01 2022
+Mount count:              0
+Maximum mount count:      -1
+Last checked:             Wed Nov 23 01:06:01 2022
+Check interval:           0 (&lt;none&gt;)
+Reserved blocks uid:      0 (user root)
+Reserved blocks gid:      0 (group root)
+First inode:              11
+Inode size:	          128
+Default directory hash:   half_md4
+Directory Hash Seed:      f18550d1-7a1e-4c49-b8cc-742790eca888
+
+
+Group 0: (Blocks 1-8192)
+  Primary superblock at 1, Group descriptors at 2-2
+  Reserved GDT blocks at 3-65
+  Block bitmap at 66 (+65)
+  Inode bitmap at 67 (+66)
+  Inode table at 68-323 (+67)
+  7855 free blocks, 2037 free inodes, 2 directories
+  Free blocks: 338-8192
+  Free inodes: 12-2048
+Group 1: (Blocks 8193-16383)
+  Backup superblock at 8193, Group descriptors at 8194-8194
+  Reserved GDT blocks at 8195-8257
+  Block bitmap at 8258 (+65)
+  Inode bitmap at 8259 (+66)
+  Inode table at 8260-8515 (+67)
+  7868 free blocks, 2048 free inodes, 0 directories
+  Free blocks: 8516-16383
+  Free inodes: 2049-4096
+</code></pre><p>东西太多看不懂？没关系接下来一一解释。</p>
+<h2 id="ext2的布局">ext2的布局<a hidden class="anchor" aria-hidden="true" href="#ext2的布局">#</a></h2>
+<p>由图可以看出，ext2会将整个块设备划分为多个块组(Block Group)，每个块组里又划分成6个区域，分别是超级块、块组描述符、数据块位图，inode位图，inode表以及数据块。其中各部分的作用如下</p>
+<p><img loading="lazy" src="../ext2.png" alt=""  />
+</p>
+<ul>
+<li>
+<p>超级块</p>
+<p>超级块是文件系统的起始位置，它是整个文件系统的入口。文件系统的挂载（初始化）就是从读取这里的数据开始
+的。在超级块中记录了整个文件系统的描述信息，如格式化时指定的文件系统逻辑块大小信息、逻辑块的数量、inode的
+数量，根节点的id和文件系统的特性。上面dumpe2fs中输出的描述信息，基本就是超级块的内容。超级块对应对应ext2源码里的
+<code>ext2_super_block</code>结构体。</p>
+</li>
+<li>
+<p>块组描述符</p>
+<p>块组描述符的描述信息包括对应块组中数据块位图的位置、inode位图的位置和inode表的位置等信息。另外，还包
+括数据块和inode的剩余情况等信息。对应源码里的 <code>ext2_group_desc</code>。</p>
+</li>
+<li>
+<p>块位图</p>
+<p>块位图标识了块组中哪个数据块被使用了，哪个数据块没有被使用。在块位图区中将1字节(Byte）划分为8份，也
+就是用1位(bit）对一个逻辑块进行标记。如果该位是0，则表示该位对应的逻辑块未被使用；如果该位是1，则表示该位
+对应的逻辑块已经被使用。</p>
+</li>
+<li>
+<p>inode位图</p>
+<p>和块位图类似，标识哪个inode被使用了，哪个inode没有被使用</p>
+</li>
+<li>
+<p>inode表</p>
+<p>记录inode的信息，对应结构体<code>ext2_inode_info</code></p>
+</li>
+<li>
+<p>数据块</p>
+<p>存放具体的数据以及目录项<code>ext2_dir_entry_2</code></p>
+</li>
+</ul>
+<h2 id="举个例子">举个例子<a hidden class="anchor" aria-hidden="true" href="#举个例子">#</a></h2>
+<p>回到一开始我们创建的mdisk，通过dumpe2fs我们知道，这个mdisk的块大小为1024个字节，并且被划分了2个块组。</p>
+<pre><code>...
+Block size:               1024
+...
+
+Group 0: (Blocks 1-8192)
+  Primary superblock at 1, Group descriptors at 2-2
+  Reserved GDT blocks at 3-65
+  Block bitmap at 66 (+65)
+  Inode bitmap at 67 (+66)
+  Inode table at 68-323 (+67)
+  7855 free blocks, 2037 free inodes, 2 directories
+  Free blocks: 338-8192
+  Free inodes: 12-2048
+Group 1: (Blocks 8193-16383)
+  Backup superblock at 8193, Group descriptors at 8194-8194
+  Reserved GDT blocks at 8195-8257
+  Block bitmap at 8258 (+65)
+  Inode bitmap at 8259 (+66)
+  Inode table at 8260-8515 (+67)
+  7868 free blocks, 2048 free inodes, 0 directories
+  Free blocks: 8516-16383
+  Free inodes: 2049-4096
+</code></pre><p>可以简单的看出，Group0的块范围从1~8192(为什么不是从0开始呢？因为第一个block被拿去作为文件系统的启动块了), 其中超级块在Group0的1号block里，块组描述符在2号描述符里，<code>Reserved GDT blocks</code> 意味着ext2还保留了部分块不对外使用。块位图在第66号块里，inode位图在67号块里，inode表在68～323号块里，剩下的338～8192块作为数据块。</p>
+<blockquote>
+<p>注意到Group1里的第一个块是<code>Backup superblock</code>, 这是ext2为里防止超级块数据损毁而在其他的块组里做的备份，值得学习</p>
+</blockquote>
+<p>接下来，我们借助hexdump工具查看mdisk的内容。</p>
+<h3 id="查看启动块的内容">查看启动块的内容<a hidden class="anchor" aria-hidden="true" href="#查看启动块的内容">#</a></h3>
+<blockquote>
+<p>对于hexdump命令，<code>-s</code>代表偏移多少字节，<code>-n</code> 代表查看多少字节</p>
+</blockquote>
+<pre><code># 由于启动块就在第0个block上，所以我们偏移0个字节，往后查看1024个字节的内容
+hexdump -s 0 -n 1024 mdisk
+</code></pre><p>返回如下（最左边一列是十六进制的地址，地址后面是十六进制表示的数据，每一行是16个字节）</p>
+<pre><code>0000000 0000 0000 0000 0000 0000 0000 0000 0000
+*
+0000400
+</code></pre><p>可以看出，启动块此时并没有写入任何数据，1024个字节都是0</p>
+<h3 id="查看超级块的内容">查看超级块的内容<a hidden class="anchor" aria-hidden="true" href="#查看超级块的内容">#</a></h3>
+<pre><code>hexdump -s 1024 -n 1024 mdisk
+</code></pre><p>返回</p>
+<pre><code>root@10-23-47-166:~/workspace/ext2# hexdump -s 1024 -n 1024 mdisk
+0000400 1000 0000 4000 0000 0333 0000 3d6b 0000
+0000410 0ff5 0000 0001 0000 0000 0000 0000 0000
+0000420 2000 0000 2000 0000 0800 0000 0000 0000
+0000430 0179 637d 0000 ffff ef53 0001 0001 0000
+0000440 0179 637d 0000 0000 0000 0000 0001 0000
+0000450 0000 0000 000b 0000 0080 0000 0038 0000
+0000460 0002 0000 0003 0000 4a6f cebb 88ba 1b49
+0000470 c698 2782 985d a6af 0000 0000 0000 0000
+0000480 0000 0000 0000 0000 0000 0000 0000 0000
+*
+00004c0 0000 0000 0000 0000 0000 0000 0000 003f
+00004d0 0000 0000 0000 0000 0000 0000 0000 0000
+00004e0 0000 0000 0000 0000 0000 0000 85f1 d150
+00004f0 1e7a 494c ccb8 2774 ec90 88a8 0001 0000
+0000500 000c 0000 0000 0000 0179 637d 0000 0000
+0000510 0000 0000 0000 0000 0000 0000 0000 0000
+*
+0000560 0001 0000 0000 0000 0000 0000 0000 0000
+0000570 0000 0000 0000 0000 0000 0000 0000 0000
+*
+0000800
+</code></pre><p>我们通过对照源码的<code>ext2_super_block</code>结构体可以看出对应的含义</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#cdcd00">struct</span> ext2_super_block {
+	__le32	s_inodes_count;		<span style="color:#000080">/* Inodes count */</span>
+	__le32	s_blocks_count;		<span style="color:#000080">/* Blocks count */</span>
+	__le32	s_r_blocks_count;	<span style="color:#000080">/* Reserved blocks count */</span>
+	__le32	s_free_blocks_count;	<span style="color:#000080">/* Free blocks count */</span>
+	__le32	s_free_inodes_count;	<span style="color:#000080">/* Free inodes count */</span>
+	__le32	s_first_data_block;	<span style="color:#000080">/* First Data Block */</span>
+	__le32	s_log_block_size;	<span style="color:#000080">/* Block size */</span>
+	__le32	s_log_frag_size;	<span style="color:#000080">/* Fragment size */</span>
+	__le32	s_blocks_per_group;	<span style="color:#000080">/* # Blocks per group */</span>
+	__le32	s_frags_per_group;	<span style="color:#000080">/* # Fragments per group */</span>
+	__le32	s_inodes_per_group;	<span style="color:#000080">/* # Inodes per group */</span>
+	__le32	s_mtime;		<span style="color:#000080">/* Mount time */</span>
+	__le32	s_wtime;		<span style="color:#000080">/* Write time */</span>
+	__le16	s_mnt_count;		<span style="color:#000080">/* Mount count */</span>
+	__le16	s_max_mnt_count;	<span style="color:#000080">/* Maximal mount count */</span>
+	__le16	s_magic;		<span style="color:#000080">/* Magic signature */</span>
+	__le16	s_state;		<span style="color:#000080">/* File system state */</span>
+	__le16	s_errors;		<span style="color:#000080">/* Behaviour when detecting errors */</span>
+	__le16	s_minor_rev_level; 	<span style="color:#000080">/* minor revision level */</span>
+	__le32	s_lastcheck;		<span style="color:#000080">/* time of last check */</span>
+	__le32	s_checkinterval;	<span style="color:#000080">/* max. time between checks */</span>
+	__le32	s_creator_os;		<span style="color:#000080">/* OS */</span>
+	__le32	s_rev_level;		<span style="color:#000080">/* Revision level */</span>
+	__le16	s_def_resuid;		<span style="color:#000080">/* Default uid for reserved blocks */</span>
+	__le16	s_def_resgid;		<span style="color:#000080">/* Default gid for reserved blocks */</span>
+	<span style="color:#000080">/*
+</span><span style="color:#000080">	 * These fields are for EXT2_DYNAMIC_REV superblocks only.
+</span><span style="color:#000080">	 *
+</span><span style="color:#000080">	 * Note: the difference between the compatible feature set and
+</span><span style="color:#000080">	 * the incompatible feature set is that if there is a bit set
+</span><span style="color:#000080">	 * in the incompatible feature set that the kernel doesn&#39;t
+</span><span style="color:#000080">	 * know about, it should refuse to mount the filesystem.
+</span><span style="color:#000080">	 * 
+</span><span style="color:#000080">	 * e2fsck&#39;s requirements are more strict; if it doesn&#39;t know
+</span><span style="color:#000080">	 * about a feature in either the compatible or incompatible
+</span><span style="color:#000080">	 * feature set, it must abort and not try to meddle with
+</span><span style="color:#000080">	 * things it doesn&#39;t understand...
+</span><span style="color:#000080">	 */</span>
+	__le32	s_first_ino; 		<span style="color:#000080">/* First non-reserved inode */</span>
+	__le16   s_inode_size; 		<span style="color:#000080">/* size of inode structure */</span>
+	__le16	s_block_group_nr; 	<span style="color:#000080">/* block group # of this superblock */</span>
+	__le32	s_feature_compat; 	<span style="color:#000080">/* compatible feature set */</span>
+	__le32	s_feature_incompat; 	<span style="color:#000080">/* incompatible feature set */</span>
+	__le32	s_feature_ro_compat; 	<span style="color:#000080">/* readonly-compatible feature set */</span>
+	__u8	s_uuid[<span style="color:#cd00cd">16</span>];		<span style="color:#000080">/* 128-bit uuid for volume */</span>
+	<span style="color:#00cd00">char</span>	s_volume_name[<span style="color:#cd00cd">16</span>]; 	<span style="color:#000080">/* volume name */</span>
+	<span style="color:#00cd00">char</span>	s_last_mounted[<span style="color:#cd00cd">64</span>]; 	<span style="color:#000080">/* directory where last mounted */</span>
+	__le32	s_algorithm_usage_bitmap; <span style="color:#000080">/* For compression */</span>
+	<span style="color:#000080">/*
+</span><span style="color:#000080">	 * Performance hints.  Directory preallocation should only
+</span><span style="color:#000080">	 * happen if the EXT2_COMPAT_PREALLOC flag is on.
+</span><span style="color:#000080">	 */</span>
+	__u8	s_prealloc_blocks;	<span style="color:#000080">/* Nr of blocks to try to preallocate*/</span>
+	__u8	s_prealloc_dir_blocks;	<span style="color:#000080">/* Nr to preallocate for dirs */</span>
+	__u16	s_padding1;
+	<span style="color:#000080">/*
+</span><span style="color:#000080">	 * Journaling support valid if EXT3_FEATURE_COMPAT_HAS_JOURNAL set.
+</span><span style="color:#000080">	 */</span>
+	__u8	s_journal_uuid[<span style="color:#cd00cd">16</span>];	<span style="color:#000080">/* uuid of journal superblock */</span>
+	__u32	s_journal_inum;		<span style="color:#000080">/* inode number of journal file */</span>
+	__u32	s_journal_dev;		<span style="color:#000080">/* device number of journal file */</span>
+	__u32	s_last_orphan;		<span style="color:#000080">/* start of list of inodes to delete */</span>
+	__u32	s_hash_seed[<span style="color:#cd00cd">4</span>];		<span style="color:#000080">/* HTREE hash seed */</span>
+	__u8	s_def_hash_version;	<span style="color:#000080">/* Default hash version to use */</span>
+	__u8	s_reserved_char_pad;
+	__u16	s_reserved_word_pad;
+	__le32	s_default_mount_opts;
+ 	__le32	s_first_meta_bg; 	<span style="color:#000080">/* First metablock block group */</span>
+	__u32	s_reserved[<span style="color:#cd00cd">190</span>];	<span style="color:#000080">/* Padding to the end of the block */</span>
+};
+</code></pre></div><p>举例说明，对于第一行</p>
+<pre><code>0000400 1000 0000 4000 0000 0333 0000 3d6b 0000
+</code></pre><p><code>1000 0000</code> 表示inode数量4096（注意右边才是高地址），<code>4000 0000</code> 表示block的数量，即16384。可以看到hexdump里打印的内容和dumpe2fs里的描述信息是一致的。</p>
+<h3 id="查看block-bitmap">查看block bitmap<a hidden class="anchor" aria-hidden="true" href="#查看block-bitmap">#</a></h3>
+<blockquote>
+<p>block bitmap在第66号block上，因此偏移66*1024个字节</p>
+</blockquote>
+<pre><code>hexdump -s 67584 -n 1024 mdisk
+</code></pre><p>返回</p>
+<pre><code>0010800 ffff ffff ffff ffff ffff ffff ffff ffff
+*
+0010820 ffff ffff ffff ffff ffff 0001 0000 0000
+0010830 0000 0000 0000 0000 0000 0000 0000 0000
+*
+0010c00
+</code></pre><blockquote>
+<p>一行16个字节，即16*8个位</p>
+</blockquote>
+<p>可以看出总共有 <code>(16 * 2 + 10) * 8 + 1 = 337</code> 个位被标记成1，即有337个块被使用了</p>
+<h3 id="查看inode-bitmap">查看inode bitmap<a hidden class="anchor" aria-hidden="true" href="#查看inode-bitmap">#</a></h3>
+<blockquote>
+<p>block bitmap在第67号block上，因此偏移67*1024个字节</p>
+</blockquote>
+<pre><code>hexdump -s 68608 -n 1024 mdisk
+</code></pre><p>返回</p>
+<pre><code>0010c00 07ff 0000 0000 0000 0000 0000 0000 0000
+0010c10 0000 0000 0000 0000 0000 0000 0000 0000
+*
+0010d00 ffff ffff ffff ffff ffff ffff ffff ffff
+*
+0011000
+</code></pre><p>十六进制的<code>07ff</code>即二进制的 <code>11111111111</code>, 总用有11个1，代表有11个inode被使用了, 这个适合你可能会有疑问，明明我们什么文件都还没创建，怎么就有11个inode被使用了呢？其实这里是ext2保留了前11个inode作为内部使用。特别是2号inode，是作为整个文件系统的根目录。</p>
+<h3 id="查看inode表">查看inode表<a hidden class="anchor" aria-hidden="true" href="#查看inode表">#</a></h3>
+<p>在dumpe2fs的输出中，我们知道了每个inode的大小位128个字节，并且inode表在第68～323号块中。</p>
+<p>查看1号inode的内容</p>
+<pre><code>hexdump -s 69632 -n 128 mdisk
+</code></pre><p>返回</p>
+<pre><code>0011000 0000 0000 0000 0000 0179 637d 0179 637d
+0011010 0179 637d 0000 0000 0000 0000 0000 0000
+0011020 0000 0000 0000 0000 0000 0000 0000 0000
+*
+0011080
+</code></pre><p>同上面看超级块的方法类似，我们对照inode结构体<code>ext2_inode</code>来看</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#000080">/*
+</span><span style="color:#000080"> * Structure of an inode on the disk
+</span><span style="color:#000080"> */</span>
+<span style="color:#cdcd00">struct</span> ext2_inode {
+	__le16	i_mode;		<span style="color:#000080">/* File mode */</span>
+	__le16	i_uid;		<span style="color:#000080">/* Low 16 bits of Owner Uid */</span>
+	__le32	i_size;		<span style="color:#000080">/* Size in bytes */</span>
+	__le32	i_atime;	<span style="color:#000080">/* Access time */</span>
+	__le32	i_ctime;	<span style="color:#000080">/* Creation time */</span>
+	__le32	i_mtime;	<span style="color:#000080">/* Modification time */</span>
+	__le32	i_dtime;	<span style="color:#000080">/* Deletion Time */</span>
+	__le16	i_gid;		<span style="color:#000080">/* Low 16 bits of Group Id */</span>
+	__le16	i_links_count;	<span style="color:#000080">/* Links count */</span>
+	__le32	i_blocks;	<span style="color:#000080">/* Blocks count */</span>
+	__le32	i_flags;	<span style="color:#000080">/* File flags */</span>
+	<span style="color:#cdcd00">union</span> {
+		<span style="color:#cdcd00">struct</span> {
+			__le32  l_i_reserved1;
+		} linux1;
+		<span style="color:#cdcd00">struct</span> {
+			__le32  h_i_translator;
+		} hurd1;
+		<span style="color:#cdcd00">struct</span> {
+			__le32  m_i_reserved1;
+		} masix1;
+	} osd1;				<span style="color:#000080">/* OS dependent 1 */</span>
+	__le32	i_block[EXT2_N_BLOCKS];<span style="color:#000080">/* Pointers to blocks */</span>
+	__le32	i_generation;	<span style="color:#000080">/* File version (for NFS) */</span>
+	__le32	i_file_acl;	<span style="color:#000080">/* File ACL */</span>
+	__le32	i_dir_acl;	<span style="color:#000080">/* Directory ACL */</span>
+	__le32	i_faddr;	<span style="color:#000080">/* Fragment address */</span>
+	<span style="color:#cdcd00">union</span> {
+		<span style="color:#cdcd00">struct</span> {
+			__u8	l_i_frag;	<span style="color:#000080">/* Fragment number */</span>
+			__u8	l_i_fsize;	<span style="color:#000080">/* Fragment size */</span>
+			__u16	i_pad1;
+			__le16	l_i_uid_high;	<span style="color:#000080">/* these 2 fields    */</span>
+			__le16	l_i_gid_high;	<span style="color:#000080">/* were reserved2[0] */</span>
+			__u32	l_i_reserved2;
+		} linux2;
+		<span style="color:#cdcd00">struct</span> {
+			__u8	h_i_frag;	<span style="color:#000080">/* Fragment number */</span>
+			__u8	h_i_fsize;	<span style="color:#000080">/* Fragment size */</span>
+			__le16	h_i_mode_high;
+			__le16	h_i_uid_high;
+			__le16	h_i_gid_high;
+			__le32	h_i_author;
+		} hurd2;
+		<span style="color:#cdcd00">struct</span> {
+			__u8	m_i_frag;	<span style="color:#000080">/* Fragment number */</span>
+			__u8	m_i_fsize;	<span style="color:#000080">/* Fragment size */</span>
+			__u16	m_pad1;
+			__u32	m_i_reserved2[<span style="color:#cd00cd">2</span>];
+		} masix2;
+	} osd2;				<span style="color:#000080">/* OS dependent 2 */</span>
+};
+</code></pre></div><p>可以看到 <code>0179 637d</code> 对应 <code>i_atime</code>, 即时间戳 <code>1669136761</code></p>
+<h3 id="查看数据块">查看数据块<a hidden class="anchor" aria-hidden="true" href="#查看数据块">#</a></h3>
+<p>前面我们都是分析ext2文件系统格式化之后自带的数据内容，还没有真正自己往ext2中写入过数据。那么怎么自己往ext2里写入数据呢，我们需要执行以下几个步骤，将mdisk这个块挂载起来</p>
+<blockquote>
+<p>losetup 命令用于设置循环设备。循环设备可把文件虚拟成区块设备，籍以模拟整个文件系统，让用户得以将其视为硬盘驱动器，光驱或软驱等设备，并挂入当作目录来使用。</p>
+</blockquote>
+<pre><code>losetup /dev/loop0 mdisk
+mount /dev/loop0 /mnt/test
+</code></pre><p>此时mdisk即被挂载到<code>/mnt/test</code>目录里，进入目录后我们发现跟普通的目录看不出区别。</p>
+<p>cd 进入 <code>/mnt/test</code>, 创建一个带内容的文件a.txt</p>
+<pre><code>root@ubuntu:/mnt/test# echo abcd &gt; a.txt
+root@ubuntu:/mnt/test# ls -ali
+total 18
+     2 drwxr-xr-x 3 root root  1024 Nov 23 02:10 .
+786437 drwxr-xr-x 3 root root  4096 Nov 21 01:42 ..
+    12 -rw-r--r-- 1 root root     5 Nov 23 02:10 a.txt
+    11 drwx------ 2 root root 12288 Nov 23 01:06 lost+found
+</code></pre><p>通过上面的ls命令我们知道了a.txt是inode号为12，那么接下来我们就去mdisk的inode表里找到这个inode。</p>
+<p>每个inode的大小位128个字节，并且inode表在第68～323号块中，因此12号inode所在的偏移为<code>68 * 1024 + 11 * 128 = 71168</code>, 所以hexdump命令如下：</p>
+<pre><code>hexdump -s 71040 -n 128 mdisk
+</code></pre><p>返回</p>
+<pre><code>0011580 81a4 0000 0005 0000 1282 637d 10b3 637d
+0011590 10b3 637d 0000 0000 0000 0001 0002 0000
+00115a0 0000 0000 0001 0000 0201 0000 0000 0000
+00115b0 0000 0000 0000 0000 0000 0000 0000 0000
+*
+00115e0 0000 0000 baff 4d19 0000 0000 0000 0000
+00115f0 0000 0000 0000 0000 0000 0000 0000 0000
+0011600
+</code></pre><p><code>81a4 0000</code> 即是i_mode，转化为八进制即<code>100644</code>, 即 <code>-rw-r--r--</code>; <code>0005 0000</code> 即是i_size，转化为十进制即5;</p>
+<p>i_block是存着数据块的地址，在偏移40个字节处的位置，即 <code>0201</code>, 十进制即<code>513</code>, 所以算出实际的偏移地址为<code>513 * 1024 = 525312</code>, 而inode的size为5，因此hexdump命令如下：</p>
+<pre><code>hexdump -s 525312 -n 5 -C mdisk
+</code></pre><p>返回</p>
+<pre><code>00080400  61 62 63 64 0a                                    |abcd.|
+00080405
+</code></pre><p>可以看出，确实存放着我们之前echo的<code>abcd</code></p>
+<h3 id="查看inode的子目录">查看inode的子目录<a hidden class="anchor" aria-hidden="true" href="#查看inode的子目录">#</a></h3>
+<p>前面提到，<code>ext2_inode</code>里的<code>i_blocks</code>存放的是数据块的地址；对于文件，数据块即是存放文件内容的地方；而对于目录，数据块存放的则是目录项 <code>ext2_dir_entry_2</code>。</p>
+<div class="highlight"><pre tabindex="0" style="color:#ccc;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#000080">/*
+</span><span style="color:#000080"> * The new version of the directory entry.  Since EXT2 structures are
+</span><span style="color:#000080"> * stored in intel byte order, and the name_len field could never be
+</span><span style="color:#000080"> * bigger than 255 chars, it&#39;s safe to reclaim the extra byte for the
+</span><span style="color:#000080"> * file_type field.
+</span><span style="color:#000080"> */</span>
+<span style="color:#cdcd00">struct</span> ext2_dir_entry_2 {
+	__le32	inode;			<span style="color:#000080">/* Inode number */</span>
+	__le16	rec_len;		<span style="color:#000080">/* Directory entry length */</span>
+	__u8	name_len;		<span style="color:#000080">/* Name length */</span>
+	__u8	file_type;
+	<span style="color:#00cd00">char</span>	name[];			<span style="color:#000080">/* File name, up to EXT2_NAME_LEN */</span>
+};
+</code></pre></div><p>我们之前在根目录底下创建过<code>a.txt</code>文件，现在我们就去根目录对应的inode表(2号inode)里去查看它是如何存储的。</p>
+<p>首先查看2号inode表</p>
+<pre><code>hexdump -s 69760 -n 128 mdisk
+</code></pre><p>返回</p>
+<pre><code>0011080 41ed 0000 0400 0000 2d34 637e 2d32 637e
+0011090 2d32 637e 0000 0000 0000 0003 0002 0000
+00110a0 0000 0000 0001 0000 0144 0000 0000 0000
+00110b0 0000 0000 0000 0000 0000 0000 0000 0000
+</code></pre><p>再通过十六进制 <code>0144</code> 算出偏移十进制 <code>324 * 1024 = 331776</code></p>
+<pre><code># hexdump -s 331776 -n 128 mdisk -C
+
+00051000  02 00 00 00 0c 00 01 02  2e 00 00 00 02 00 00 00  |................|
+00051010  0c 00 02 02 2e 2e 00 00  0b 00 00 00 14 00 0a 02  |................|
+00051020  6c 6f 73 74 2b 66 6f 75  6e 64 00 00 0c 00 00 00  |lost+found......|
+00051030  d4 03 05 01 61 2e 74 78  74 00 00 00 00 00 00 00  |....a.txt.......|
+00051040  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+00051080
+</code></pre><p>可以看到确实是存储着inode对应目录里的子项</p>
+<h2 id="ext2的文件数据如何管理">ext2的文件数据如何管理<a hidden class="anchor" aria-hidden="true" href="#ext2的文件数据如何管理">#</a></h2>
+<p>在Ext2文件系统中，文件数据的位置信息存储在ext2_inode的1block成员变量中。该变量是一个32位整型数组，共有15个成员，前12个成员中的内容为文件数据的物理地址，后3个成员存储的内容指向磁盘数据块。数据块中存储的数据并不是文件的数据，而是地址数据。由于在这种情況下数据块存储的并非是文件数据，而是inode与文件数据中间的数据，因此被称为间接块 (Indirect Block，简称IB）</p>
+<p><img loading="lazy" src="../data.png" alt=""  />
+</p>
+<p>举例，对于小文件来说，通过直接引用就可以完成数据的存储和查找。比如，在格式化时文件逻辑块大小是4KB, 48KB（4Kx12） 以内的文件都可以通过直接引用完成。但是，如果文件大于48KB，直接引用则无法容纳所有的数据，48KB以外的数据先要通过一级间接引用进行存储。以此类推，当超过本级存储空间的最大值时，要启用下一级进行文件数据的管理。</p>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lambertxiao.github.io/tags/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/">文件系统</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lambertxiao.github.io/posts/%E8%81%8A%E8%81%8A%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/doc/">
+    <span class="title">« Prev Page</span>
+    <br>
+    <span>聊聊内存模型</span>
+  </a>
+  <a class="next" href="https://lambertxiao.github.io/posts/c&#43;&#43;/%E5%AE%89%E8%A3%85%E6%96%B0%E7%89%88gcc/doc/">
+    <span class="title">Next Page »</span>
+    <br>
+    <span>安装新版gcc</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 文件系统之ext2 on twitter"
+        href="https://twitter.com/intent/tweet/?text=%e6%96%87%e4%bb%b6%e7%b3%bb%e7%bb%9f%e4%b9%8bext2&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E6%2596%2587%25E4%25BB%25B6%25E7%25B3%25BB%25E7%25BB%259F-ext2%2fdoc%2f&amp;hashtags=%e6%96%87%e4%bb%b6%e7%b3%bb%e7%bb%9f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 文件系统之ext2 on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E6%2596%2587%25E4%25BB%25B6%25E7%25B3%25BB%25E7%25BB%259F-ext2%2fdoc%2f&amp;title=%e6%96%87%e4%bb%b6%e7%b3%bb%e7%bb%9f%e4%b9%8bext2&amp;summary=%e6%96%87%e4%bb%b6%e7%b3%bb%e7%bb%9f%e4%b9%8bext2&amp;source=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E6%2596%2587%25E4%25BB%25B6%25E7%25B3%25BB%25E7%25BB%259F-ext2%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 文件系统之ext2 on reddit"
+        href="https://reddit.com/submit?url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E6%2596%2587%25E4%25BB%25B6%25E7%25B3%25BB%25E7%25BB%259F-ext2%2fdoc%2f&title=%e6%96%87%e4%bb%b6%e7%b3%bb%e7%bb%9f%e4%b9%8bext2">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 文件系统之ext2 on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E6%2596%2587%25E4%25BB%25B6%25E7%25B3%25BB%25E7%25BB%259F-ext2%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 文件系统之ext2 on whatsapp"
+        href="https://api.whatsapp.com/send?text=%e6%96%87%e4%bb%b6%e7%b3%bb%e7%bb%9f%e4%b9%8bext2%20-%20https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E6%2596%2587%25E4%25BB%25B6%25E7%25B3%25BB%25E7%25BB%259F-ext2%2fdoc%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 文件系统之ext2 on telegram"
+        href="https://telegram.me/share/url?text=%e6%96%87%e4%bb%b6%e7%b3%bb%e7%bb%9f%e4%b9%8bext2&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f%25E6%2596%2587%25E4%25BB%25B6%25E7%25B3%25BB%25E7%25BB%259F-ext2%2fdoc%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_KY25sRiRtb" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

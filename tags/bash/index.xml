@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Bash on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/bash/</link>
+    <description>Recent content in Bash on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Fri, 29 May 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/bash/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>curl使用socks5代理的正确姿势</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2020-05-29-curl%E4%BD%BF%E7%94%A8socks5%E4%BB%A3%E7%90%86%E7%9A%84%E6%AD%A3%E7%A1%AE%E5%A7%BF%E5%8A%BF/</link>
+      <pubDate>Fri, 29 May 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2020-05-29-curl%E4%BD%BF%E7%94%A8socks5%E4%BB%A3%E7%90%86%E7%9A%84%E6%AD%A3%E7%A1%AE%E5%A7%BF%E5%8A%BF/</guid>
+      <description>使用以下参数，不在local端去解析域名
+--socks5-hostname HOST[:PORT] SOCKS5 proxy, pass host name to proxy --socks5-hostname 等同于 -x socks5h
+示例:
+curl -x socks5h://127.0.0.1:36000 https://www.google.com.hk </description>
+    </item>
+    
+    <item>
+      <title>Shell分组计数</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2020-05-25-shell%E5%88%86%E7%BB%84%E8%AE%A1%E6%95%B0/</link>
+      <pubDate>Mon, 25 May 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2020-05-25-shell%E5%88%86%E7%BB%84%E8%AE%A1%E6%95%B0/</guid>
+      <description>先将内容排序, 排序后计数, 再按数量排序
+sort | uniq -c | sort -rnk 1 r表示逆向排序， n表示按数值排序， k表示按第k列进行排序</description>
+    </item>
+    
+    <item>
+      <title>Linux下统计代码的工具Cloc</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2019-08-16-linux%E4%B8%8B%E7%BB%9F%E8%AE%A1%E4%BB%A3%E7%A0%81%E7%9A%84%E5%B7%A5%E5%85%B7cloc/</link>
+      <pubDate>Thu, 15 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2019-08-16-linux%E4%B8%8B%E7%BB%9F%E8%AE%A1%E4%BB%A3%E7%A0%81%E7%9A%84%E5%B7%A5%E5%85%B7cloc/</guid>
+      <description>Cloc cloc是linux平台里可以统计代码的工具，并非简单的统计代码的行数，能同时针对各种语言做分类输出
+安装 sudo apt install cloc 使用 cloc $filePath 返回结果：
+$ cloc . 1339 text files. 1302 unique files. 160 files ignored. github.com/AlDanial/cloc v 1.74 T=3.75 s (321.1 files/s, 135799.4 lines/s) -------------------------------------------------------------------------------- Language files blank comment code -------------------------------------------------------------------------------- Go 940 39122 40781 354176 C 37 6806 9795 31924 Markdown 49 1854 0 6552 C/C++ Header 37 1330 3531 3864 Assembly 38 503 884 2402 YAML 70 145 18 1955 Bourne Shell 13 139 323 856 JSON 1 2 0 637 make 9 73 96 296 Protocol Buffers 3 38 27 165 SQL 1 1 0 155 Python 1 14 13 99 Bourne Again Shell 1 8 3 52 TOML 2 5 45 11 Dockerfile 1 1 0 8 -------------------------------------------------------------------------------- SUM: 1203 50041 55516 403152 -------------------------------------------------------------------------------- </description>
+    </item>
+    
+    <item>
+      <title>Shell取值表达式</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2019-08-15-shell%E9%87%8C%E7%9A%84%E5%8F%98%E9%87%8F%E5%8F%96%E5%80%BC/</link>
+      <pubDate>Thu, 15 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2019-08-15-shell%E9%87%8C%E7%9A%84%E5%8F%98%E9%87%8F%E5%8F%96%E5%80%BC/</guid>
+      <description>Shell里的变量取值 # 假如 $file 没有设定，则使用 my.file.txt 作传回值。(空值及非空值时不作处理) ${file-my.file.txt} # 假如 $file 没有设定或为空值，则使用 my.file.txt 作传回值。 (非空值时不作处理) ${file:-my.file.txt} # 假如 $file 设为空值或非空值，均使用 my.file.txt 作传回值。(没设定时不作处理) ${file+my.file.txt} # 若 $file 为非空值，则使用 my.file.txt 作传回值。 (没设定及空值时不作处理) ${file:+my.file.txt} # 若 $file 没设定，则使用 my.file.txt 作传回值，同时将 $file 赋值为 my.file.txt 。 (空值及非空值时不作处理) ${file=my.file.txt} # 若 $file 没设定或为空值，则使用 my.file.txt 作传回值，同时将 $file 赋值为 my.file.txt 。 (非空值时不作处理) ${file:=my.file.txt} # 若 $file 没设定，则将 my.file.txt 输出至 STDERR。 (空值及非空值时不作处理) ${file?my.file.txt} # 若 $file 没设定或为空值，则将 my.file.txt 输出至 STDERR。 (非空值时不作处理) ${file:?</description>
+    </item>
+    
+  </channel>
+</rss>

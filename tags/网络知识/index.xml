@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>网络知识 on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/</link>
+    <description>Recent content in 网络知识 on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Fri, 25 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>golang-http2实现</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-http2%E7%9A%84%E5%AE%9E%E7%8E%B0/doc/</link>
+      <pubDate>Fri, 25 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-http2%E7%9A%84%E5%AE%9E%E7%8E%B0/doc/</guid>
+      <description>扒开go源码，看看http2在go里的实现</description>
+    </item>
+    
+    <item>
+      <title>DNS记录都有哪些？</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/dns%E8%A7%A3%E6%9E%90/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/dns%E8%A7%A3%E6%9E%90/</guid>
+      <description>NS记录、A记录都是些啥</description>
+    </item>
+    
+    <item>
+      <title>Http2简介</title>
+      <link>https://lambertxiao.github.io/posts/http2-%E7%AE%80%E4%BB%8B/http2/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/http2-%E7%AE%80%E4%BB%8B/http2/</guid>
+      <description>二进制协议、多路复用、流量控制、首部压缩</description>
+    </item>
+    
+    <item>
+      <title>HTTPS是怎么建立的？</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/http/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/http/</guid>
+      <description>HTTP + TLS = HTTPS</description>
+    </item>
+    
+    <item>
+      <title>UDP协议</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/udp/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/udp/</guid>
+      <description>觉得TCP太慢了，何不试试我？</description>
+    </item>
+    
+    <item>
+      <title>加密算法之ECDH</title>
+      <link>https://lambertxiao.github.io/posts/%E5%8A%A0%E5%AF%86%E7%AE%97%E6%B3%95-ecdh/ecdh%E7%AE%97%E6%B3%95/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E5%8A%A0%E5%AF%86%E7%AE%97%E6%B3%95-ecdh/ecdh%E7%AE%97%E6%B3%95/</guid>
+      <description>ECDH算法 ECDH全称是椭圆曲线迪菲-赫尔曼秘钥交换（Elliptic Curve Diffie–Hellman key Exchange），主要是用来在一个不安全的通道中建立起安全的共有加密资料，一般来说交换的都是私钥，这个密钥一般作为“对称加密”的密钥而被双方在后续数据传输中使用。
+算法流程 我们通过一个经典的场景，Alice和Bob要在一条不安全的线路上交换秘钥，交换的秘钥不能被中间人知晓。 首先，双方约定使用ECDH秘钥交换算法，这个时候双方也知道了ECDH算法里的一个大素数P，这个P可以看做是一个算法中的常量。 P的位数决定了攻击者破解的难度。还有一个整数g用来辅助整个秘钥交换，g不用很大，一般是2或者5，双方知道g和p之后就开始了ECDH交换秘钥的过程了。
+ Alice生成一个整数a作为私钥，需要利用p，g，a通过公式 g^a mod p = A 生成A作为公钥传递。 Bob通过链路收到Alice发来的p，g，A，知道了Alice的公钥A。这个时候Bob也生成自己的私钥b，然后通过公式 g^b mod p = B 生成自己公钥B。 Alice收到Bob发来的公钥B以后，同样通过 B^a mod p = K 生成公共秘钥K，这样Alice和Bob就通过不传递私钥a和b完成了对公共秘钥K的协商。  举个栗子 我们通过代入具体的数字来重复一下上面的过程：
+ Alice和Bob同意使用质数p和整数g： p = 83, g = 8  Alice选择秘钥 a = 9, 生成公钥 g^a mod p = A 并发送 (8^9) mod 83 = 5 Bob选择秘钥 b = 21, 生成公钥 A^b mod p = K 并发送 (8^21) mod 83 = 18</description>
+    </item>
+    
+    <item>
+      <title>啥是KCP协议？</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/kcp/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/kcp/</guid>
+      <description>TCP退下，让我来！</description>
+    </item>
+    
+    <item>
+      <title>未来传输协议之星-QUIC</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/quic/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/quic/</guid>
+      <description>我其实是个缝合怪，UDP + TLS + HTTP/2</description>
+    </item>
+    
+    <item>
+      <title>网络世界的传输基石-TCP</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/tcp/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/tcp/</guid>
+      <description>姜还是老的辣</description>
+    </item>
+    
+  </channel>
+</rss>

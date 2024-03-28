@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>koa on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/koa/</link>
+    <description>Recent content in koa on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Fri, 05 Jun 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/koa/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>koa的洋葱设计模型</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2020-06-05-koa%E7%9A%84%E6%B4%8B%E8%91%B1%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%9E%8B/</link>
+      <pubDate>Fri, 05 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2020-06-05-koa%E7%9A%84%E6%B4%8B%E8%91%B1%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%9E%8B/</guid>
+      <description>async function a(ctx, next) { console.log(&amp;#34;invoke a&amp;#34;) await next() console.log(&amp;#34;exit a&amp;#34;) } async function b(ctx, next) { console.log(&amp;#34;invoke b&amp;#34;) await next() console.log(&amp;#34;exit b&amp;#34;) } function compose(middleware) { return (ctx, next) =&amp;gt; { let index = -1 async function dispatch(i) { if (i &amp;lt;= index) { throw new Error(&amp;#39;next() called multiple times&amp;#39;) } index = i let fn = middleware[i] if (i === middleware.length) { fn = next } if (!fn) { return } return await fn(ctx, () =&amp;gt; { return dispatch(i + 1) }) } return dispatch(0) } } let func = compose([a, b]) func(&amp;#39;context&amp;#39;, () =&amp;gt; { console.</description>
+    </item>
+    
+  </channel>
+</rss>

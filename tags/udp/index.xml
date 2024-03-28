@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>UDP on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/udp/</link>
+    <description>Recent content in UDP on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Tue, 04 Sep 2018 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/udp/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>UDP协议</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-06-udp/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-06-udp/</guid>
+      <description>UDP协议 UDP协议全称是用户数据报协议，在网络中它与TCP协议一样用于处理数据包，是一种无连接的协议。在OSI模型中，在第四层——传输层，处于IP协议的上一层。UDP有不提供数据包分组、组装和不能对数据包进行排序的缺点，也就是说，当报文发送之后，是无法得知其是否安全完整到达的。
+  基本特点
+  无连接的
+  不保证可靠交付
+  面向报文的，在添加了UDP协议的首部后就直接塞给UP层了
+  没有拥塞控制
+  支持一对一，一对多和多对多的交互通信
+  UDP首部开销小
+    UDP首部格式
+  源端口
+  目的端口
+  长度
+  校验和（检测UDP数据包在传输中是否有错，有错就丢弃）
+    </description>
+    </item>
+    
+  </channel>
+</rss>

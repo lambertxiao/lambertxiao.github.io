@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>数据库 on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/</link>
+    <description>Recent content in 数据库 on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Sun, 06 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>如何通过存储过程计算用户留存</title>
+      <link>https://lambertxiao.github.io/posts/%E4%B8%9A%E5%8A%A1%E8%AE%A1%E7%AE%97-%E7%95%99%E5%AD%98/%E7%95%99%E5%AD%98%E8%AE%A1%E7%AE%97/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E4%B8%9A%E5%8A%A1%E8%AE%A1%E7%AE%97-%E7%95%99%E5%AD%98/%E7%95%99%E5%AD%98%E8%AE%A1%E7%AE%97/</guid>
+      <description>留存计算 DELIMITER $$ CREATE DEFINER=`vpRoot`@`%` PROCEDURE `retention`(IN datestr VARCHAR(20)) BEGIN DECLARE s INT DEFAULT 0; DECLARE sdate VARCHAR(20) CHARACTER SET utf8; DECLARE country_zh VARCHAR(20) CHARACTER SET utf8; DECLARE pkg_name VARCHAR(50) CHARACTER SET utf8 ; DECLARE register_num INT DEFAULT 0; DECLARE keep_number_1 INT DEFAULT 0; DECLARE keep_number_2 INT DEFAULT 0; DECLARE keep_number_3 INT DEFAULT 0; DECLARE keep_number_7 INT DEFAULT 0; DECLARE keep_number_15 INT DEFAULT 0; DECLARE keep_number_30 INT DEFAULT 0; DECLARE report CURSOR FOR SELECT t5.</description>
+    </item>
+    
+    <item>
+      <title>数据库索引</title>
+      <link>https://lambertxiao.github.io/posts/database-%E7%B4%A2%E5%BC%95%E7%9B%B8%E5%85%B3/%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E7%B4%A2%E5%BC%95/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/database-%E7%B4%A2%E5%BC%95%E7%9B%B8%E5%85%B3/%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E7%B4%A2%E5%BC%95/</guid>
+      <description>B树和B+树</description>
+    </item>
+    
+  </channel>
+</rss>

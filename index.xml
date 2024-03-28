@@ -1,0 +1,2201 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/</link>
+    <description>Recent content on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Thu, 15 Feb 2024 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>使用GDB调试程序</title>
+      <link>https://lambertxiao.github.io/posts/gdb_usage/doc/</link>
+      <pubDate>Thu, 15 Feb 2024 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/gdb_usage/doc/</guid>
+      <description>好记性不如烂笔头</description>
+    </item>
+    
+    <item>
+      <title>什么是NUMA</title>
+      <link>https://lambertxiao.github.io/posts/numa/doc/</link>
+      <pubDate>Mon, 12 Feb 2024 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/numa/doc/</guid>
+      <description>NUMA 今天在学习DPDK的过程中接触到了NUMA，特此记录
+什么是NUMA NUMA全称为 Non-uniform memory access, 即非一致性内存访问，它是一种计算机内存设计方案，主要用于多处理器的计算机中。但在理解NUMA之前， 我们需要先了解SMP（Symmetric multiprocessing），即对称性多处理；在SMP架构中，CPU和内存的关系如下图所示：
+所有的CPU核心处理器都通过系统总线与内存进行数据交互（中间有Cache层会对数据进行访问加速），这架构很简单对吧，一目了然，但是这个架构存在一个问题， 就是当CPU的核心处理器越来越多时，由于总线在同一时刻只能有一个设备在访问，因此CPU的核心处理器之间会相互争夺总线的使用权，核心越多， 争夺得越激烈，运行效率就越低。
+在这种情况下，NUMA诞生了，NUMA的架构其实也很简单，如下
+NUMA 尝试通过为每个处理器提供单独的内存来解决此问题，从而避免多个处理器尝试寻址同一内存时对性能造成的影响。 NUMA定义了一个叫Node的概念，每一个Node会包含一组CPU的处理器，内存控制器（Memory Controler）和一组内存。CPU的处理器通过内存控制器访问内存。 Node与Node之间是物理上相互连接着的。 Node内的处理器访问Node里的内存，称为local access，Node内的处理器访问其他Node的内存，称为remote access。
+怎么使用NUMA 经过前面的介绍，我们知道，local access是在一个Node内部发生的，争夺内存控制器的使用权的处理器数量是有限的，因此它必然是很高效的； 我们在编程过程中也要尽量让程序在一个Node内运行，而不要在各个Node间相互调度。在Linux上，提供了一个 numactl 的工具可以帮助我们对处理器的numa策略进行配置。
+显示node的配置 numactl -H available: 2 nodes (0-1) node 0 cpus: 0 1 2 3 4 5 6 7 8 9 20 21 22 23 24 25 26 27 28 29 node 0 size: 63822 MB node 0 free: 20142 MB node 1 cpus: 10 11 12 13 14 15 16 17 18 19 30 31 32 33 34 35 36 37 38 39 node 1 size: 64507 MB node 1 free: 19918 MB node distances: node 0 1 0: 10 21 1: 21 10 可以看到，我的机器上被划分了两个Node，并且每个node分配的内存在60GB左右，其中 Node0包含处理器（0 1 2 3 4 5 6 7 8 9 20 21 22 23 24 25 26 27 28 29）， Node1包含（10 11 12 13 14 15 16 17 18 19 30 31 32 33 34 35 36 37 38 39）。 Node Distances是NUMA架构中的节点距离，指的是从一个节点访问另一个节点上的内存所需要付出的代价或延迟。</description>
+    </item>
+    
+    <item>
+      <title>什么是UIO</title>
+      <link>https://lambertxiao.github.io/posts/uio/doc/</link>
+      <pubDate>Mon, 12 Feb 2024 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/uio/doc/</guid>
+      <description>UIO 又是学DPDK的时候接触到的知识，DPDK里有特别多的用户态的驱动，实现用户态驱动需要会用到的技术之一就是UIO
+什么是UIO UIO全称为UserSpace I/O，是Linux内核提供的一个用户态驱动框架；它由两部分组成，一个非常小巧的内核模块和一个用户态驱动；
+为什么需要用UIO 对于许多类型的设备，创建Linux内核驱动程序是多余的。真正需要的是能处理硬件的中断和访问设备的内存空间。控制设备的逻辑不一定必须在内核内，因为设备不需要利用内核提供的任何其他资源。一种常见的设备类型是工业I/O卡。为了解决这种情况，UIO诞生了。对于典型的工业I/O卡，只需要一个非常小的内核模块。驱动程序的主要部分将在用户空间中运行。这简化了开发并降低了内核模块中出现严重错误的风险。
+什么硬件适合用UIO UIO不是一个通用的驱动程序接口。已经被其他内核子系统处理得很好的设备（如网络、串行或USB）不适合UIO驱动程序。非常适合UIO驱动程序的硬件可以满足以下所有要求：
+ 设备具有可映射的内存。通过写入该存储器，可以完全控制该设备。 设备通常会产生中断。 该设备不适合标准内核子系统之一。  使用UIO的好处  只需编写和维护一个小的内核模块。 在用户空间中开发驱动程序的主要部分，使用您习惯的所有工具和库。 驱动程序中的错误不会使内核崩溃。 你的驱动程序的更新可以在不重新编译内核的情况下进行。  UIO的困局 UIO的设计初衷是为了提供一种简单、轻量级的用户空间I/O框架，使得用户空间程序能够直接访问设备I/O内存和中断，而不需要内核空间的参与。因此，
+ 不支持 DMA（不受 IOMMU 的保护），也就意味着没有DMA为它做虚拟地址到物理地址的转化，只能直接访问物理地址，危险性极高 由于不支持DMA，所以UIO只能在用户空间操作硬件设备的寄存器空间，而无法支持通过DMA把内核空间的数据传送到用户空间。对于需要通过DMA进行大量数据传输的I/O设备，如网卡、显卡等，UIO就无法满足需求，需要使用其他机制，如VFIO（Virtual Function I/O）等。 UIO需要root权限。  </description>
+    </item>
+    
+    <item>
+      <title>什么是VFIO</title>
+      <link>https://lambertxiao.github.io/posts/vfio/doc/</link>
+      <pubDate>Mon, 12 Feb 2024 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/vfio/doc/</guid>
+      <description>VFIO 什么是VFIO  VFIO可以简单理解为一个增强版的UIO，上一个文章里提到了UIO的几个不足，不支持DMA，仅支持有限的中断，需要用root访问等，而VFIO就是为了弥补这些不足诞生的。
+ VFIO也是linux提供的一个用户态驱动框架，使用VFIO能开发用户态驱动。VFIO 允许用户将物理设备直接分配给虚拟机，从而让虚拟机获得接近物理机的性能。（VFIO 可以绕过虚拟化管理程序，直接将虚拟机的 I/O 请求发送到物理设备）
+为什么要用VFIO 一些应用程序，特别是在高性能计算领域，由于需要很低的延时开销，需要从用户空间直接访问设备。在没有VFIO的时候，有两个选择，
+ 可以选择直接开发内核驱动（复杂又繁琐，稳定性差） 使用UIO框架，但该框架没有IOMMU保护的概念，有限的中断支持，并且需要root权限才能访问PCI配置空间等内容。  VFIO驱动程序框架旨在解决这些问题，取代KVM PCI特定的设备分配代码，并提供比UIO更安全，功能更丰富的用户空间驱动程序环境。
+VFIO被用在哪里  KVM QEMU VMware ESXi Hyper-V  怎么使用 VFIO 使用用户态驱动来实现设备直通。用户态驱动运行在虚拟机的用户空间中，可以直接访问物理设备。
+VFIO 的工作流程如下：
+ 用户在虚拟机中安装 VFIO 驱动。 用户将物理设备分配给虚拟机。 VFIO 驱动在虚拟机的用户空间中启动。 VFIO 驱动访问物理设备。 VFIO 提供了一系列 API 来管理设备直通。这些 API 允许用户：   列出可用的物理设备 将物理设备分配给虚拟机 从虚拟机中释放物理设备 配置 VFIO 驱动  VFIO的组成 Device（设备） 设备是指要操作的硬件设备，这些设备可以是网卡、显卡、存储控制器等。在VFIO中，设备是通过IOMMU（Input/Output Memory Management Unit）进行管理的。IOMMU是一个硬件单元，它可以把设备的IO地址映射成虚拟地址，为设备提供页表映射，使得设备可以直接通过DMA（Direct Memory Access）方式访问内存。 设备在VFIO中是被隔离和暴露给虚拟机或用户空间程序的关键资源。通过VFIO，设备可以被分配给特定的虚拟机或用户空间程序，以实现设备直通。
+Group（组） Group是IOMMU能进行DMA隔离的最小硬件单元。一个group可以包含一个或多个device，具体取决于物理平台上硬件的IOMMU拓扑结构，Group是硬件上的划分。这意味着，如果一个设备在硬件拓扑上是独立的，那么它本身就构成一个IOMMU group。而如果多个设备在硬件上是互联的，需要相互访问数据，那么这些设备需要被放到同一个IOMMU group中。在VFIO中，group是设备直通的最小单位。也就是说，当设备直通给一个虚拟机时，group内的所有设备都必须同时直通给该虚拟机。
+Container（容器） Container是由多个group组成的集合，Container是逻辑上的划分，为了让内部的group能共享某些资源。 虽然group是VFIO的最小隔离单元，但在某些情况下，将多个group组合到一个container中可以提高系统的性能。例如，当多个group需要共享一个页表时，将它们组合到一个container中是有益的。此外，将多个group放入一个container中也方便用户进行管理和控制。</description>
+    </item>
+    
+    <item>
+      <title>什么是Virtio</title>
+      <link>https://lambertxiao.github.io/posts/virtio/doc/</link>
+      <pubDate>Mon, 12 Feb 2024 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/virtio/doc/</guid>
+      <description>Virtio 什么是Virtio Virtio是一种半虚拟化 I/O 设备虚拟化技术，用于在虚拟机管理程序（hypervisor）中实现虚拟设备。 它提供了一种通用的、高性能的设备模型和应用编程接口 (API)，可以减少虚拟化开销并提高虚拟机的性能。
+ 半虚拟化是一种虚拟化技术，它介于完全虚拟化和裸机运行之间。与完全虚拟化不同，半虚拟化需要对操作系统内核进行修改，使其意识到自己正在运行在虚拟化环境中。
+ 为什么使用Virtio Virtio的出现是为了解决传统虚拟化设备模拟的性能问题。传统虚拟化设备模拟通常需要在虚拟机管理程序和虚拟机之间进行多层数据复制，这会导致性能下降。Virtio通过半虚拟化技术将设备驱动程序的一部分功能移到虚拟机中，从而减少了数据复制的次数，提高了性能。
+传统虚拟化   完全虚拟化 完全虚拟化是一种完全模拟物理硬件的虚拟化技术。在这种方式下，虚拟机管理程序（Hypervisor）会创建一个虚拟的硬件环境，包括虚拟 CPU、虚拟内存、虚拟磁盘、虚拟网络等。虚拟机操作系统认为自己正在运行在真实的物理硬件上。完全虚拟化的实现方式主要有两种：
+ 软件二进制翻译：虚拟机管理程序会将虚拟机操作系统的二进制指令翻译成真实 CPU 可以执行的指令。这种方式可以支持任何操作系统，但性能会受到一定的影響。 动态二进制翻译：虚拟机管理程序会在虚拟机操作系统运行时动态地翻译指令。这种方式可以提高性能，但需要对操作系统内核进行一些修改。    硬件辅助虚拟化
+硬件辅助虚拟化是一种利用 CPU 和其他硬件提供的虚拟化功能的虚拟化技术。在这种方式下，虚拟机管理程序可以利用 CPU 的虚拟化扩展指令（如 Intel VT 或 AMD SVM）来提高虚拟化的性能和效率。硬件辅助虚拟化的实现方式主要有两种：
+ 全虚拟化：虚拟机管理程序仍然会模拟一部分硬件，但会利用 CPU 的虚拟化扩展指令来提高性能。 半虚拟化：虚拟机操作系统需要进行一些修改，以便直接使用 CPU 的虚拟化扩展指令。这种方式可以获得更高的性能，但对操作系统的兼容性要求更高。    Virtio的主要优点包括：
+ 提高性能：Virtio通过减少数据复制的次数来提高虚拟机的性能。 提高可靠性：Virtio使用共享内存机制进行通信，这可以提高虚拟机的可靠性。 提高可移植性：Virtio提供了一种通用的设备模型，可以移植到不同的虚拟机管理程序和虚拟机操作系统中。  Virtio应用在哪里 Virtio主要用于虚拟机环境中，包括服务器虚拟化、桌面虚拟化和云计算等。
+Virtio工作原理 Virtio采用前端-后端架构
+ 前端驱动程序(FE), FE驱动程序只需要提供配置接口、传递消息、生成请求和启动后端virtio驱动程序的服务。因此，FE驱动程序易于实现，并且消除了模拟设备的性能开销 后端驱动程序(BE), BE驱动程序在主机操作系统的用户区或内核区运行，使用来自FE驱动程序的请求并将其发送到主机本地设备驱动程序。一旦主机本地设备驱动程序完成请求，BE驱动程序通知FE驱动程序请求完成 前端驱动程序和后端驱动程序通过虚拟队列（Virtqueue）进行通信。虚拟队列是一种共享内存机制，用于在虚拟机管理程序和虚拟机之间传递数据。 virtio支持PCI/PCIe总线和MMIO总线  参考文章：https://projectacrn.github.io/latest/developer-guides/hld/hld-virtio-devices.html#virtio-apis</description>
+    </item>
+    
+    <item>
+      <title>进程的内存是怎么布局的</title>
+      <link>https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/</link>
+      <pubDate>Sun, 15 Oct 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/doc/</guid>
+      <description>今天来探讨一下 linux 环境下进程的内存布局</description>
+    </item>
+    
+    <item>
+      <title>openssl生成自签名证书</title>
+      <link>https://lambertxiao.github.io/posts/openssl%E7%94%9F%E6%88%90%E8%87%AA%E7%AD%BE%E5%90%8D%E8%AF%81%E4%B9%A6/doc/</link>
+      <pubDate>Thu, 20 Apr 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/openssl%E7%94%9F%E6%88%90%E8%87%AA%E7%AD%BE%E5%90%8D%E8%AF%81%E4%B9%A6/doc/</guid>
+      <description>工作中用到了，由于需要签入指定的域名，折腾了一番，写篇文章记录一下
+生成证书的配置文件 创建openssl.conf，填入下面内容
+[req] distinguished_name = req_distinguished_name req_extensions = v3_req [req_distinguished_name] countryName = country stateOrProvinceName = province localityName = city organizationName = company name commonName = domain name or ip [v3_req] subjectAltName = @alt_names [alt_names] DNS.1=test.com DNS.2=www.test.com 生成私钥文件 openssl genrsa -out test.key 2048 生成证书的request文件 openssl req -new -key test.key -out test.csr -config openssl.conf -subj &#39;/C=CN/ST=BeiJing/L=BeiJing/O=test.com/OU=test/CN=test/emailAddress=test@qq.com&#39; 查看生成的request文件 openssl req -in test.csr -text -noout 生成证书文件 openssl x509 -req -days 3650 -sha1 -in test.</description>
+    </item>
+    
+    <item>
+      <title>Linux-dlsym</title>
+      <link>https://lambertxiao.github.io/posts/linux-dlsym/doc/</link>
+      <pubDate>Thu, 13 Apr 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/linux-dlsym/doc/</guid>
+      <description>dlsym(dynamic link symbol)</description>
+    </item>
+    
+    <item>
+      <title>怎么使用pkg-config</title>
+      <link>https://lambertxiao.github.io/posts/%E5%B7%A5%E5%85%B7%E4%BB%8B%E7%BB%8D-pkg-config/doc/</link>
+      <pubDate>Wed, 12 Apr 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E5%B7%A5%E5%85%B7%E4%BB%8B%E7%BB%8D-pkg-config/doc/</guid>
+      <description>pkg-config 是一种用于获取已安装软件包编译选项的工具</description>
+    </item>
+    
+    <item>
+      <title>如何使用mmap读写文件</title>
+      <link>https://lambertxiao.github.io/posts/%E9%9B%B6%E6%8B%B7%E8%B4%9D-mmap/doc/</link>
+      <pubDate>Sun, 09 Apr 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E9%9B%B6%E6%8B%B7%E8%B4%9D-mmap/doc/</guid>
+      <description>读写文件新姿势</description>
+    </item>
+    
+    <item>
+      <title>gtest-使用指北</title>
+      <link>https://lambertxiao.github.io/posts/gtest-lesson/doc/</link>
+      <pubDate>Wed, 29 Mar 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/gtest-lesson/doc/</guid>
+      <description>少年，你懂测试驱动开发吗？</description>
+    </item>
+    
+    <item>
+      <title>cmake-简单指北</title>
+      <link>https://lambertxiao.github.io/posts/cmake-lesson/doc/</link>
+      <pubDate>Tue, 28 Mar 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/cmake-lesson/doc/</guid>
+      <description>入坑C/C++前的一座大山</description>
+    </item>
+    
+    <item>
+      <title>如何使用liburing读写磁盘</title>
+      <link>https://lambertxiao.github.io/posts/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8liburing%E8%AF%BB%E5%86%99%E7%A3%81%E7%9B%98/doc/</link>
+      <pubDate>Sun, 26 Mar 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8liburing%E8%AF%BB%E5%86%99%E7%A3%81%E7%9B%98/doc/</guid>
+      <description>什么是liburing liburing是一个用于异步IO库，它提供了简洁易用的API来处理文件I/O、网络I/O以及事件驱动I/O等各种I/O操作。liburing库基于Linux内核中的io_uring特性实现，将I/O请求从应用层转移到内核层以提高应用程序的I/O性能。
+ 由于liburing在内核版本5.1才引入，所以需要运行环境的linux内核版本大于等于5.1
+ 为什么使用liburing liburing库对于一些高并发、高吞吐量的程序，特别是网络服务器、云存储等高性能系统的设计和实现有很大的帮助作用。
+如何使用 建议参考源码里的步骤自行编译安装，源码：https://github.com/axboe/liburing
+常用函数介绍：
+ io_uring_queue_init：用于初始化io_uring并且返回其句柄。 io_uring_queue_exit：用于关闭并释放io_uring的句柄。 io_uring_get_sqe：用于获取一个可用的sqe，即I/O请求对应的队列元素数据结构。 io_uring_prep_readv：用于准备一个异步读请求。 io_uring_prep_writev：用于准备一个异步写请求。 io_uring_sqe_set_data：用于将用户私有数据关联到一个sqe（请求）中。 io_uring_submit：用于提交一个或一批异步IO请求到io_uring。 io_uring_peek_cqe：用于查看完成队列（cq）中的未处理项数量。 io_uring_wait_cqe：阻塞等待一个处理完成的io。 io_uring_cqe_get_data：用于获取特定的完成队列项（cqe），其中包含先前提交的IO请求的结果以及相关的私有数据。 io_uring_cqe_seen：用于标记一个完成队列项（cqe）已被处理过。  下面使用liburing封装一个DiskUtil实现对文件的基本读写
+编写disk_util.h头文件
+#include &amp;lt;functional&amp;gt;#include &amp;lt;string&amp;gt;#include &amp;lt;liburing.h&amp;gt;#include &amp;lt;thread&amp;gt; enum IO_OP { OP_READ = 0, OP_WRITE = 1 }; struct IORequest { IO_OP opcode; // 0: read, 1: write  char* buffer; off_t offset; size_t length; std::function&amp;lt;void(int)&amp;gt; callback; }; class DiskUtil { public: DiskUtil(const std::string&amp;amp; file_path, int block_size); ~DiskUtil(); void submit_request(IORequest* req); void start(); void stop(); private: void io_worker_thread(); int open_file(); void close_file(); void process_io_request(IORequest* req); int submit_io_request(IORequest* req); void complete_io_request(); private: int fd_ = -1; io_uring io_ring_; const std::string file_path_; const int block_size_; std::thread io_worker_; bool is_running_ = false; }; 编写disk_tool.</description>
+    </item>
+    
+    <item>
+      <title>在centos上安装多版本gcc</title>
+      <link>https://lambertxiao.github.io/posts/%E5%9C%A8centos%E4%B8%8A%E5%AE%89%E8%A3%85%E5%A4%9A%E7%89%88%E6%9C%ACgcc/doc/</link>
+      <pubDate>Sat, 25 Mar 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E5%9C%A8centos%E4%B8%8A%E5%AE%89%E8%A3%85%E5%A4%9A%E7%89%88%E6%9C%ACgcc/doc/</guid>
+      <description>前言 有些时候，我们的开发环境需要用到多个版本的gcc, g++，在centos上有方便的工具帮助我们来处理这件事
+操作步骤  安装centos-release-scl  sudo yum install centos-release-scl scl 的含义是 SoftwareCollections，软件集合之意.
+安装devtoolset  安装gcc8使用如下命令：
+yum install devtoolset-8-gcc* 安装gcc7使用如下命令：
+yum install devtoolset-7-gcc* 安装的内容会在/opt/rh目录下
+激活对应的devtoolset  scl enable devtoolset-8 bash 它实际上会调用/opt/rh/devtoolset-8/enable 脚本, 完成工具切换
+查看版本  g++ -v gcc -v </description>
+    </item>
+    
+    <item>
+      <title>如何使用libaio读写磁盘</title>
+      <link>https://lambertxiao.github.io/posts/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8libaio%E8%AF%BB%E5%86%99%E7%A3%81%E7%9B%98/doc/</link>
+      <pubDate>Sat, 25 Mar 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8libaio%E8%AF%BB%E5%86%99%E7%A3%81%E7%9B%98/doc/</guid>
+      <description>什么是libaio libaio是Linux异步I/O文件操作库，它能够提供更高效的文件异步I/O读写方式。
+为什么使用libaio 异步I/O操作是指将数据传输请求发送给操作系统后，操作系统会立即返回并继续执行其他任务，而不必等待数据传输完成，这种操作方式可以充分利用CPU和I/O设备的资源，提高系统的I/O性能。
+相比于传统的同步I/O操作方式，异步I/O操作需要通过系统调用和事件通知机制实现，在编程实现上具有较高的难度。而libaio封装了这些细节，使得开发人员可以更方便地使用异步I/O操作，从而提高应用程序的I/O性能。因此，如果需要高效的文件I/O操作，并期望充分利用系统资源，可以考虑使用libaio。
+如何使用 安装libaio
+apt install libaio-dev 接口介绍
+ io_setup：用于初始化异步IO环境并返回其句柄。 io_destroy：用于清除异步IO环境并关闭相应的文件描述符。 io_getevents：用于等待指定数量的IO事件（如读、写或错误）并将它们存储在指定的缓冲区中。 io_prep_pread：用于为读取一个文件块准备异步IO操作。 io_prep_pwrite：用于为写入一个文件块准备异步IO操作。 io_submit：用于提交一或多个异步IO请求，并将其排入异步IO环境中，等待事件处理。  下面使用libaio封装一个DiskUtil实现对文件的基本读写
+编写disk_util.h头文件
+#include &amp;lt;functional&amp;gt;#include &amp;lt;string&amp;gt;#include &amp;lt;libaio.h&amp;gt;#include &amp;lt;thread&amp;gt; enum IO_OP { OP_READ = 0, OP_WRITE = 1 }; struct IORequest { IO_OP opcode; // 0: read, 1: write  char* buffer; off_t offset; size_t length; std::function&amp;lt;void(int)&amp;gt; callback; }; class DiskUtil { public: DiskUtil(const std::string&amp;amp; file_path, int block_size); ~DiskUtil(); void submit_request(IORequest* req); void start(); void stop(); private: void io_worker_thread(); int open_file(); void close_file(); void process_io_request(IORequest* req); int submit_io_request(IORequest* req); void complete_io_request(io_context_t ctx, io_event* events, int num_events); private: int fd_ = -1; const std::string file_path_; const int block_size_; // 对应一个会话的上下文  io_context_t io_ctx_ = 0; std::thread io_worker_; bool is_running_ = false; }; 编写disk_tool.</description>
+    </item>
+    
+    <item>
+      <title>怎么使用valgrind诊断内存问题</title>
+      <link>https://lambertxiao.github.io/posts/valgrind/%E6%80%8E%E4%B9%88%E4%BD%BF%E7%94%A8valgrind%E8%AF%8A%E6%96%AD%E5%86%85%E5%AD%98%E9%97%AE%E9%A2%98/</link>
+      <pubDate>Wed, 22 Mar 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/valgrind/%E6%80%8E%E4%B9%88%E4%BD%BF%E7%94%A8valgrind%E8%AF%8A%E6%96%AD%E5%86%85%E5%AD%98%E9%97%AE%E9%A2%98/</guid>
+      <description>让valgrind为你的程序保驾护航</description>
+    </item>
+    
+    <item>
+      <title>聊聊内存模型</title>
+      <link>https://lambertxiao.github.io/posts/%E8%81%8A%E8%81%8A%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/doc/</link>
+      <pubDate>Tue, 21 Mar 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E8%81%8A%E8%81%8A%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/doc/</guid>
+      <description>原子性, 内存屏障, 内存重排序</description>
+    </item>
+    
+    <item>
+      <title>文件系统之ext2</title>
+      <link>https://lambertxiao.github.io/posts/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F-ext2/doc/</link>
+      <pubDate>Tue, 22 Nov 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F-ext2/doc/</guid>
+      <description>麻雀虽小，但五脏俱全</description>
+    </item>
+    
+    <item>
+      <title>安装新版gcc</title>
+      <link>https://lambertxiao.github.io/posts/c&#43;&#43;/%E5%AE%89%E8%A3%85%E6%96%B0%E7%89%88gcc/doc/</link>
+      <pubDate>Mon, 31 Oct 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/c&#43;&#43;/%E5%AE%89%E8%A3%85%E6%96%B0%E7%89%88gcc/doc/</guid>
+      <description>查找当前gcc的版本 http://ftp.gnu.org/gnu/gcc/
+下载对应的版本，并解压 cd ~/gcc 使用gcc自带的脚本安装依赖 ./contrib/download_prerequisites 生成makefile mkdir build &amp;amp;&amp;amp; cd build/ ../configure -enable-checking=release -enable-languages=c,c++ -disable-multilib 编译 make -j 8 如果中途出现g++: error: gengtype-lex.c: No such file or directory, 需要安装apt install flex
+安装到机器上 make install 设置环境变量 export CC=/usr/local/bin/gcc export CXX=/usr/local/bin/g++ 查看默认编译选项 echo &amp;quot;&amp;quot; | gcc -v -x c++ -E -
+解决GLIBCXX之类的错误 这是因为glibc++的版本太老，先查找
+whereis libstdc++.so.6 // /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ls -al /usr/lib/x86_64-linux-gnu/libstdc++.so.6 // /usr/lib/x86_64-linux-gnu/libstdc++.so.6 -&amp;gt; libstdc++.so.6.0.24 在gcc的build目录下查找新编译出来的libstdc++.so
+find . -name &amp;quot;*libstdc++*&amp;quot; 将找到的libstdc++.so.6.0.30放到/usr/lib/x86_64-linux-gnu/下，并通过软链替换掉原本的指向</description>
+    </item>
+    
+    <item>
+      <title>编译aws-sdk-cpp</title>
+      <link>https://lambertxiao.github.io/posts/c&#43;&#43;/%E7%BC%96%E8%AF%91aws-sdk-cpp/doc/</link>
+      <pubDate>Mon, 31 Oct 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/c&#43;&#43;/%E7%BC%96%E8%AF%91aws-sdk-cpp/doc/</guid>
+      <description>git clone https://github.com/aws/aws-sdk-cpp cd aws-sdk-cpp mkdir build &amp;amp;&amp;amp; cd build cmake ../ -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_ONLY=&amp;quot;s3&amp;quot; cmake --build aws-cpp-sdk-core cmake --build aws-cpp-sdk-s3 cmake --install aws-cpp-sdk-core --prefix ~/workspace/aws cmake --install aws-cpp-sdk-s3 --prefix ~/workspace/aws BUILD_ONLY 选项可以指定编译的模块，不同模块用;隔开</description>
+    </item>
+    
+    <item>
+      <title>c&#43;&#43;之什么是智能指针</title>
+      <link>https://lambertxiao.github.io/posts/c&#43;&#43;/%E6%99%BA%E8%83%BD%E6%8C%87%E9%92%88/doc/</link>
+      <pubDate>Sun, 17 Jul 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/c&#43;&#43;/%E6%99%BA%E8%83%BD%E6%8C%87%E9%92%88/doc/</guid>
+      <description>普通指针存在的问题 如何解决 官方库里给的方法 </description>
+    </item>
+    
+    <item>
+      <title>什么是eventfd</title>
+      <link>https://lambertxiao.github.io/posts/c&#43;&#43;/eventfd/doc/</link>
+      <pubDate>Sun, 17 Jul 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/c&#43;&#43;/eventfd/doc/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>c-野指针和悬空指针</title>
+      <link>https://lambertxiao.github.io/posts/c-%E9%87%8E%E6%8C%87%E9%92%88%E5%92%8C%E6%82%AC%E7%A9%BA%E6%8C%87%E9%92%88/doc/</link>
+      <pubDate>Thu, 07 Jul 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/c-%E9%87%8E%E6%8C%87%E9%92%88%E5%92%8C%E6%82%AC%E7%A9%BA%E6%8C%87%E9%92%88/doc/</guid>
+      <description>野指针 看代码
+void *p; // 此时p为野指针  “野指针”可能指向任意内存段，因此它可能会损坏正常的数据，也有可能引发其他未知错误
+ 正确做法
+void *p = NULL 悬空指针 看代码
+void *p = malloc(size); free(p); // p为悬空指针了  free(p) 之后，p指针仍然指向之前分配的内存，有可能会引发不可预知的错误
+ 正确做法
+void *p = malloc(size); free(p); p = NULL </description>
+    </item>
+    
+    <item>
+      <title>文件系统-fd究竟是啥</title>
+      <link>https://lambertxiao.github.io/posts/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F-fd%E7%A9%B6%E7%AB%9F%E6%98%AF%E5%95%A5/doc/</link>
+      <pubDate>Thu, 30 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F-fd%E7%A9%B6%E7%AB%9F%E6%98%AF%E5%95%A5/doc/</guid>
+      <description>一句话终结</description>
+    </item>
+    
+    <item>
+      <title>网络-NAT打洞</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C-nat%E6%89%93%E6%B4%9E/doc/</link>
+      <pubDate>Fri, 24 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C-nat%E6%89%93%E6%B4%9E/doc/</guid>
+      <description>洞次打次，洞次打次</description>
+    </item>
+    
+    <item>
+      <title>网络-ssdp协议</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C-ssdp%E5%8D%8F%E8%AE%AE/doc/</link>
+      <pubDate>Tue, 21 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C-ssdp%E5%8D%8F%E8%AE%AE/doc/</guid>
+      <description>基于udp+http协议，在upnp中被使用到</description>
+    </item>
+    
+    <item>
+      <title>Linux-dd命令</title>
+      <link>https://lambertxiao.github.io/posts/linux-dd%E5%91%BD%E4%BB%A4/doc/</link>
+      <pubDate>Thu, 16 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/linux-dd%E5%91%BD%E4%BB%A4/doc/</guid>
+      <description>生成文件的好用工具</description>
+    </item>
+    
+    <item>
+      <title>Linux-strace</title>
+      <link>https://lambertxiao.github.io/posts/linux-strace%E5%91%BD%E4%BB%A4/doc/</link>
+      <pubDate>Thu, 16 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/linux-strace%E5%91%BD%E4%BB%A4/doc/</guid>
+      <description>查看系统调用的神器</description>
+    </item>
+    
+    <item>
+      <title>Golang-Coredump设置</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-coredump%E8%AE%BE%E7%BD%AE/doc/</link>
+      <pubDate>Tue, 14 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-coredump%E8%AE%BE%E7%BD%AE/doc/</guid>
+      <description>定位crash问题少不了</description>
+    </item>
+    
+    <item>
+      <title>实现一个p2p网络都需要会什么</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C-p2p/doc/</link>
+      <pubDate>Tue, 14 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C-p2p/doc/</guid>
+      <description>坚持更新</description>
+    </item>
+    
+    <item>
+      <title>数据库分库、迁移</title>
+      <link>https://lambertxiao.github.io/posts/%E6%95%B0%E6%8D%AE%E5%BA%93-%E5%88%86%E5%BA%93%E7%AD%96%E7%95%A5/doc/</link>
+      <pubDate>Tue, 14 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E6%95%B0%E6%8D%AE%E5%BA%93-%E5%88%86%E5%BA%93%E7%AD%96%E7%95%A5/doc/</guid>
+      <description>能不接触数据库尽量不接触</description>
+    </item>
+    
+    <item>
+      <title>[Writing]使用libp2p来构建点对点网络</title>
+      <link>https://lambertxiao.github.io/posts/libp2p/doc/</link>
+      <pubDate>Mon, 13 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/libp2p/doc/</guid>
+      <description>在filecoin中发现这个库，读读源码，学习学习</description>
+    </item>
+    
+    <item>
+      <title>CMake和Automake</title>
+      <link>https://lambertxiao.github.io/posts/cmakeautomake/doc/</link>
+      <pubDate>Fri, 10 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/cmakeautomake/doc/</guid>
+      <description>在C和C++的开源项目里没少见他俩</description>
+    </item>
+    
+    <item>
+      <title>golang-pprof使用</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-pprof%E4%BD%BF%E7%94%A8/doc/</link>
+      <pubDate>Wed, 08 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-pprof%E4%BD%BF%E7%94%A8/doc/</guid>
+      <description>pprof能做什么 pprof能提供正在运行的go程序的各项维度指标，可以帮助我们很好的了解程序的运行状态，如内存的使用，cpu的消耗，是否发现死锁等
+pprof提供的profile    profile 解释     cpu 默认进行 30s 的 CPU Profiling，得到一个分析用的 profile 文件   goroutine 查看当前所有运行的 goroutines 堆栈跟踪   block 查看导致阻塞同步的堆栈跟踪   heap 查看活动对象的内存分配情况   mutex 查看导致互斥锁的竞争持有者的堆栈跟踪   threadcreate 查看创建新OS线程的堆栈跟踪    怎么拿到对应的profile文件 当在服务里引入pprof包之后，可能通过http访问的方式拿到profile文件
+wget - O analysis.pprof http://${ip}:${port}/debug/pprof/${profile} 怎么分析 以heap.pprof举例
+// 查看常驻内存的使用情况 go tool pprof -inuse_space heap.pprof // 查看常驻对象的使用情况 go tool pprof -inuse_objects heap.pprof // 查看内存临时分配情况 go tool pprof -alloc_space heap.</description>
+    </item>
+    
+    <item>
+      <title>算法-两数之和变种</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%B8%A4%E6%95%B0%E4%B9%8B%E5%92%8C%E5%8F%98%E7%A7%8D/doc/</link>
+      <pubDate>Tue, 07 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%B8%A4%E6%95%B0%E4%B9%8B%E5%92%8C%E5%8F%98%E7%A7%8D/doc/</guid>
+      <description>面试流利说遇到了，做得磕磕绊绊</description>
+    </item>
+    
+    <item>
+      <title>iptables和netfilter</title>
+      <link>https://lambertxiao.github.io/posts/iptables/doc/</link>
+      <pubDate>Mon, 16 May 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/iptables/doc/</guid>
+      <description>iptables, netfilter, 5链3表</description>
+    </item>
+    
+    <item>
+      <title>MongoDB查询计划</title>
+      <link>https://lambertxiao.github.io/posts/mongo-%E6%9F%A5%E8%AF%A2%E8%AE%A1%E5%88%92/doc/</link>
+      <pubDate>Sun, 08 May 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/mongo-%E6%9F%A5%E8%AF%A2%E8%AE%A1%E5%88%92/doc/</guid>
+      <description>什么是查询计划</description>
+    </item>
+    
+    <item>
+      <title>MongoDB索引检索图解</title>
+      <link>https://lambertxiao.github.io/posts/mongo-%E7%B4%A2%E5%BC%95%E6%A3%80%E7%B4%A2%E5%9B%BE%E8%A7%A3/doc/</link>
+      <pubDate>Sat, 07 May 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/mongo-%E7%B4%A2%E5%BC%95%E6%A3%80%E7%B4%A2%E5%9B%BE%E8%A7%A3/doc/</guid>
+      <description>亿点点图</description>
+    </item>
+    
+    <item>
+      <title>MongoDB覆盖索引</title>
+      <link>https://lambertxiao.github.io/posts/mongo-%E8%A6%86%E7%9B%96%E7%B4%A2%E5%BC%95/doc/</link>
+      <pubDate>Sat, 07 May 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/mongo-%E8%A6%86%E7%9B%96%E7%B4%A2%E5%BC%95/doc/</guid>
+      <description>什么是覆盖索引</description>
+    </item>
+    
+    <item>
+      <title>MongoDB</title>
+      <link>https://lambertxiao.github.io/posts/mongo/doc/</link>
+      <pubDate>Fri, 06 May 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/mongo/doc/</guid>
+      <description>分片模式下数据分发流程  mongos在启动后，其内部会维护一份路由表缓存并通过心跳机制与Contg Server （配置中心） 保持同步 业务请求进入后，由mongos开始接管 mongos检索本地路由表，根据请求中的分片键信息找到相应的chunk，进一步确定所在的分片。 mongos向目标分片发起操作，并返回最终结果  避免广播操作 需要向所有的分片查询结果
+单分片故障会影响整个查询
+保证索引唯一性 分片模式会影响索引的唯一性。由于没有手段保证多个分片上的数据唯一，所以唯一性索引必须与分片键使用相同的字段，或者以分片键作为前级。
+如下面的选择可以避免冲突。
+(1） 唯一性索引为：{a：1}，分片键采用a字段。
+(2） 唯一性索引为：{a：1，b：1}, 分片键采用a字段。
+分片均衡 手动均衡 自动均衡 </description>
+    </item>
+    
+    <item>
+      <title>算法-设计数据结构</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E8%AE%BE%E8%AE%A1%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/doc/</link>
+      <pubDate>Mon, 04 Apr 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E8%AE%BE%E8%AE%A1%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/doc/</guid>
+      <description>双向队列，跳表等</description>
+    </item>
+    
+    <item>
+      <title>LevelDB总览</title>
+      <link>https://lambertxiao.github.io/posts/leveldb/doc/</link>
+      <pubDate>Sun, 03 Apr 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/leveldb/doc/</guid>
+      <description>level，多层级</description>
+    </item>
+    
+    <item>
+      <title>leveldb内部实现之compact</title>
+      <link>https://lambertxiao.github.io/posts/leveldb-compaction/doc/</link>
+      <pubDate>Thu, 31 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/leveldb-compaction/doc/</guid>
+      <description>了解一下leveldb的WAL是怎么做的</description>
+    </item>
+    
+    <item>
+      <title>leveldb内部实现之journal</title>
+      <link>https://lambertxiao.github.io/posts/leveldb-journal/doc/</link>
+      <pubDate>Thu, 31 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/leveldb-journal/doc/</guid>
+      <description>了解一下leveldb的WAL是怎么做的</description>
+    </item>
+    
+    <item>
+      <title>leveldb内部实现之memdb</title>
+      <link>https://lambertxiao.github.io/posts/leveldb-memdb/doc/</link>
+      <pubDate>Wed, 30 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/leveldb-memdb/doc/</guid>
+      <description>长成这样，真是看不出这是个跳表</description>
+    </item>
+    
+    <item>
+      <title>算法-只出现一次的数字</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8F%AA%E5%87%BA%E7%8E%B0%E4%B8%80%E6%AC%A1%E7%9A%84%E6%95%B0%E5%AD%97/doc/</link>
+      <pubDate>Sun, 27 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8F%AA%E5%87%BA%E7%8E%B0%E4%B8%80%E6%AC%A1%E7%9A%84%E6%95%B0%E5%AD%97/doc/</guid>
+      <description>挺恶心的位运行</description>
+    </item>
+    
+    <item>
+      <title>golang-http2实现</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-http2%E7%9A%84%E5%AE%9E%E7%8E%B0/doc/</link>
+      <pubDate>Fri, 25 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-http2%E7%9A%84%E5%AE%9E%E7%8E%B0/doc/</guid>
+      <description>扒开go源码，看看http2在go里的实现</description>
+    </item>
+    
+    <item>
+      <title>golang-runtime</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-runtime/doc/</link>
+      <pubDate>Fri, 25 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-runtime/doc/</guid>
+      <description>func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool) func deferproc(siz int32, fn *funcval) </description>
+    </item>
+    
+    <item>
+      <title>LevelDB是干嘛的</title>
+      <link>https://lambertxiao.github.io/posts/leveldb-bloomfilter/doc/</link>
+      <pubDate>Fri, 25 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/leveldb-bloomfilter/doc/</guid>
+      <description>level，多层级</description>
+    </item>
+    
+    <item>
+      <title>Golang-epoll</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-epoll/doc/</link>
+      <pubDate>Thu, 24 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-epoll/doc/</guid>
+      <description>go怎么用的epoll</description>
+    </item>
+    
+    <item>
+      <title>算法-全O(1)的数据结构</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%85%A8o1%E7%9A%84%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/doc/</link>
+      <pubDate>Wed, 23 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%85%A8o1%E7%9A%84%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/doc/</guid>
+      <description>写在字节4面后</description>
+    </item>
+    
+    <item>
+      <title>golang-怎么用的epoll</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E6%80%8E%E4%B9%88%E7%94%A8%E7%9A%84epoll/doc/</link>
+      <pubDate>Thu, 17 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E6%80%8E%E4%B9%88%E7%94%A8%E7%9A%84epoll/doc/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>linux-常用命令</title>
+      <link>https://lambertxiao.github.io/posts/linux-%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/doc/</link>
+      <pubDate>Thu, 17 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/linux-%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/doc/</guid>
+      <description>mtr </description>
+    </item>
+    
+    <item>
+      <title>什么是happend-before</title>
+      <link>https://lambertxiao.github.io/posts/%E4%BB%80%E4%B9%88%E6%98%AFhappen-before/doc/</link>
+      <pubDate>Thu, 17 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E4%BB%80%E4%B9%88%E6%98%AFhappen-before/doc/</guid>
+      <description>字节面试问到了，留个记录</description>
+    </item>
+    
+    <item>
+      <title>拥塞控制算法都有哪些</title>
+      <link>https://lambertxiao.github.io/posts/%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6%E7%AE%97%E6%B3%95%E9%83%BD%E6%9C%89%E5%93%AA%E4%BA%9B/doc/</link>
+      <pubDate>Thu, 17 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6%E7%AE%97%E6%B3%95%E9%83%BD%E6%9C%89%E5%93%AA%E4%BA%9B/doc/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>网络IO的演变</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9Cio%E7%9A%84%E6%BC%94%E5%8F%98/doc/</link>
+      <pubDate>Tue, 15 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9Cio%E7%9A%84%E6%BC%94%E5%8F%98/doc/</guid>
+      <description>一颗红黑树，一个就绪句柄链表，一个进程等待队列，少量的内核cache</description>
+    </item>
+    
+    <item>
+      <title>算法-BFS</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-bfs/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-bfs/doc/</guid>
+      <description>200. 岛屿数量 200. 岛屿数量 给你一个由 &amp;lsquo;1&amp;rsquo;（陆地）和 &amp;lsquo;0&amp;rsquo;（水）组成的的二维网格，请你计算网格中岛屿的数量。
+岛屿总是被水包围，并且每座岛屿只能由水平方向和/或竖直方向上相邻的陆地连接形成。
+此外，你可以假设该网格的四条边均被水包围。
+func numIslands(grid [][]byte) int { m, n := len(grid), len(grid[0]) bfs := func(i, j int) { // 从[i, j]位置开始扩散  q := [][]int{{i, j}} for len(q) != 0 { e := q[0] q = q[1:] x, y := e[0], e[1] if x &amp;gt;= 0 &amp;amp;&amp;amp; x &amp;lt; m &amp;amp;&amp;amp; y &amp;gt;= 0 &amp;amp;&amp;amp; y &amp;lt; n &amp;amp;&amp;amp; grid[x][y] == &amp;#39;1&amp;#39; { grid[x][y] = &amp;#39;0&amp;#39; q = append(q, []int{x+1, y}) q = append(q, []int{x-1, y}) q = append(q, []int{x, y+1}) q = append(q, []int{x, y-1}) } } } cnt := 0 for i := 0; i &amp;lt; m; i++ { for j := 0; j &amp;lt; n; j++ { if grid[i][j] == &amp;#39;0&amp;#39; { continue } bfs(i, j) // 为什么找到了一块陆地就可以增加一个岛屿数呢，  // 是因为在bfs方法中会将跟这块陆地相连的其他陆地染色，不会再次重复计算  cnt++ } } return cnt } 301.</description>
+    </item>
+    
+    <item>
+      <title>算法-DFS</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-dfs/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-dfs/doc/</guid>
+      <description>22. 括号生成 22. 括号生成 数字 n 代表生成括号的对数，请你设计一个函数，用于能够生成所有可能的并且 有效的 括号组合。
+func generateParenthesis(n int) []string { ans := []string{} var dfs func(lb, rb int, s string) dfs = func(lb, rb int, s string) { if lb &amp;gt; rb { return } if lb == 0 &amp;amp;&amp;amp; rb == 0 { // 括号用完了，并且是合法的  if isValid(s) { ans = append(ans, s) } return } if lb != 0 { dfs(lb - 1, rb, s + &amp;#34;(&amp;#34;) } if rb !</description>
+    </item>
+    
+    <item>
+      <title>算法-hash表</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-hash%E8%A1%A8/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-hash%E8%A1%A8/doc/</guid>
+      <description>hash表也算是刷题中的老常客了</description>
+    </item>
+    
+    <item>
+      <title>算法-LRU和LFU</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-lru%E5%92%8Clfu/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-lru%E5%92%8Clfu/doc/</guid>
+      <description>经典面试题了属实是</description>
+    </item>
+    
+    <item>
+      <title>算法-topK</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-topk/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-topk/doc/</guid>
+      <description>通常可以使用堆来解决topK的问题</description>
+    </item>
+    
+    <item>
+      <title>算法-二叉树</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%8F%89%E6%A0%91/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%8F%89%E6%A0%91/doc/</guid>
+      <description>子串和子序列是一块难啃的骨头，但大多数时候可以通过动态规划来解决</description>
+    </item>
+    
+    <item>
+      <title>算法-位运算</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E4%BD%8D%E8%BF%90%E7%AE%97/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E4%BD%8D%E8%BF%90%E7%AE%97/doc/</guid>
+      <description>461. 汉明距离 461. 汉明距离 两个整数之间的 汉明距离 指的是这两个数字对应二进制位不同的位置的数目。
+给你两个整数 x 和 y，计算并返回它们之间的汉明距离。
+func hammingDistance(x int, y int) int { s := x ^ y // 汉明距离即为s中1的数量  res := 0 for s &amp;gt; 0 { // 判断最低位是不是1  res += s &amp;amp; 1 s &amp;gt;&amp;gt;= 1 } return res } 397. 整数替换 397. 整数替换
+给定一个正整数 n ，你可以做如下操作：
+如果 n 是偶数，则用 n / 2替换 n 。 如果 n 是奇数，则可以用 n + 1或n - 1替换 n 。 返回 n 变为 1 所需的 最小替换次数 。</description>
+    </item>
+    
+    <item>
+      <title>算法-前缀和</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%89%8D%E7%BC%80%E5%92%8C/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%89%8D%E7%BC%80%E5%92%8C/doc/</guid>
+      <description>前缀和也是常见的数组题的解法了吧</description>
+    </item>
+    
+    <item>
+      <title>算法-动态规划</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92/doc/</guid>
+      <description>55. 跳跃游戏 55. 跳跃游戏 给定一个非负整数数组 nums ，你最初位于数组的 第一个下标 。
+数组中的每个元素代表你在该位置可以跳跃的最大长度。
+判断你是否能够到达最后一个下标。
+func canJump(nums []int) bool { l := len(nums) if l == 0 || l == 1 { return true } // 表示能不能到达第i位下标，true代表可以，false代表不可以  d := make([]bool, l) d[0] = true for i := 1; i &amp;lt; l; i++ { for j := i - 1; j &amp;gt;= 0; j-- { // 能找到一个j就好了  d[i] = d[j] &amp;amp;&amp;amp; (j + nums[j]) &amp;gt;= i if d[i] { break } } if !</description>
+    </item>
+    
+    <item>
+      <title>算法-子串子序列问题</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%AD%90%E4%B8%B2%E5%AD%90%E5%BA%8F%E5%88%97%E9%97%AE%E9%A2%98/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%AD%90%E4%B8%B2%E5%AD%90%E5%BA%8F%E5%88%97%E9%97%AE%E9%A2%98/doc/</guid>
+      <description>子串和子序列是一块难啃的骨头，但大多数时候可以通过动态规划来解决</description>
+    </item>
+    
+    <item>
+      <title>算法-快慢指针</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%BF%AB%E6%85%A2%E6%8C%87%E9%92%88/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%BF%AB%E6%85%A2%E6%8C%87%E9%92%88/doc/</guid>
+      <description>19. 删除链表的倒数第 N 个结点
+给你一个链表，删除链表的倒数第 n 个结点，并且返回链表的头结点。
+func removeNthFromEnd(head *ListNode, n int) *ListNode { // 快慢指针  dummy := &amp;amp;ListNode{} dummy.Next = head s, f := dummy, dummy // faster向前走n+1步，一会可以让slow停在想要删除的节点的前继节点上  for n &amp;gt;= 0 &amp;amp;&amp;amp; f != nil { f = f.Next n-- } for f != nil { f = f.Next s = s.Next } s.Next = s.Next.Next return dummy.Next } </description>
+    </item>
+    
+    <item>
+      <title>算法-拓扑排序</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%8B%93%E8%A1%A5%E6%8E%92%E5%BA%8F/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%8B%93%E8%A1%A5%E6%8E%92%E5%BA%8F/doc/</guid>
+      <description>207. 课程表 207. 课程表 你这个学期必须选修 numCourses 门课程，记为 0 到 numCourses - 1 。
+在选修某些课程之前需要一些先修课程。 先修课程按数组 prerequisites 给出，其中 prerequisites[i] = [ai, bi] ，表示如果要学习课程 ai 则 必须 先学习课程 bi 。
+例如，先修课程对 [0, 1] 表示：想要学习课程 0 ，你需要先完成课程 1 。 请你判断是否可能完成所有课程的学习？如果可以，返回 true ；否则，返回 false 。
+func canFinish(numCourses int, prerequisites [][]int) bool { // 入度  indeg := make([]int, numCourses) // 邻接表  g := make(map[int][]int) for _, q := range prerequisites { indeg[q[0]]++ g[q[1]] = append(g[q[1]], q[0]) } q := make([]int, 0, numCourses) // 无入度节点入队  for i := range indeg { if indeg[i] == 0 { q = append(q, i) } } resCount := 0 for len(q) &amp;gt; 0 { head := q[0] q = q[1:] resCount++ for _, i := range g[head] { indeg[i]-- if indeg[i] == 0 { q = append(q, i) } } } return resCount == numCourses } </description>
+    </item>
+    
+    <item>
+      <title>算法-括号问题</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%8B%AC%E5%8F%B7%E9%97%AE%E9%A2%98/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%8B%AC%E5%8F%B7%E9%97%AE%E9%A2%98/doc/</guid>
+      <description>20. 有效的括号
+给定一个只包括 &amp;lsquo;(&#39;，&#39;)&#39;，&#39;{&#39;，&#39;}&#39;，&#39;[&#39;，&#39;]&amp;rsquo; 的字符串 s ，判断字符串是否有效。
+有效字符串需满足： 左括号必须用相同类型的右括号闭合。 左括号必须以正确的顺序闭合。
+function isValid(s: string): boolean { let stack = [] for (let c of s) { if (c == &amp;#39;(&amp;#39; || c == &amp;#39;{&amp;#39; || c == &amp;#39;[&amp;#39;) { stack.push(c) } if (c == &amp;#39;)&amp;#39; || c == &amp;#39;}&amp;#39; || c == &amp;#39;]&amp;#39;) { let e = stack.pop() if (c != rightof(e)) { return false } } } if (stack.length &amp;gt; 0) { return false } return true }; function rightof(c: string): string { if (c == &amp;#34;{&amp;#34;) { return &amp;#34;}&amp;#34; } if (c == &amp;#34;[&amp;#34;) { return &amp;#34;]&amp;#34; } if (c == &amp;#34;(&amp;#34;) { return &amp;#34;)&amp;#34; } return &amp;#34;&amp;#34; } </description>
+    </item>
+    
+    <item>
+      <title>算法-数组</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%95%B0%E7%BB%84/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%95%B0%E7%BB%84/doc/</guid>
+      <description>与数组相关的算法题可以又各种骚操作</description>
+    </item>
+    
+    <item>
+      <title>算法-滑动窗口</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3/doc/</guid>
+      <description>LR两指针</description>
+    </item>
+    
+    <item>
+      <title>算法-链表</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E9%93%BE%E8%A1%A8/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E9%93%BE%E8%A1%A8/doc/</guid>
+      <description>2. 两数相加 2. 两数相加
+给你两个 非空 的链表，表示两个非负的整数。它们每位数字都是按照 逆序 的方式存储的，并且每个节点只能存储 一位 数字。
+请你将两个数相加，并以相同形式返回一个表示和的链表。 你可以假设除了数字 0 之外，这两个数都不会以 0 开头。
+206. 反转链表 206. 反转链表 给你单链表的头节点 head ，请你反转链表，并返回反转后的链表。
+func reverseList(head *ListNode) *ListNode { // 双指针，pre和curr一前一后  var pre *ListNode curr := head for curr != nil { tmp := curr.Next curr.Next = pre pre = curr curr = tmp } return pre } func reverseList(head *ListNode) *ListNode { if head == nil || head.Next == nil { return head } nhead := reverseList(head.</description>
+    </item>
+    
+    <item>
+      <title>golang-内存管理</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D/doc/</link>
+      <pubDate>Sat, 12 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D/doc/</guid>
+      <description>空闲链表 + 多规格多级别管理</description>
+    </item>
+    
+    <item>
+      <title>Golang-函数栈帧布局</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E5%87%BD%E6%95%B0%E6%A0%88%E5%B8%A7%E5%B8%83%E5%B1%80/doc/</link>
+      <pubDate>Sat, 12 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E5%87%BD%E6%95%B0%E6%A0%88%E5%B8%A7%E5%B8%83%E5%B1%80/doc/</guid>
+      <description>学会golang函数栈帧布局让你团灭各种defer面试题</description>
+    </item>
+    
+    <item>
+      <title>MySQL的三种日志-binlog、redolog、undolog</title>
+      <link>https://lambertxiao.github.io/posts/mysql-binlog-redolog-undolog/doc/</link>
+      <pubDate>Fri, 11 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/mysql-binlog-redolog-undolog/doc/</guid>
+      <description>名字相近，其实长得不一样</description>
+    </item>
+    
+    <item>
+      <title>UML-类图线条</title>
+      <link>https://lambertxiao.github.io/posts/uml-%E7%B1%BB%E5%9B%BE%E7%BA%BF%E6%9D%A1/doc/</link>
+      <pubDate>Fri, 11 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/uml-%E7%B1%BB%E5%9B%BE%E7%BA%BF%E6%9D%A1/doc/</guid>
+      <description>记得住吗？记不住!</description>
+    </item>
+    
+    <item>
+      <title>算法-二分法</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%88%86%E6%B3%95/doc/</link>
+      <pubDate>Thu, 10 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%88%86%E6%B3%95/doc/</guid>
+      <description>最难不过二分，边界问题最蛋疼</description>
+    </item>
+    
+    <item>
+      <title>算法-单调栈</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8D%95%E8%B0%83%E6%A0%88/doc/</link>
+      <pubDate>Thu, 10 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8D%95%E8%B0%83%E6%A0%88/doc/</guid>
+      <description>单调栈总是能解决一些看起来很困难的题</description>
+    </item>
+    
+    <item>
+      <title>Golang-sync.Pool结构之poolDequeue</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-sync.pool%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0/1-pooldequeue/</link>
+      <pubDate>Wed, 09 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-sync.pool%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0/1-pooldequeue/</guid>
+      <description>环形队列，无锁，CAS</description>
+    </item>
+    
+    <item>
+      <title>动态规划-买卖股票</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%B9%B0%E5%8D%96%E8%82%A1%E7%A5%A8/doc/</link>
+      <pubDate>Wed, 09 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%B9%B0%E5%8D%96%E8%82%A1%E7%A5%A8/doc/</guid>
+      <description>啥时候A股的最大收益能用算法算出来也就不用上班了</description>
+    </item>
+    
+    <item>
+      <title>动态规划-打家劫舍</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%89%93%E5%AE%B6%E5%8A%AB%E8%88%8D/doc/</link>
+      <pubDate>Wed, 09 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%89%93%E5%AE%B6%E5%8A%AB%E8%88%8D/doc/</guid>
+      <description>不会打家劫舍的程序员不是好的小偷</description>
+    </item>
+    
+    <item>
+      <title>动态规划-爬楼梯</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E7%88%AC%E6%A5%BC%E6%A2%AF/doc/</link>
+      <pubDate>Wed, 09 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E7%88%AC%E6%A5%BC%E6%A2%AF/doc/</guid>
+      <description>爬个楼梯也事多</description>
+    </item>
+    
+    <item>
+      <title>角落生物-坨坨坨酱</title>
+      <link>https://lambertxiao.github.io/posts/%E8%A7%92%E8%90%BD%E7%94%9F%E7%89%A9-%E5%9D%A8/doc/</link>
+      <pubDate>Wed, 09 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E8%A7%92%E8%90%BD%E7%94%9F%E7%89%A9-%E5%9D%A8/doc/</guid>
+      <description>坨坨酱</description>
+    </item>
+    
+    <item>
+      <title>Golang-Defer底层实现机制</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-defer%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/doc/</link>
+      <pubDate>Tue, 08 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-defer%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/doc/</guid>
+      <description>麻了呀，面试面到了答不出来</description>
+    </item>
+    
+    <item>
+      <title>Golang-Sync.Pool底层结构</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-sync.pool%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0/pool/</link>
+      <pubDate>Tue, 08 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-sync.pool%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0/pool/</guid>
+      <description>sync.Pool在项目中被频繁用到，那么它底下是怎么实现的呢</description>
+    </item>
+    
+    <item>
+      <title>Golang-实现限流器</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E5%AE%9E%E7%8E%B0%E9%99%90%E6%B5%81%E5%99%A8/doc/</link>
+      <pubDate>Tue, 08 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E5%AE%9E%E7%8E%B0%E9%99%90%E6%B5%81%E5%99%A8/doc/</guid>
+      <description>麻了呀，面试问到限流器相关的知识答不出来</description>
+    </item>
+    
+    <item>
+      <title>Raft-简单入门</title>
+      <link>https://lambertxiao.github.io/posts/raft-%E7%AE%80%E5%8D%95%E5%85%A5%E9%97%A8/raft/</link>
+      <pubDate>Mon, 07 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/raft-%E7%AE%80%E5%8D%95%E5%85%A5%E9%97%A8/raft/</guid>
+      <description>分布式一致性协议的当红辣子鸡</description>
+    </item>
+    
+    <item>
+      <title>Redis-实现分布式锁</title>
+      <link>https://lambertxiao.github.io/posts/redis-%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/redis/</link>
+      <pubDate>Mon, 07 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/redis-%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/redis/</guid>
+      <description>只要是分布式应用，免不了要使用分布式锁</description>
+    </item>
+    
+    <item>
+      <title>B&#43;树</title>
+      <link>https://lambertxiao.github.io/posts/data-struct/b&#43;%E6%A0%91/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/data-struct/b&#43;%E6%A0%91/</guid>
+      <description>用过mysql的都知道我</description>
+    </item>
+    
+    <item>
+      <title>BIOS是什么</title>
+      <link>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/bios/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/bios/</guid>
+      <description>当年重装系统的时候，没少听过BIOS吧？</description>
+    </item>
+    
+    <item>
+      <title>B树</title>
+      <link>https://lambertxiao.github.io/posts/data-struct/b%E6%A0%91/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/data-struct/b%E6%A0%91/</guid>
+      <description>平衡多路查找树</description>
+    </item>
+    
+    <item>
+      <title>C-啥是宏</title>
+      <link>https://lambertxiao.github.io/posts/c-%E5%95%A5%E6%98%AF%E5%AE%8F%E5%91%80/define%E5%AE%8F/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/c-%E5%95%A5%E6%98%AF%E5%AE%8F%E5%91%80/define%E5%AE%8F/</guid>
+      <description>宏在C中真的是无所不在了吧</description>
+    </item>
+    
+    <item>
+      <title>C-小知识</title>
+      <link>https://lambertxiao.github.io/posts/c-%E5%B0%8F%E7%9F%A5%E8%AF%86/doc/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/c-%E5%B0%8F%E7%9F%A5%E8%AF%86/doc/</guid>
+      <description>为了在存储的路上深耕，C/C++知识储备不能少</description>
+    </item>
+    
+    <item>
+      <title>DNS记录都有哪些？</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/dns%E8%A7%A3%E6%9E%90/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/dns%E8%A7%A3%E6%9E%90/</guid>
+      <description>NS记录、A记录都是些啥</description>
+    </item>
+    
+    <item>
+      <title>Docker原理</title>
+      <link>https://lambertxiao.github.io/posts/docker-%E5%8E%9F%E7%90%86/docker/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/docker-%E5%8E%9F%E7%90%86/docker/</guid>
+      <description>Namespace, CGroup, UnionFS的整合怪</description>
+    </item>
+    
+    <item>
+      <title>Golang-Channel的底层结构</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-channel%E7%9A%84%E5%BA%95%E5%B1%82%E7%BB%93%E6%9E%84/channel%E7%9A%84%E5%BA%95%E5%B1%82%E7%BB%93%E6%9E%84/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-channel%E7%9A%84%E5%BA%95%E5%B1%82%E7%BB%93%E6%9E%84/channel%E7%9A%84%E5%BA%95%E5%B1%82%E7%BB%93%E6%9E%84/</guid>
+      <description>一把锁+一个环形数组+两个等待队列</description>
+    </item>
+    
+    <item>
+      <title>Golang-小知识</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E5%B0%8F%E7%9F%A5%E8%AF%86/golang%E5%B0%8F%E7%9F%A5%E8%AF%86/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E5%B0%8F%E7%9F%A5%E8%AF%86/golang%E5%B0%8F%E7%9F%A5%E8%AF%86/</guid>
+      <description>面试前总得背一背吧</description>
+    </item>
+    
+    <item>
+      <title>Golang-线程模型</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B/golang%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B/golang%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B/</guid>
+      <description>M(内核线程)、P(处理器)、G(协程)</description>
+    </item>
+    
+    <item>
+      <title>Golang垃圾回收</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/golang%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/golang%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</guid>
+      <description>三色标记法</description>
+    </item>
+    
+    <item>
+      <title>Http2简介</title>
+      <link>https://lambertxiao.github.io/posts/http2-%E7%AE%80%E4%BB%8B/http2/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/http2-%E7%AE%80%E4%BB%8B/http2/</guid>
+      <description>二进制协议、多路复用、流量控制、首部压缩</description>
+    </item>
+    
+    <item>
+      <title>HTTPS是怎么建立的？</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/http/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/http/</guid>
+      <description>HTTP + TLS = HTTPS</description>
+    </item>
+    
+    <item>
+      <title>kafka-知识总览</title>
+      <link>https://lambertxiao.github.io/posts/kafka-%E7%9F%A5%E8%AF%86%E6%80%BB%E8%A7%88/kafka/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/kafka-%E7%9F%A5%E8%AF%86%E6%80%BB%E8%A7%88/kafka/</guid>
+      <description>顺序写、复制状态机、分区、多副本、时间轮</description>
+    </item>
+    
+    <item>
+      <title>Linux系统上的网络抓包</title>
+      <link>https://lambertxiao.github.io/posts/linux-%E6%8A%93%E5%8C%85%E5%B7%A5%E5%85%B7/linux%E7%B3%BB%E7%BB%9F%E4%B8%8A%E7%9A%84%E6%8A%93%E5%8C%85/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/linux-%E6%8A%93%E5%8C%85%E5%B7%A5%E5%85%B7/linux%E7%B3%BB%E7%BB%9F%E4%B8%8A%E7%9A%84%E6%8A%93%E5%8C%85/</guid>
+      <description>tcpdump、tshark、editcap、wireshark</description>
+    </item>
+    
+    <item>
+      <title>LSMTree-一种支持高效读写的存储引擎</title>
+      <link>https://lambertxiao.github.io/posts/lsm-tree/doc/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/lsm-tree/doc/</guid>
+      <description>跳表 + SSTable + LogCompact + 顺序写</description>
+    </item>
+    
+    <item>
+      <title>Redis</title>
+      <link>https://lambertxiao.github.io/posts/redis-%E7%9F%A5%E8%AF%86%E6%80%BB%E8%A7%88/redis/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/redis-%E7%9F%A5%E8%AF%86%E6%80%BB%E8%A7%88/redis/</guid>
+      <description>单线程、全内存、AOF、RDB、单点、哨兵、集群</description>
+    </item>
+    
+    <item>
+      <title>TCMalloc</title>
+      <link>https://lambertxiao.github.io/posts/tcmalloc/tcmalloc/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/tcmalloc/tcmalloc/</guid>
+      <description>Golang的内存分配算法都是跟我学的</description>
+    </item>
+    
+    <item>
+      <title>UDP协议</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/udp/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/udp/</guid>
+      <description>觉得TCP太慢了，何不试试我？</description>
+    </item>
+    
+    <item>
+      <title>中断</title>
+      <link>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E4%B8%AD%E6%96%AD/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E4%B8%AD%E6%96%AD/</guid>
+      <description>放开那个女孩，让我来</description>
+    </item>
+    
+    <item>
+      <title>你知道实模式和保护模式的区别吗</title>
+      <link>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E6%A8%A1%E5%BC%8F/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E6%A8%A1%E5%BC%8F/</guid>
+      <description>模式 实模式   特点
+  寻址特点
+   寻址范围为1MB，地址总线20位    寄存器只使用来16位，采用单一寄存器来寻址的话只能访问到2^16=64KB的空间    访问内存采用 段基址 + 段内偏移地址的方式      程序引用的地址都是真实的物理地址，不灵活也不安全    程序可以随意修改自己的段基址，任意访问改变所有内存    一次只能运行一个程序    地址总线只有20位，最大可用内存只有1M      保护模式   起源
+ CPU发展到32位后，推出保护模式，为了区别两种模式，便将之前的模式称为实模式。刚开机时，32位的CPU是先处于16位的实模式，再进入保护模式的 64位系统也一样吗？    地址总线32位
+  通用寄存器、标志寄存器、指令指针寄存器扩展到来32位
+  总结 </description>
+    </item>
+    
+    <item>
+      <title>前缀树</title>
+      <link>https://lambertxiao.github.io/posts/data-struct/%E5%89%8D%E7%BC%80%E6%A0%91/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/data-struct/%E5%89%8D%E7%BC%80%E6%A0%91/</guid>
+      <description>Leetcode刷题见过我吧</description>
+    </item>
+    
+    <item>
+      <title>加密算法之ECDH</title>
+      <link>https://lambertxiao.github.io/posts/%E5%8A%A0%E5%AF%86%E7%AE%97%E6%B3%95-ecdh/ecdh%E7%AE%97%E6%B3%95/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E5%8A%A0%E5%AF%86%E7%AE%97%E6%B3%95-ecdh/ecdh%E7%AE%97%E6%B3%95/</guid>
+      <description>ECDH算法 ECDH全称是椭圆曲线迪菲-赫尔曼秘钥交换（Elliptic Curve Diffie–Hellman key Exchange），主要是用来在一个不安全的通道中建立起安全的共有加密资料，一般来说交换的都是私钥，这个密钥一般作为“对称加密”的密钥而被双方在后续数据传输中使用。
+算法流程 我们通过一个经典的场景，Alice和Bob要在一条不安全的线路上交换秘钥，交换的秘钥不能被中间人知晓。 首先，双方约定使用ECDH秘钥交换算法，这个时候双方也知道了ECDH算法里的一个大素数P，这个P可以看做是一个算法中的常量。 P的位数决定了攻击者破解的难度。还有一个整数g用来辅助整个秘钥交换，g不用很大，一般是2或者5，双方知道g和p之后就开始了ECDH交换秘钥的过程了。
+ Alice生成一个整数a作为私钥，需要利用p，g，a通过公式 g^a mod p = A 生成A作为公钥传递。 Bob通过链路收到Alice发来的p，g，A，知道了Alice的公钥A。这个时候Bob也生成自己的私钥b，然后通过公式 g^b mod p = B 生成自己公钥B。 Alice收到Bob发来的公钥B以后，同样通过 B^a mod p = K 生成公共秘钥K，这样Alice和Bob就通过不传递私钥a和b完成了对公共秘钥K的协商。  举个栗子 我们通过代入具体的数字来重复一下上面的过程：
+ Alice和Bob同意使用质数p和整数g： p = 83, g = 8  Alice选择秘钥 a = 9, 生成公钥 g^a mod p = A 并发送 (8^9) mod 83 = 5 Bob选择秘钥 b = 21, 生成公钥 A^b mod p = K 并发送 (8^21) mod 83 = 18</description>
+    </item>
+    
+    <item>
+      <title>啥是KCP协议？</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/kcp/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/kcp/</guid>
+      <description>TCP退下，让我来！</description>
+    </item>
+    
+    <item>
+      <title>如何通过存储过程计算用户留存</title>
+      <link>https://lambertxiao.github.io/posts/%E4%B8%9A%E5%8A%A1%E8%AE%A1%E7%AE%97-%E7%95%99%E5%AD%98/%E7%95%99%E5%AD%98%E8%AE%A1%E7%AE%97/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E4%B8%9A%E5%8A%A1%E8%AE%A1%E7%AE%97-%E7%95%99%E5%AD%98/%E7%95%99%E5%AD%98%E8%AE%A1%E7%AE%97/</guid>
+      <description>留存计算 DELIMITER $$ CREATE DEFINER=`vpRoot`@`%` PROCEDURE `retention`(IN datestr VARCHAR(20)) BEGIN DECLARE s INT DEFAULT 0; DECLARE sdate VARCHAR(20) CHARACTER SET utf8; DECLARE country_zh VARCHAR(20) CHARACTER SET utf8; DECLARE pkg_name VARCHAR(50) CHARACTER SET utf8 ; DECLARE register_num INT DEFAULT 0; DECLARE keep_number_1 INT DEFAULT 0; DECLARE keep_number_2 INT DEFAULT 0; DECLARE keep_number_3 INT DEFAULT 0; DECLARE keep_number_7 INT DEFAULT 0; DECLARE keep_number_15 INT DEFAULT 0; DECLARE keep_number_30 INT DEFAULT 0; DECLARE report CURSOR FOR SELECT t5.</description>
+    </item>
+    
+    <item>
+      <title>常见数据结构</title>
+      <link>https://lambertxiao.github.io/posts/data-struct/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/data-struct/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/</guid>
+      <description>数组、栈、链表、队列、hash表&amp;hellip;</description>
+    </item>
+    
+    <item>
+      <title>平衡二叉树</title>
+      <link>https://lambertxiao.github.io/posts/data-struct/%E5%B9%B3%E8%A1%A1%E4%BA%8C%E5%8F%89%E6%A0%91/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/data-struct/%E5%B9%B3%E8%A1%A1%E4%BA%8C%E5%8F%89%E6%A0%91/</guid>
+      <description>Leetcode刷题见过我吧</description>
+    </item>
+    
+    <item>
+      <title>我只是个小模板</title>
+      <link>https://lambertxiao.github.io/posts/template/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/template/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>数据库索引</title>
+      <link>https://lambertxiao.github.io/posts/database-%E7%B4%A2%E5%BC%95%E7%9B%B8%E5%85%B3/%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E7%B4%A2%E5%BC%95/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/database-%E7%B4%A2%E5%BC%95%E7%9B%B8%E5%85%B3/%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E7%B4%A2%E5%BC%95/</guid>
+      <description>B树和B+树</description>
+    </item>
+    
+    <item>
+      <title>数据库锁</title>
+      <link>https://lambertxiao.github.io/posts/database-%E9%94%81%E7%9B%B8%E5%85%B3/%E6%95%B0%E6%8D%AE%E5%BA%93%E9%94%81/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/database-%E9%94%81%E7%9B%B8%E5%85%B3/%E6%95%B0%E6%8D%AE%E5%BA%93%E9%94%81/</guid>
+      <description>数据库锁  按锁的粒度划分（即，每次上锁的对象是表，行还是页）：表级锁，行级锁，页级锁 按锁的级别划分：共享锁、排他锁 按加锁方式分：自动锁（存储引擎自行根据需要施加的锁）、显式锁（用户手动请求的锁） 按操作划分：DML锁（对数据进行操作的锁)、DDL锁（对表结构进行变更的锁） 最后按使用方式划分：悲观锁、乐观锁  共享锁 共享锁(S)表示对数据进行读操作。因此多个事务可以同时为一个对象加共享锁。（对于写作来说就是，如果文章处于「已发布」的状态，则所有人都可以同时看。）
+SELECT ... LOCK IN SHARE MODE; 排他锁 排他锁表示对数据进行写操作。如果一个事务对对象加了排他锁，其他事务就不能再给它加任何锁了。（对于写作来说就是，如果文章正在被修改的时候，其他的读者无法看到这篇文章，其他的编辑也无法修改这篇文章。）
+SELECT ... FOR UPDATE; 悲观锁 在关系数据库管理系统里，悲观并发控制（又名“悲观锁”，Pessimistic Concurrency Control，缩写“PCC”）是一种并发控制的方法，即为悲观的思想，认为并发问题总会出现，所以每次一个事务读取某一条记录后，就会把这条记录锁住，这样其它的事务要想更新，必须等以前的事务提交或者回滚解除锁。
+悲观并发控制主要用于数据争用激烈的环境，以及发生并发冲突时使用锁保护数据的成本要低于回滚事务的成本的环境中。
+乐观锁 总是假设最好的情况，每次去拿数据的时候都认为别人不会修改，所以不会上锁，但是在更新的时候会判断一下在此期间别人有没有去更新这个数据，乐观锁假设认为数据一般情况下不会造成冲突，所以在数据进行提交更新的时候，才会正式对数据的冲突与否进行检测，如果发现冲突了，则让返回用户错误的信息，让用户决定如何去做，一般来说可以使用版本号机制和 CAS 算法实现。
+版本号机制 一般是在数据表中加上一个数据版本号 version 字段，表示数据被修改的次数，当数据被修改时，version 值会加一，当读取数据时，将 version 字段的值一同读出，数据每更新一次，对此 version 值加一。当我们提交更新的时候，判断数据库表对应记录的当前版本信息与第一次取出来的 version 值进行比对，如果数据库表当前版本号与第一次取出来的 version 值相等，则予以更新，否则认为是过期数据。
+CAS 算法 即 compare and swap（比较与交换），是一种有名的无锁算法。
+无锁编程，即不使用锁的情况下实现多线程之间的变量同步，也就是在没有线程被阻塞的情况下实现变量的同步，所以也叫非阻塞同步（Non-blocking Synchronization）。CAS 算法涉及到三个操作数：
+需要读写的内存值 V 进行比较的值 A 拟写入的新值 B
+当且仅当 V 的值等于 A 时，CAS 通过原子方式用新值B来更新V的值，否则不会执行任何操作（比较和替换是一个原子操作）。一般情况下是一个自旋操作，即不断的重试，与 version 事务机制类似，CAS 事务也是一种细粒度的锁。然而，version 为行级锁，粒度过大， 而 CAS 事务为列级锁，粒度更小。根据锁机制的一般原则，粒度越小，并发性能越高。</description>
+    </item>
+    
+    <item>
+      <title>未来传输协议之星-QUIC</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/quic/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/quic/</guid>
+      <description>我其实是个缝合怪，UDP + TLS + HTTP/2</description>
+    </item>
+    
+    <item>
+      <title>红黑树</title>
+      <link>https://lambertxiao.github.io/posts/data-struct/%E7%BA%A2%E9%BB%91%E6%A0%91/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/data-struct/%E7%BA%A2%E9%BB%91%E6%A0%91/</guid>
+      <description>IT界的老大难，面试手撕红黑树</description>
+    </item>
+    
+    <item>
+      <title>线程相关</title>
+      <link>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E7%BA%BF%E7%A8%8B/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E7%BA%BF%E7%A8%8B/</guid>
+      <description>线程：我可是CPU调度的基本单位，进程是我爹</description>
+    </item>
+    
+    <item>
+      <title>网络世界的传输基石-TCP</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/tcp/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/tcp/</guid>
+      <description>姜还是老的辣</description>
+    </item>
+    
+    <item>
+      <title>进程相关</title>
+      <link>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E8%BF%9B%E7%A8%8B/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E8%BF%9B%E7%A8%8B/</guid>
+      <description>进程：我可是操作系统调度的基本单位，线程是我儿子</description>
+    </item>
+    
+    <item>
+      <title>expect的简单使用</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2020-06-09-expect%E7%9A%84%E7%AE%80%E5%8D%95%E4%BD%BF%E7%94%A8/</link>
+      <pubDate>Tue, 09 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2020-06-09-expect%E7%9A%84%E7%AE%80%E5%8D%95%E4%BD%BF%E7%94%A8/</guid>
+      <description>使用expect可以帮我们完成一些需要交互的终端命令，比如，在用密码ssh登录服务器时，总是需要手动输入密码，可以用以下方法实现自动登录
+#!/usr/bin/expect -f  set username [lindex $argv 0] set host [lindex $argv 1] set port [lindex $argv 2] set password [lindex $argv 3] spawn ssh -p $port &amp;#34;$username@$host&amp;#34; expect &amp;#34;password&amp;#34; send &amp;#34;$password\r&amp;#34; interact 外部调用
+/usr/bin/expect -f login_with_password.sh $user $publicIp $port $password </description>
+    </item>
+    
+    <item>
+      <title>koa的洋葱设计模型</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2020-06-05-koa%E7%9A%84%E6%B4%8B%E8%91%B1%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%9E%8B/</link>
+      <pubDate>Fri, 05 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2020-06-05-koa%E7%9A%84%E6%B4%8B%E8%91%B1%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%9E%8B/</guid>
+      <description>async function a(ctx, next) { console.log(&amp;#34;invoke a&amp;#34;) await next() console.log(&amp;#34;exit a&amp;#34;) } async function b(ctx, next) { console.log(&amp;#34;invoke b&amp;#34;) await next() console.log(&amp;#34;exit b&amp;#34;) } function compose(middleware) { return (ctx, next) =&amp;gt; { let index = -1 async function dispatch(i) { if (i &amp;lt;= index) { throw new Error(&amp;#39;next() called multiple times&amp;#39;) } index = i let fn = middleware[i] if (i === middleware.length) { fn = next } if (!fn) { return } return await fn(ctx, () =&amp;gt; { return dispatch(i + 1) }) } return dispatch(0) } } let func = compose([a, b]) func(&amp;#39;context&amp;#39;, () =&amp;gt; { console.</description>
+    </item>
+    
+    <item>
+      <title>docker踩坑集锦</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2020-06-02-docker%E8%B8%A9%E5%9D%91%E9%9B%86%E9%94%A6/</link>
+      <pubDate>Tue, 02 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2020-06-02-docker%E8%B8%A9%E5%9D%91%E9%9B%86%E9%94%A6/</guid>
+      <description>踩坑集锦 此篇文章用来记录维护k8s过程中的一系列问题
+ 容器端口被占用 Bind for 0.0.0.0:9876 failed: port is already allocated.  找到端口占用的进程  sudo lsof -i -P -n | grep 9000  杀掉进程
+  重启docker
+   kubectl logs 超时 错误类似：
+Error from server: Get https://172.31.27.3:10250/containerLogs/prod-sfox/a-group-miner-2hshz/miner-idx-1?follow=true&amp;amp;tailLines=20: dial tcp 172.31.27.3:10250: connect: connection timed out   该操作走内网ip，节点间内网不同
+  10250端口未打开
+   DNS解析失败 具体错误信息一般如下：
+panic: dial tcp: lookup mysql on 10.96.0.10:53: no such host   查看coredns的日志，判断集群内的dns解析是否成功</description>
+    </item>
+    
+    <item>
+      <title>curl使用socks5代理的正确姿势</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2020-05-29-curl%E4%BD%BF%E7%94%A8socks5%E4%BB%A3%E7%90%86%E7%9A%84%E6%AD%A3%E7%A1%AE%E5%A7%BF%E5%8A%BF/</link>
+      <pubDate>Fri, 29 May 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2020-05-29-curl%E4%BD%BF%E7%94%A8socks5%E4%BB%A3%E7%90%86%E7%9A%84%E6%AD%A3%E7%A1%AE%E5%A7%BF%E5%8A%BF/</guid>
+      <description>使用以下参数，不在local端去解析域名
+--socks5-hostname HOST[:PORT] SOCKS5 proxy, pass host name to proxy --socks5-hostname 等同于 -x socks5h
+示例:
+curl -x socks5h://127.0.0.1:36000 https://www.google.com.hk </description>
+    </item>
+    
+    <item>
+      <title>Shell分组计数</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2020-05-25-shell%E5%88%86%E7%BB%84%E8%AE%A1%E6%95%B0/</link>
+      <pubDate>Mon, 25 May 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2020-05-25-shell%E5%88%86%E7%BB%84%E8%AE%A1%E6%95%B0/</guid>
+      <description>先将内容排序, 排序后计数, 再按数量排序
+sort | uniq -c | sort -rnk 1 r表示逆向排序， n表示按数值排序， k表示按第k列进行排序</description>
+    </item>
+    
+    <item>
+      <title>五种IO模型</title>
+      <link>https://lambertxiao.github.io/posts/%E4%BA%94%E7%A7%8Dio%E6%A8%A1%E5%9E%8B/%E4%BA%94%E7%A7%8Dio%E6%A8%A1%E5%9E%8B/</link>
+      <pubDate>Fri, 27 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E4%BA%94%E7%A7%8Dio%E6%A8%A1%E5%9E%8B/%E4%BA%94%E7%A7%8Dio%E6%A8%A1%E5%9E%8B/</guid>
+      <description>同步异步、阻塞非阻塞，傻傻分不清</description>
+    </item>
+    
+    <item>
+      <title>Socks5</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2019-12-10-socks5/</link>
+      <pubDate>Tue, 10 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2019-12-10-socks5/</guid>
+      <description>Socks5 概念 Socks5是一种网络传输协议, 用于客户端与(代理)服务器通讯使用
+三个阶段 认证阶段 socks5比socks4多了一个认证阶段, 客户端必须将自己使用的socks版本, 加密方式等信息发送给服务端(以节点为单位, 总共258)
+   VER NMETHODS METHODS     1 1 1-255      VER
+使用的socks协议的版本号, 当前最新的版本号是5
+  NMETHODS
+METHODS 字段占用的字节数
+  METHODS
+METHODS是客户端支持的认证方式列表，每个方法占1字节。当前的定义是：
+  0x00 不需要认证
+  0x01 GSSAPI
+  0x02 用户名、密码认证
+  0x03 - 0x7F 由IANA分配（保留）
+  0x80 - 0xFE 为私人方法保留
+  0xFF 无可接受的方法
+    服务端从客户端提供的方法中选择一个并通过以下消息通知客户端:</description>
+    </item>
+    
+    <item>
+      <title>什么是https</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2019-12-03-%E4%BB%80%E4%B9%88%E6%98%AFhttps/</link>
+      <pubDate>Tue, 03 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2019-12-03-%E4%BB%80%E4%B9%88%E6%98%AFhttps/</guid>
+      <description>什么是https 首先, 在讲我们为什么需要https之前, 先看看以下两个流程, 描述了A和B之间想要互相通信, 又想让通信的内容安全
+流程1   A将对称秘钥发送给B
+  B使用该秘钥加密数据, 并发送给A
+  A用秘钥解开B发送的内容, AB成功通信
+  缺陷: 当中间人C截获了首次通信时, A发送给B的秘钥, 则AB后续所有的交互信息都能被C解开
+流程2   A将自己的公钥给B
+  B收到A的公钥后, 用A的公钥加密了 B自己生成对称秘钥, 并将加密后的内容回给了B
+  当A收到来自B的回复, A用自己的私钥解开了B的加密内容, 从而得到了B的对称秘钥, 后续通信使用该对称秘钥加密内容
+  缺陷:
+中间人C可在截获了A和B的首次通信后, 用自己的公钥给了B, B收到请求后,他不知道公钥是C发过来的,从而用了C的公钥加密了对称秘钥并回给了C, C拿到内容后,用自己的私钥解开内容,从而拿到了B的对称秘钥
+这个流程的缺陷主要是A和B都无法确定收到的数据是来源与对方的, 而不是来源于中间人的.
+引入证书 内容:
+  证书颁发机构
+  服务端网址
+  机构私钥加密(服务端公钥)
+  机构私钥加密(证书签名)
+  流程3 此时假设A作为服务端
+  A把自己的公钥给证书颁发机构</description>
+    </item>
+    
+    <item>
+      <title>Kafka的基本命令</title>
+      <link>https://lambertxiao.github.io/posts/kafak%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%91%BD%E4%BB%A4/doc/</link>
+      <pubDate>Mon, 26 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/kafak%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%91%BD%E4%BB%A4/doc/</guid>
+      <description>脚本命令使用 生产消息 ./kafka-console-producer.sh --broker-list kafkas:9092 --topic user_register 输入消息:
+{&amp;quot;accountname&amp;quot;:&amp;quot;test@qq.com&amp;quot;,&amp;quot;action&amp;quot;:&amp;quot;register&amp;quot;,&amp;quot;appname&amp;quot;:&amp;quot;CoolLine&amp;quot;,&amp;quot;appversion&amp;quot;:&amp;quot;1.6.xx&amp;quot;,&amp;quot;channelName&amp;quot;:&amp;quot;googleplay&amp;quot;,&amp;quot;cityen&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;cityzh&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;continentsen&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;continentszh&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;countryen&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;countryZh&amp;quot;:&amp;quot;美国&amp;quot;,&amp;quot;createTimestamp&amp;quot;:1566376441,&amp;quot;deviceid&amp;quot;:&amp;quot;edb3d8ce8df595ad&amp;quot;,&amp;quot;isPrivilegedUser&amp;quot;:&amp;quot;true&amp;quot;,&amp;quot;line&amp;quot;:&amp;quot;CoolLine&amp;quot;,&amp;quot;mail&amp;quot;:&amp;quot;test@qq.com&amp;quot;,&amp;quot;pkgname&amp;quot;:&amp;quot;cc.coolline.client&amp;quot;,&amp;quot;platform&amp;quot;:&amp;quot;Android&amp;quot;,&amp;quot;provinceen&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;provincezh&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;pt&amp;quot;:&amp;quot;2019-08-21&amp;quot;,&amp;quot;registerip&amp;quot;:&amp;quot;10.244.2.64&amp;quot;,&amp;quot;registertime&amp;quot;:&amp;quot;2019-08-21 16:34:01&amp;quot;,&amp;quot;registertype&amp;quot;:&amp;quot;mail&amp;quot;,&amp;quot;userid&amp;quot;:19348,&amp;quot;userName&amp;quot;:&amp;quot;test@qq.com&amp;quot;,&amp;quot;userpwd&amp;quot;:&amp;quot;86A8F132223D033619389988E663F6C2&amp;quot;,&amp;quot;userstate&amp;quot;:0,&amp;quot;virtualCountryCode&amp;quot;:&amp;quot;AF&amp;quot;} 消费主题 ./kafka-console-consumer.sh --bootstrap-server kafkas:9092 --topic user_register --from-beginning 设置某个主题的消息缓存时间 ./kafka-configs.sh --zookeeper zookeeper:2181 --alter --entity-name ${主题} --entity-type topics --add-config retention.ms=86400000 立即生效 ./kafka-topics.sh --zookeeper zookeeper:2181 --alter --topic ${主题} --config cleanup.policy=delete </description>
+    </item>
+    
+    <item>
+      <title>Linux下统计代码的工具Cloc</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2019-08-16-linux%E4%B8%8B%E7%BB%9F%E8%AE%A1%E4%BB%A3%E7%A0%81%E7%9A%84%E5%B7%A5%E5%85%B7cloc/</link>
+      <pubDate>Thu, 15 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2019-08-16-linux%E4%B8%8B%E7%BB%9F%E8%AE%A1%E4%BB%A3%E7%A0%81%E7%9A%84%E5%B7%A5%E5%85%B7cloc/</guid>
+      <description>Cloc cloc是linux平台里可以统计代码的工具，并非简单的统计代码的行数，能同时针对各种语言做分类输出
+安装 sudo apt install cloc 使用 cloc $filePath 返回结果：
+$ cloc . 1339 text files. 1302 unique files. 160 files ignored. github.com/AlDanial/cloc v 1.74 T=3.75 s (321.1 files/s, 135799.4 lines/s) -------------------------------------------------------------------------------- Language files blank comment code -------------------------------------------------------------------------------- Go 940 39122 40781 354176 C 37 6806 9795 31924 Markdown 49 1854 0 6552 C/C++ Header 37 1330 3531 3864 Assembly 38 503 884 2402 YAML 70 145 18 1955 Bourne Shell 13 139 323 856 JSON 1 2 0 637 make 9 73 96 296 Protocol Buffers 3 38 27 165 SQL 1 1 0 155 Python 1 14 13 99 Bourne Again Shell 1 8 3 52 TOML 2 5 45 11 Dockerfile 1 1 0 8 -------------------------------------------------------------------------------- SUM: 1203 50041 55516 403152 -------------------------------------------------------------------------------- </description>
+    </item>
+    
+    <item>
+      <title>Shell取值表达式</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2019-08-15-shell%E9%87%8C%E7%9A%84%E5%8F%98%E9%87%8F%E5%8F%96%E5%80%BC/</link>
+      <pubDate>Thu, 15 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2019-08-15-shell%E9%87%8C%E7%9A%84%E5%8F%98%E9%87%8F%E5%8F%96%E5%80%BC/</guid>
+      <description>Shell里的变量取值 # 假如 $file 没有设定，则使用 my.file.txt 作传回值。(空值及非空值时不作处理) ${file-my.file.txt} # 假如 $file 没有设定或为空值，则使用 my.file.txt 作传回值。 (非空值时不作处理) ${file:-my.file.txt} # 假如 $file 设为空值或非空值，均使用 my.file.txt 作传回值。(没设定时不作处理) ${file+my.file.txt} # 若 $file 为非空值，则使用 my.file.txt 作传回值。 (没设定及空值时不作处理) ${file:+my.file.txt} # 若 $file 没设定，则使用 my.file.txt 作传回值，同时将 $file 赋值为 my.file.txt 。 (空值及非空值时不作处理) ${file=my.file.txt} # 若 $file 没设定或为空值，则使用 my.file.txt 作传回值，同时将 $file 赋值为 my.file.txt 。 (非空值时不作处理) ${file:=my.file.txt} # 若 $file 没设定，则将 my.file.txt 输出至 STDERR。 (空值及非空值时不作处理) ${file?my.file.txt} # 若 $file 没设定或为空值，则将 my.file.txt 输出至 STDERR。 (非空值时不作处理) ${file:?</description>
+    </item>
+    
+    <item>
+      <title>Docker 杂记</title>
+      <link>https://lambertxiao.github.io/posts/_posts/docker-%E6%9D%82%E8%AE%B0/</link>
+      <pubDate>Wed, 14 Aug 2019 15:48:18 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/docker-%E6%9D%82%E8%AE%B0/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>NodeJS与ES6的模块化</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2019-08-14-nodejs%E4%B8%8Ees6%E7%9A%84%E6%A8%A1%E5%9D%97%E5%8C%96/</link>
+      <pubDate>Wed, 14 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2019-08-14-nodejs%E4%B8%8Ees6%E7%9A%84%E6%A8%A1%E5%9D%97%E5%8C%96/</guid>
+      <description>NodeJS的module 对于 circle.js
+// 这种导出方式，相当于将变量地址导出，会被外界修改 exports.varA = &amp;#39;varA&amp;#39; exports.func1 = () =&amp;gt; { console.log(&amp;#39;func1&amp;#39;) } module.exports.varB = &amp;#39;varB&amp;#39; // 以上写法等价于 module.exports = { varA: &amp;#39;varA&amp;#39;, varB: &amp;#39;varB&amp;#39;, func1 () { console.log(&amp;#39;func&amp;#39;) } } 在 main.js 中可以这么引入
+let math = require(&amp;#39;./utils/math&amp;#39;) console.log(math.varA) console.log(math.varB) math.func1() math.varA = &amp;#39;A&amp;#39;; math.varB = &amp;#39;B&amp;#39;; math.func1 = () =&amp;gt; { console.log(&amp;#39;another func&amp;#39;) } let math2 = require(&amp;#39;./utils/math&amp;#39;) // varA, varB 和 func1 都发生了改变，证明import进来的模块是单例的 console.log(math2.varA) console.log(math2.varB) math2.func1() ES6的module ES6 模块不是对象，而是通过export命令显式指定输出的代码，再通过import命令输入。</description>
+    </item>
+    
+    <item>
+      <title>nodejs-异步编程</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2019-08-06-nodejs-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B/</link>
+      <pubDate>Sat, 06 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2019-08-06-nodejs-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B/</guid>
+      <description>异步编程 callback瀑布级回调 Promise Generator Async 和 Await   在函数体前通过关键字async可以将函数变为async函数
+  在async函数中对需要异步执行的函数前需加await关键字
+  await后的函数必须使用Promise对象封装
+  async函数执行后返回的是一个Promise对象
+  NodeJs单线程是怎么保证效率的 </description>
+    </item>
+    
+    <item>
+      <title>以太坊</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-10-06-ethereum-1/</link>
+      <pubDate>Sat, 06 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-10-06-ethereum-1/</guid>
+      <description>什么是以太坊 简单来说，以太坊就是一个基于交易的状态机。什么是状态机呢？可以将其理解成一台机器，这台机器维护着一些状态，在以太坊交易发生时，这些状态会从一个状态转化到另一个状态。以太坊时基于区块链构建的，区块链上保存着状态和交易。当我们与以太坊交互时，其实就是在执行交易、改变系统状态。
+引用一个公式表示就是：
+ σ′ =Υ(σ,T)
+ Υ是状态转换函数，T是交易，σ是状态，σ′转换后的状态。
+从创世区块开始，无尽的交易不断的刷新着系统当前状态，每产生一个区块就对当前状态做一次快照（patricia trie根）存入区块头中。
+以太坊可以干什么？ 以太坊作为一个开发的区块链平台，它允许任何人在平台中建立和使用通过区块链技术运行的去中心化应用。可将之类比为Internet平台，而我们可以在其上面开发web网站。（但是似乎在以太坊上面只能开发智能合约？）
+什么是智能合约？ 智能合约就是以太坊平台上运行的程序。一旦事件触发合约中的条款，代码自动执行。智能合约的功能是由开发者自行设计的。
+智能合约的工作原理 构建 → 存储 → 执行
+  智能合约由区块链内的多个用户共同参与制定，可用于用户之间的任何交易行为。协议中明确了双方的权利和义务，开发人员将这些权利和义务以电子化的方式进行编程，代码中包含会触发合约自动执行的条件。比方说，你把一套闲置的房子租给A，那么，这份智能租约中就规定了A必须在每月5号之前给你打房租、你必须在收到房租时马上给对方钥匙［2］等条款。
+  一旦编码完成，这份智能合约就被上传到区块链网络上，即全网验证节点都会接收到你和A的租房合约。
+  智能合约会定期检查是否存在 相关事件和触发条件；满足条件的事件将会推送到待验证的队列中。假设A在4号提前打房租给你，这个事件就成了该合约的触发条件（每月5号以前）。
+  区块链上的验证节点先对该 事件进行签名验证 以确保其有效性；等大多数验证节点对该事件达成共识后，智能合约将成功执行，并通知用户。
+  成功执行的合约将移出区块。而未执行的合约则继续等待下一轮处理，直至成功执行。
+  部署到以太坊上的智能合约是要消耗以太币的。就好像把现实中的仲裁人、法官、执行人搬到了区块链上，尽管他们成了一行行的代码，但也是珍贵的计算机资源。智能合约也遵循“Less is more”，逻辑应尽可能地简单。逻辑越复杂，消耗的以太币就越多。
+既然执行要消费以太币，如何支付呢？智能合约是预支付，为了合约顺利执行，一般提前多打一点以太币。如果预支付的以太币不足以支撑整个执行过程，就算进行到半路，合约也会回到初始状态；并且消耗的以太币也不会退回给合约发起人。
+如何触发智能合约？ 智能合约本身规定了触发的条件，只要满足了条件的情况下，合约就会自动触发（比如时间到了自动缴房租）。也可以由外部账户触发。
+以太坊的区块结构 区块链上最重要的结构莫过于区块的结构，以太坊的区块结构和区块链的类似，但是又有着诸多不同。
+以太坊区块是由三大部分组成：区块头，叔块，交易列表。
+  区块头由15个字段组成。
+  叔块其实就是孤块，是由于某个区块上产生了多分支。因以太坊出块速度很快平均十几秒就会打包生成一个块，所以矿工挖矿的竞争性很高，可能同时产出几个都合法的区块，以太坊为了一些安全性起见，允许竞争块也挂在到主链上，同时给与挖出这些孤块的矿工们少许奖励增加工作的公平性。这些孤块最多允许6个高度，这也是6个区块确认主链说法的来源。
+  交易列表，存储的是本区块中所有的交易内容。
+  看一下一个实际的区块信息：
+&amp;quot;blocks&amp;quot; : [ { &amp;quot;blockHeader&amp;quot; : { &amp;quot;bloom&amp;quot; : &amp;quot;0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000&amp;quot;, &amp;quot;coinbase&amp;quot; : &amp;quot;0x3535353535353535353535353535353535353535&amp;quot;, &amp;quot;difficulty&amp;quot; : &amp;quot;0x020000&amp;quot;, &amp;quot;extraData&amp;quot; : &amp;quot;&amp;quot;, &amp;quot;gasLimit&amp;quot; : &amp;quot;0x05f5e100&amp;quot;, &amp;quot;gasUsed&amp;quot; : &amp;quot;0x014fa1&amp;quot;, &amp;quot;hash&amp;quot; : &amp;quot;0x39f4659b079e257df8fd7e699528531e97a6b8a442ca0d11200c4a2f7433c483&amp;quot;, &amp;quot;mixHash&amp;quot; : &amp;quot;0x7379f33af4ae2db7e293f808a165135d0b1a99572cc96fb9f7d17ef64a751969&amp;quot;, &amp;quot;nonce&amp;quot; : &amp;quot;0x8e08d7aabeee8773&amp;quot;, &amp;quot;number&amp;quot; : &amp;quot;0x01&amp;quot;, &amp;quot;parentHash&amp;quot; : &amp;quot;0xadbef3bf0b3b7b14f6e7b1a45d240ecc863543a279a86c23f60170e8e7a6bcc3&amp;quot;, &amp;quot;receiptTrie&amp;quot; : &amp;quot;0xb21660268480338c0cd0613358315359b619bd527d5850949c4863cddaec316b&amp;quot;, &amp;quot;stateRoot&amp;quot; : &amp;quot;0xde4ce9b5b2f88ab1680962c64281224b1743bdf94bd6a9e390ea779ff616c1f7&amp;quot;, &amp;quot;timestamp&amp;quot; : &amp;quot;0x03e8&amp;quot;, &amp;quot;transactionsTrie&amp;quot; : &amp;quot;0x56445ba866f3e41851154fb8700dcec8556a178f1833021e030b8a47b494769d&amp;quot;, &amp;quot;uncleHash&amp;quot; : &amp;quot;0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347&amp;quot; }, &amp;quot;rlp&amp;quot; : &amp;quot;0xf90308f901f9a0adbef3bf0b3b7b14f6e7b1a45d240ecc863543a279a86c23f60170e8e7a6bcc3a01dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347943535353535353535353535353535353535353535a0de4ce9b5b2f88ab1680962c64281224b1743bdf94bd6a9e390ea779ff616c1f7a056445ba866f3e41851154fb8700dcec8556a178f1833021e030b8a47b494769da0b21660268480338c0cd0613358315359b619bd527d5850949c4863cddaec316bb901000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083020000018405f5e10083014fa18203e880a07379f33af4ae2db7e293f808a165135d0b1a99572cc96fb9f7d17ef64a751969888e08d7aabeee8773f90108f90105460183030d4094c305c901078781c232a2a521c2af7980f8385ee980b8a430c8d1da000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000230644e72e131a029b85045b68181585d2833e84879b9709143e1f593f00000001ba021a28cc82b40931239f8653ffa5300e1a506c0ef7fb79a663772cafe6558ab44a075af23441f7f176a2770af41142c77b671391209b15d59144e7a1332179b5e14c0&amp;quot;, &amp;quot;transactions&amp;quot; : [ { &amp;quot;data&amp;quot; : &amp;quot;0x30c8d1da000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000230644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000000&amp;quot;, &amp;quot;gasLimit&amp;quot; : &amp;quot;0x030d40&amp;quot;, &amp;quot;gasPrice&amp;quot; : &amp;quot;0x01&amp;quot;, &amp;quot;nonce&amp;quot; : &amp;quot;0x46&amp;quot;, &amp;quot;r&amp;quot; : &amp;quot;0x21a28cc82b40931239f8653ffa5300e1a506c0ef7fb79a663772cafe6558ab44&amp;quot;, &amp;quot;s&amp;quot; : &amp;quot;0x75af23441f7f176a2770af41142c77b671391209b15d59144e7a1332179b5e14&amp;quot;, &amp;quot;to&amp;quot; : &amp;quot;0xc305c901078781c232a2a521c2af7980f8385ee9&amp;quot;, &amp;quot;v&amp;quot; : &amp;quot;0x1b&amp;quot;, &amp;quot;value&amp;quot; : &amp;quot;0x00&amp;quot; } ], &amp;quot;uncleHeaders&amp;quot; : [ ] } ] 区块头的结构 区块头包含15个字段，介绍如下：</description>
+    </item>
+    
+    <item>
+      <title>区块链的运转流程</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-10-05-blockchain-tx/</link>
+      <pubDate>Fri, 05 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-10-05-blockchain-tx/</guid>
+      <description>区块链的运转流程 当一笔交易经由某个节点或钱包产生时，这笔交易需要被转播给其他的节点来做验证。
+  产生一笔新交易
+一笔新交易产生时，会被广播到区块链中的其他参与节点
+  各节点将多笔交易一起放进区块
+每个节点会将数笔未验证的交易的hash值收集到区块中，每个区块可以包含数百笔或上千笔交易
+  决定由谁来打包区块
+各个节点进行POW，来决定谁可以获得区块的打包权，由最快算出结果的节点打包该区块
+  各节点验证打包的区块
+其他节点会确认这个区块所包含的交易是否有效，确认没被重复花费且具有有效数位签章后，接受该区块，此时该区块才能正式接上区块链
+  交易验证完成
+所有节点一旦接受该区块后，先前没计算完POW工作的区块将会失效，各节点会重新建立一个区块，并开始下一轮POW计算工作
+  Q&amp;amp;A 节点如何验证某个区块的有效性？ 当某个节点收到某个区块后，需要验证的信息有三个：
+  区块编号有效
+对区块的header进行2次hash计算，计算出来的值就是当前区块的hash值
+  区块的上一个区块hash值有效
+对比区块里的上一个区块hash值和当前节点区块链里的最后一个区块的编号（每个节点都有着一条完整的区块链数据），如果相同则验证通过，如果不同，需要顺着已有链往前查找，直到找到这个编号的页（找到了又怎么样呢？这就代表上一个区块后面已经有别的区块链啊？？？这就形成了多分支了）。如果没有找到，则验证不通过。
+  交易清单有效
+这里即是确认每笔交易的付款人是否有足够的余额来支付这笔钱。确认交易输入的UTXO是否存在，且在此之前没有支付给别人，另外，产生交易的节点本身并不验证交易输入的UTXO是否有效，即不验证交易输出用户的余额是否充足，余额的验证是让其他节点来做的
+  当节点收到一笔新交易时，是否会立即开始打包成区块的操作？ 矿工是一直在收集交易信息的，但只有等到上一个区块生成后，拿到上一个区块的hash值时，才会将收集到的交易信息打包新的区块，并进行POW工作
+当一个区块发现它的上一个区块已经连接上了新的区块后，如何处理？ 这就是区块链的多分支问题，当矿工收到两份不一样的区块，它们都基于当前这个矿工节点的链上的最后一个节点，并且内容都合法，都应将其保留，按分支的形式组织起来。区块链规定，任何时刻，都以最长的链作为主链，当某个分支的长度长于另外的分支后，该分支就称为主分支了，其他分支就会被遗忘。
+由于多分支问题产生的双花问题该如何解决？ 中本聪给出的解决方案是，建议收款人不要在公告挂出时立即确认交易完成，而是应该再看一段时间，等待各个挖矿小组再挂出6张确认账簿，并且之前的账簿没有被取消，才确认钱已到账。
+中本聪解释道，之前设定变态的编号规则，正是为了防御这一点。根据前面所述，生成有效账簿页不是那么简单的，要花费大量的人力反复试不同的幸运数 字，而且过程完全是碰运气。如果某账簿页包含你收到钱的确认，并且在后面又延续了6个，那么攻击者想要在落后6页的情况下从另一个分支赶超当前主分支是非 常困难的，除非攻击者拥有非常多的人力，超过其他所有诚实矿工的人力之和。
+而且，如果攻击者有如此多人力，与其花这么大力气搞这种攻击，还不如做良民挖矿来的收益大。这就从动机上杜绝了攻击的形成。
+每个节点打包到区块里的交易都是一样的吗？ 区块的打包是由矿工来做的，矿工可能是随机地选取某几笔交易进行打包，也可能是挑选交易手续费较高的交易进行打包，因此，每个节点产生的区块是不一样的。
+如果各个节点打包的区块交易是完全不同的，那会怎么样？ 比如，节点A打包了一个区块，所含的交易是1和2；节点B也打包了一个区块，所含的交易是3和4；由于两个节点打包的区块的前驱节点都是一致的，如果这两个区块都合法，且都被其他节点验证通过了，那么就会在链上形成分支。
+当一个节点完成POW工作后，广播给其他节点验证时，如果有某个节点此时在进行着其他交易（即不包含相同的交易）的POW工作，会怎么样？ 会停止当前工作，先验证区块的有效性
+矿工是不间断地进行挖矿工作的吗？可以光挖矿而不打包普通交易吗？ 矿工基本上就是在不间断地做POW工作的，矿工的收入主要来源于挖矿和手续费。一般来说，币的数量是有限的，前期矿工应该可以只挖矿，但为了获得更大的收益，都会选择打包有手续费的交易
+产生一笔交易的时候，就会产生一个区块吗？ 并不是，收集多少笔交易之后开始打包成区块，是由挖矿策略或者挖矿程序决定的。
+是否有可能区块生成时，块里没有交易数据？ 可能存在区块里有零笔普通交易，但有一个系统给予的挖矿奖励的交易。对于空交易的区块，由于数量量小，算出满足条件的区块hash值更快。据说早期的区块大都是这种。系统给予奖励，矿工们才有挖矿的热情。</description>
+    </item>
+    
+    <item>
+      <title>Nat技术详解</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-10-04-nat/</link>
+      <pubDate>Thu, 04 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-10-04-nat/</guid>
+      <description>提出问题 什么是Nat？ Nat全称Network Address Translation，即网络地址转换，就是替换IP报文头部的地址信息。Nat通常部署在一个组织的网络出口位置，通过将内部网络IP地址替换为出口网络的IP地址，从而提供公网连通内部网络的能力。
+为什么需要Nat技术？ 解决IPV4地址即将耗尽的问题，对于有网络访问需求而内部又使用私有地址的网络，就要在组织的出口位置部署NAT网关，在报文离开私网进入Internet时，将源IP替换为公网地址，通常是出口设备的接口地址。在接收方收到访问请求后，在接收方看来，此次请求是来自组织的出口设备的，因此接收方会将响应消息发送回出口网关。出口网关再将目的地址替换为私网的源主机地址，发回内网。依据这种模型，数量庞大的内网主机就不需要公有IP地址来。
+Nat网络的种类 一对一 一个内部主机占用一个公网IP，一般是用来隐藏内部主机的真实IP
+一对多 典型的应用。即在一个组织网络的出口位置部署Nat网关，所有对公网的访问表现为一台主机。这里面就有产生一个问题：当有多个内部主机去访问同一个服务器时，从返回的信息不足以区分response应该转发到哪个内部主机。因此，这就需要Nat设备根据传输层信息或其他的上层协议去区分不同的会话，这里引出了后面的很多坑，这种一对多的方式也被称为端口转换PAT，NAPT或IP伪装。
+在一对多模型中，按照NAT端口映射方式分类又可做进一步划分，为方便描述，将IP和端口标记为(nAddr)
+  全锥型（谁都可以找我）
+一旦内部主机的IP和端口被Nat网关映射到某个地址A上，之后该主机的所有出口报文的源IP都会是A这个地址。任何一个外部主机 发送到A地址上时，都会被转发到该内部主机。
+  限制锥型（我先找你，你才能找我）
+一旦内部主机的IP和端口被Nat网关映射到某个地址A上，之后该主机的所有出口报文的源IP都会是A这个地址。只有该内部主机向特定的外部主机H发送过数据，那么后续H主机从任意端口发送到地址A的报文都会被转发到该内部主机
+  端口限制锥型（我从某个port找过你，以后你找我也要从这个port）
+基本跟限制锥型是一样的，内部主机发数据到特定外部主机的特定端口上，之后只有这个外部主机从这个特定端口发过来的数据才会被转化到该内部主机
+  对称型 （我从某个port找你，但你要）
+同一内网主机同一端口号，当与同一外部主机通信时，NAT分配的端口号不变；每一次与不同的外网主机通讯，就重新分配另一个端口号
+  Nat的弊端 Nat技术最大的弊端在于 破坏了IP端到端通信的能力，首先，Nat使IP会话的保持时效变短，因为一个会话建立后会在Nat设备上建立一个关联表，在会话静默的这段时间，Nat网关会进行老化操作，会回收资源。一般基于UDP的通信协议很难确定何时通信结束，所以Nat网关主要依赖超时机制回收外部端口。如果应用需要维持连接的时间大于Nat网关的设置，通信就会意外中断。因为网关回收相关转换表资源以后，新的数据到达时就找不到相关的转换信息，必须建立新的连接。
+当这个新数据是由公网侧向内网侧发送时，就会发生无法出发新连接建立，也不能通知到内网侧的主机去重建连接的情况，这时候通信就会中断。
+即使新数据是从内网侧发向公网侧，因为重建的会话表往往使用不同于之前的公网IP和端口地址，公网侧的主机也无法对应到之前的通信上。
+连接保活机制
+Nat穿透技术 前面提出来了Nat的弊端，为例解决IP端到端应用在Nat环境下遇到的问题，一般由如下的解决方式，只是每一种方法都不完美，需要内部主机，应用程序或Nat网关上增加额外的处理。
+应用层网关 因为Nat不感知应用协议，所以有必要额外为每个应用协议定制协议分析方法。
+探针技术 STUN和TURN 所谓的探针技术，是通过在所有参与通信的实体上安装探测插件，以检测网络中是否存在Nat网关，并对不同模型实施不同穿透方法的一种技术。
+中间件技术 通过开发通用方法解决Nat穿透，客户端会参与网关公网映射信息的维护，此时Nat网关只要理解客户端的请求并按照要求去分配转换表，不需要自己去分析客户端的应用层数据，其中典型的技术由 UPNP。
+UPNP，即通用即插即用，是一个通用的网络终端与网关的通信协议，具备发布和管理控制的能力，其中，网关映射请求可以为客户动态添加映射表项。此时Nat不再需要理解应用层携带的信息，只转换IP地址和端口信息，而客户端通过控制 消息或信令 发到公网侧的信息中，直接携带公网映射的IP地址和端口，接收端可以按照此信息建立数据连接。Nat网关在接受数据或着连接请求时，按照UPNP建立的表项只转换地址和端口信息，不关心内容，再将数据转发到内网。这种方案需要网关，内部主机和应用程序都支持UPNP技术，且组网允许内部主机和Nat网关之间可以直接交换UPNP信令才能实施。
+中继代理技术 在Nat网关所在位置旁边放置一个应用服务器，这个服务器在内部网络和外部公网分别由自己的网络连接，客户端特定的应用产生网络请求时，将定向发送到应用代理服务器，应用代理服务器根据代理协议解析客户端的请求，再从服务器的公网侧发起一个新的请求，把客户端请求的内容中继到外部网络上，返回的相应反方向中继。
+特定协议的自穿越技术 基于UDP协议的P2P打洞技术详解 什么是UDP打洞？ Nat技术和P2P技术在现有网络上都有着广泛应用，P2P主机位于Nat网关后面的情况屡见不鲜，Nat技术虽然在一定程度上解决了IPv4地址短缺的问题，在构建防火墙，保证网络安全方面都发挥了一定的作用，但却破坏了端到端的网络通信，Nat阻碍主机进行P2P通信的主要原因是Nat不允许外部主机主动访问内网主机，但是P2P技术却要求通信双方都能主动发起访问，所以要在Nat网络环境中进行有效的P2P通信，就必须采用新的解决方案。
+原理 UDP打洞技术是通过集中服务器的协助，在各自的Nat网关上建立相应的表项，使P2P连接的双方发送的报文能够直接穿透对方的Nat网关 ，从而实现P2P客户端的互联。
+什么是集中服务器 集中服务器本质是一台被设置在公网的服务器，建立P2P的双方都可以直接访问到这台服务器，位于Nat网关后面的客户端A和客户端B都可以与一台已知的集中服务器建立连接，并通过这台服务器了解对方的信息并中转各自的信息。
+同时集中服务器的另一个重要的作用是判断某个客户端是否在Nat网关之后。具体的方法是：一个客户端在集中服务器登陆的时候，服务器记录下该客户端的两对二元组信息 {IP地址: UDP端口}，其中一对可以看作是内网IP和端口，另一对可以看作是外网IP和端口。如果该客户端不是位于Nat设备后面，那么两对IP端口应该是一样的。
+打洞session的建立 假设A要向B发起连接请求，具体的打洞过程如下：
+  A最初不知道如何向B发起连接，于是A向集中服务器发送消息，请求集中服务器帮助建立与B的UDP连接</description>
+    </item>
+    
+    <item>
+      <title>UTXO</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-10-04-utxo/</link>
+      <pubDate>Thu, 04 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-10-04-utxo/</guid>
+      <description>UTXO模型 什么是UXTO？ 在区块链里，账本里记录的是一笔又一笔的交易。每笔交易都有若干交易输入，也就是资金来源；也有若干交易输出，也就是资金去向。一般来说，每一笔交易都要花费一笔输入，产生一笔输出，而当其所产生的输出，并被其他交易所花费时，这笔输出就可以被称为 “未花费过的交易输出”，也就是UTXO。
+比特币中交易过程的实现 在比特币的世界里，记录交易记录正是基于UTXO模型。要理解UTXO，最简单的方法就是把一枚比特币从诞生到交易的经历描述一下。
+假设，张三通过挖矿得到了12.5枚比特币。过了几天，他把其中2.5枚比特币交给了李四。再过几天，他和李四各出资2.5比特币凑成5比特币给王五，整个交易过程再UTXO模型里的记录是这样的：
+从图上可以看出，当张三付给李四2.5个比特币时这笔交易时，收款人有两个，分别是李四和张三他自己，张三收到了余额10枚比特币，李四收到了2.5枚比特币，此时，张三原有的挖矿所得的12.5的记录因为以及消费，已经不能算是UTXO的记录了，因此，张三此时的余额就是10枚比特币。
+ 可以看出，从消费这一点来看，UTXO类似日常生活中的纸币消费，当你拿10块钱买了3块钱的肥宅快乐水时，你需要付给老板3块，同时老板会找零给你7块。此时你原来的10块钱就不存在了。
+ 当李四给了王五2.5枚比特币之后，李四的已经没有比特币了，因此没有李四的交易输出了；同时，王五同时收到了两个人的比特币，收款数额直接计算总数，并合并成一条数额为5的记录。这里似乎是可以不合并分开成两条输出记录的，待确定 ！！！
+ 由上面的例子说明，其实并没有什么比特币，只有 UTXO。当我们说张三拥有10枚比特币的时候，我实际上是说，当前区块链账本中，有若干笔交易的UTXO 项收款人写的是张三的地址，而这些UTXO项的数额总和是 10。
+ 注意点   Coinbase交易是指矿工挖矿所得比特币的交易，这种交易比较特殊，交易输入并不是来自前面某一个或者某几个交易的UTXO。
+  每一笔交易的交易输入必须等于交易输出
+  计算某个人的账户余额时，只计算 未花费的 交易输出
+  怎么确定交易输入是有效的？ 当节点接收到一笔交易的时候，它需要去 UTXO 数据库里查，看看这笔交易所引用的 UTXO 是否存在，它的收款人（拥有者）是不是当前新交易的付款者。
+怎么保证一笔交易所引用的UTXO没有被重复消费？ 当某一笔比特币交易被创建—签名—广播到区块链网络之中后，每一个节点（比特币交易参与者）会对这笔交易进行验证，看交易的输出是否存在于UTXO。
+如果A拥有1枚比特币被证实确实是“未花费过的交易输出”，他要是将这1枚比特币同事转账给B1、B2两个人，挖矿节点会选择性的记录一笔交易，或许是最先收到的，或许是手续费更高的。
+情况1：
+如果这两笔交易是先后被挖矿节点接收到的，那依据时间戳（时间戳是矿工打包区块时的时间），先被接收到的交易会被验证成功，而后被接收到的交易则会因交易输入已经不存在于UTXO而验证失败。
+情况2：
+如果两个挖矿节点分别 同时 记录了这两笔交易，并且这两笔交易被分别证明是合法的，此时这两个挖矿节点会将各自挖到的新区块广播到全网。这时链就会 分叉。当其中一笔交易（是交易被确认还是新区块被确认？？？）被6个节点确认后，它将获得最终的确认，成为最长链，记录在最长链上的交易最终会被认证是成功的，而记录在另一条链上的交易则不会被认证。
+UTXO模型是怎么计算余额的？ 我们知道，要计算A的余额，在UTXO模型里，其实就是计算有多少笔交易的收款人的地址写的A，且这条交易输出没有被花费，那么这个余额怎么才能快速计算出来呢？
+比特币客户端的实现维护一个UTXO数据库，也称UTXO池，是区块链中所有未支付交易输出的集合。“UTXO池”的名字听上去与交易池相似，但它代表了不同的数据集。UTXO池不同于交易池和孤立交易池的地方在于，它在初始化时不为空，而是包含了数以百万计的未支付交易输出条目，有些条目的历史甚至可以追溯至2009年。UTXO池可能会被安置在本地内存，或者作为一个包含索引的数据库表安置在永久性存储设备中。</description>
+    </item>
+    
+    <item>
+      <title>Kadamlia</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-10-03-kadamlia/</link>
+      <pubDate>Wed, 03 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-10-03-kadamlia/</guid>
+      <description>简介 Kademlia算法是区块链底层实现点对点通信时所用的算法，它通过对节点之间的数学操作，获得逻辑上的节点距离，并用这个距离构建一个不同层次的路由表。通过对该路由表的查询，更新等操作，使节点与节点之间能够相互发现。
+主要概念 NodeID Kadamlia算法使用160bit（20字节）的哈希值作为节点的唯一标识，当一个节点新加入网络时，会被分配这个NodeID
+距离 节点与节点之间的距离，是将两个节点的NodeID进行XOR操作后得到值，一般将得到的二进制数转化为十进制数后的值作为距离，例如对于NodeID分别为 0011 和 1011 的节点，异或之后得到的值为1000（二进制），即距离为4（十进制）
+公共前缀长度 Common Prefix Length（CPL） 举个列子，假设NodeID为3位，那么对于节点 110，它与周围节点的CPL分别为
+   CPL 所含节点     0 000 001 010 011   1 100 101   2 111   3 110（自身）    可以看出，节点间CPL越大，则节点XOR之后的值越小，即两节点的逻辑距离越小
+二叉前缀树 一个完整的网络空间可以被表示成为一颗二叉树，树的叶子节点代表网络节点 K-Bucket K-Bucket又称为K桶，Bucket里存的是一组CLP的长度一样的节点 路由表 一个由K-Bucket构成的链表
+分裂 某些Kadamlia算法的实现是一开始仅有一个Bucket，当Bucket的容量超过限制时，将最小的cpl的节点和其他节点分裂开的操作
+仍以上面的例子为例，如果一开始仅有一个Bucket，那么 000 ～ 111 的 8 个节点都存在一个Bucket中，假设此时Bucket的容量K为1，即现有的8个节点超过了容量，需要将之分裂
+第一次分裂
+Old Bucket = （000 001 010 011） New Bucket = （100 101 111）</description>
+    </item>
+    
+    <item>
+      <title>Pow算法</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-10-03-pow/</link>
+      <pubDate>Wed, 03 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-10-03-pow/</guid>
+      <description>什么是Pow算法？ Pow的全称是Proof of Work，即工作量证明，是区块链中用来判断由哪个矿工获得区块打包权的算法。
+区块链的块的结构 在聊Pow之前，首先，必须先认识区块的结构，基本的区块结构如下
+   区块结构     当前块的hash值   前一个区块的哈希值   Merkle根哈希值   时间戳   难度值   随机数Nonce   区块包含的交易列表    Merkle根 交易列表里记录的每一笔交易都有一个唯一的哈希值，将交易的hash值两两组合，最后生成Merkle根
+Merkle保证了区块的交易信息不会被串改
+Nonce值 矿工挖矿的过程其实就是对交易数据进行打包后，算出一个符合如下公式的Nonce值的过程
+CryptoJS.SHA256(index + previousHash + timestamp + data + nonce) 该公式的结果是一个hash值，而挖矿的难度就是这个hash值的前面有几个0，难度越大，即要求的0的个数越多，就越难算出来，这个算的过程就是矿工工作的过程，所以这个算法才叫工作量证明算法。</description>
+    </item>
+    
+    <item>
+      <title>Grunt</title>
+      <link>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/grunt/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/grunt/</guid>
+      <description>Grunt是一个基于NodeJS，可用于自动化构建、测试、生成文档的项目管理工具。</description>
+    </item>
+    
+    <item>
+      <title>Gulp</title>
+      <link>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/gulp/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/gulp/</guid>
+      <description>Gulp 是一个构建工具，可以通过它自动执行网站开发过程中的公共任务，比如编译 SASS/Less，编译压缩混淆 JavaScript,，合并编译模板和版本控制等。因为 gulp 是基于 Node.js 构建的，所以 gulp 源文件和开发者自己定义的 gulpfile 都被写进 JavaScript 里，前端开发者可以用自己熟悉的语言来编写 gulp 任务。</description>
+    </item>
+    
+    <item>
+      <title>TCP协议</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-06-tcp/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-06-tcp/</guid>
+      <description>TCP协议 TCP（Transmission Control Protocol 传输控制协议）是一种面向连接的、可靠的、基于字节流的传输层通信协议，由IETF的RFC 793定义。在简化的计算机网络OSI模型中，它完成第四层传输层所指定的功能，用户数据报协议（UDP）是同一层内另一个重要的传输协议。
+主要特点  面向连接 一对一 可靠交付 全双工 面向字节流  套接字Socket的含义  Socket := IP + Port TCP连接 ：= {Socket1, Socket2} 解释为两个Socket之间的连接  TCP可靠传输的工作原理   停止等待协议
+ 超时重传 超时计时器 保留已发送分组的副本 对数据分组和确认分组的编号 重传时间的设置 确认丢失和确认迟到 信道利用率    连续ARQ协议
+  发送方维持的滑动窗口
+  累计确认
+  容易实现，即使确认丢失也不必重传
+  不能向发送方反映出接收方以及正确接收到的所有分组的信息
+      TCP报文段的首部格式   源端口和目的端口
+  序号
+  确认号ack</description>
+    </item>
+    
+    <item>
+      <title>UDP协议</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-06-udp/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-06-udp/</guid>
+      <description>UDP协议 UDP协议全称是用户数据报协议，在网络中它与TCP协议一样用于处理数据包，是一种无连接的协议。在OSI模型中，在第四层——传输层，处于IP协议的上一层。UDP有不提供数据包分组、组装和不能对数据包进行排序的缺点，也就是说，当报文发送之后，是无法得知其是否安全完整到达的。
+  基本特点
+  无连接的
+  不保证可靠交付
+  面向报文的，在添加了UDP协议的首部后就直接塞给UP层了
+  没有拥塞控制
+  支持一对一，一对多和多对多的交互通信
+  UDP首部开销小
+    UDP首部格式
+  源端口
+  目的端口
+  长度
+  校验和（检测UDP数据包在传输中是否有错，有错就丢弃）
+    </description>
+    </item>
+    
+    <item>
+      <title>Webpack</title>
+      <link>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/webpack/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/webpack/</guid>
+      <description>webpack 是一个模块打包器(module bundler)。打包器(bundler)帮助您取得准备用于部署的 JavaScript 和样式表，将它们转换为适合浏览器的可用格式。</description>
+    </item>
+    
+    <item>
+      <title>产生死锁的原因和必要条件</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E4%BA%A7%E7%94%9F%E6%AD%BB%E9%94%81%E7%9A%84%E5%8E%9F%E5%9B%A0%E5%92%8C%E5%BF%85%E8%A6%81%E6%9D%A1%E4%BB%B6/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E4%BA%A7%E7%94%9F%E6%AD%BB%E9%94%81%E7%9A%84%E5%8E%9F%E5%9B%A0%E5%92%8C%E5%BF%85%E8%A6%81%E6%9D%A1%E4%BB%B6/</guid>
+      <description>产生死锁的原因和必要条件 在多道程序系统中，虽可借助于多个进程的并发执行来改善系统的资源利用率，提高系统的吞吐量，但可能发生一种危险——死锁。所谓死锁(Deadlock)，是指多个进程在运行过程中因争夺资源而造成的一种僵局(DeadlyEmbrace)，当进程处于这种僵持状态时，若无外力作用，它们都将无法再向前推进。
+产生死锁的必要条件   互斥条件
+指进程对所分配到的资源进行排它性使用，即在一段时间内某资源只由 一个进程占用。如果此时还有其它进程请求该资源，则请求者只能等待，直至占有该资源的进程用毕释放。
+  请求和保持条件
+指进程已经保持了至少一个资源，但又提出了新的资源请求，而该资源又已被其它进程占有，此时请求进程阻塞，但又对自己已获得的其它资源保持不放。
+  不剥夺条件
+指进程已获得的资源，在未使用完之前，不能被剥夺，只能在使用完 时由自己释放。
+  环路等待条件
+指在发生死锁时，必然存在一个进程——资源的环形链，即进程集合{P0，P1，P2，…，Pn}中的 P0正在等待一个 P1占用的资源； P1正在等待 P2占用的资源，……，Pn正在等待已被 P0占用的资源。
+  处理死锁的基本方法   预防死锁
+该方法是通过设置某些限制条件，去破坏产生死锁的四个必要条件中的一个或几个条件，来预防发生死锁。预防死锁是一种较易实现的方法，已被广泛使用。但由于所施加的限制条件往往太严格，因而可能会导致系统资源利用率和系统吞吐量降低。
+  避免死锁
+是在资源的动态分配过程中，用某种方法去防止系统进入不安全状态，从而避免发生死锁
+  检测死锁
+这种方法并不须事先采取任何限制性措施，也不必检查系统是否已经进 入不安全区，而是允许系统在运行过程中发生死锁。但可通过系统所设置的检测机构，及时地检测出死锁的发生，并精确地确定与死锁有关的进程和资源； 然后，采取适当措施，从系统中将已发生的死锁清除掉
+  解除死锁
+这是与检测死锁相配套的一种措施。当检测到系统中已发生死锁时，须 将进程从死锁状态中解脱出来。常用的实施方法是撤消或挂起一些进程，以便回收一些资源，再将这些资源分配给已处于阻塞状态的进程，使之转为就绪状态，以继续运行
+  </description>
+    </item>
+    
+    <item>
+      <title>基本分段存储管理方式</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E5%88%86%E6%AE%B5%E5%AD%98%E5%82%A8%E7%AE%A1%E7%90%86%E6%96%B9%E5%BC%8F/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E5%88%86%E6%AE%B5%E5%AD%98%E5%82%A8%E7%AE%A1%E7%90%86%E6%96%B9%E5%BC%8F/</guid>
+      <description>基本分段存储管理方式 如果说推动存储管理方式从固定分区到动态分区分配，进而又发展到分页存储管理方式的主要动力，是提高内存利用率，那么，引入分段存储管理方式的目的，则主要是为了满足用户(程序员)在编程和使用上多方面的要求。
+分段存储管理方式的引入   方便编程
+通常，用户把自己的作业按照逻辑关系划分为若干个段，每个段都是从 0 开始编址，并有自己的名字和长度。因此，希望要访问的逻辑地址是由段名(段号)和段内偏移量(段内地址)决定的。
+  信息共享
+在实现对程序和数据的共享时，是以信息的逻辑单位为基础的。比如，共享某个例程 和函数。分页系统中的“页”只是存放信息的物理单位(块)，并无完整的意义，不便于实现共享；然而段却是信息的逻辑单位。
+  信息保护
+  动态增长
+在实际应用中，往往有些段，特别是数据段，在使用过程中会不断地增长，而事先又无法确切地知道数据段会增长到多大。(是哪种情况?)
+  动态链接
+动态链接是指在作业运行之前，并不把几个目标程序段链接起来。要运行时，先将主程序所对应的目标程序装入内存并启动运行，当运行过程中又需要调用某段时，才将该段(目标程序)调入内存并进行链接。可见，动态链接也要求以段作为管理的单位。
+  分段系统的基本原理   分段
+在分段存储管理方式中，作业的地址空间被划分为若干个段，每个段定义了一组逻辑信息。例如，有主程序段MAIN、子程序段X、数据段D及栈段S等。每个段都有自己的名字。为了实现简单起见，通常可用一个段号来代替段名，每个段都从 0开始编址，并采用一段连续的地址空间。段的长度由相应的逻辑信息组的长度决定，因而各段长度不等。
+分段方式已得到许多编译程序的支持，编译程序 能自动地根据源程序的情况而产生若干个段。编译程序可以为全局变量、用于存储相应参数及返回地址的过程调用栈、每个过程或函数的代码部分、每个过程或函数的局部变量等等，分别建立各自的段。
+  段表
+在前面所介绍的动态分区分配方式中，系统为整个进程分配一个连续的内存空间。而在分段式存储管理系统中，则是为每个分段分配一个连续的分区，而进程中的各个段可以离散地移入内存中不同的分区中。为使程序能正常运行，亦即，能从物理内存中找出每个逻辑段所对应的位置，应像分页系统那样，在系统中为每个进程建立一张段映射表，简称“段表”。每个段在表中占有一个表项，其中记录了该段在内存中的起始地址(又称为“基址”)和段的长度。段表可以存放在一组寄存器中，这样有利于提高地址转换速度，但更常见的是将段表放在内存中
+  地址变换机构
+为了实现从进程的逻辑地址到物理地址的变换功能，在系统中设置了段表寄存器，用于存放段表始址和段表长度TL。在进行地址变换时，系统将逻辑地址中的段号与段表长度TL 进行比较。若S&amp;gt;TL，表示段号太大，是访问越界，于是产生越界中断信号；若未越界，则根据段表的始址和该段的段号，计算出该段对应段表项的位置，从中读出该段在内存的起始地址，然后，再检查段内地址d是否超过该段的段长SL。若超过，即 d&amp;gt;SL，同样发出越界中断信号；若未越界，则将该段的基址d与段内地址相加即可得到要访问的内存物理地址。
+像分页系统一样，当段表放在内存中时，每要访问一个数据，都须访问两次内存，从而极大地降低了计算机的速率。解决的方法也和分页系统类似，再增设一个联想存储器，用于保存最近常用的段表项。
+  分页和分段的主要区别   两者都采用离散分配方式，且都要通过地址映射机构来实现地址变换。
+  分页仅仅是由于系统管理的需要而不是用户的需要。段则是信息的逻辑单位，它含有一组其意义相对完整的信息
+  页的大小固定且由系统决定，由系统把逻辑地址划分为页号和页内地址两部分，是 由机器硬件实现的，因而在系统中只能有一种大小的页面；而段的长度却不固定，决定于用户所编写的程序，通常由编译程序在对源程序进行编译时，根据信息的性质来划分。
+  分页的作业地址空间是一维的，即单一的线性地址空间，程序员只需利用一个记忆 符，即可表示一个地址；而分段的作业地址空间则是二维的，程序员在标识一个地址时，既需给出段名，又需给出段内地址
+  信息共享 分段系统的一个突出优点，是易于实现段的共享，即允许若干个进程共享一个或多个分段，且对段的保护也十分简单易行。在分页系统中，虽然也能实现程序和数据的共享，但远不如分段系统来得方便。
+ 举个例子 有一个多用户系统，可同时接纳 40 个用户，他们都执行一个文本编辑程序(Text Editor)。如果文本编辑程序有 160 KB 的代码和另外 40 KB 的数据区，则总共需有 8 MB 的内存空间来支持 40个用户。如果160KB的代码是可重入的(Reentrant)，则无论是在分页系统还是在分段系统中，该代码都能被共享，在内存中只需保留一份文本编辑程序的副本，此时所需的内存空间仅为1760KB(40×40+160)，而不是8000KB。假定每个页面的大小为 4 KB，那么，160KB的代码将占用40个页面，数据区占10个页面。为实现代码的共享，应在每个进程的页表中都建立40个页表项，它们的物理块号都是21#～60#。在每个进程的页表中，还须为自己的数据区建立页表项，它们的物理块号分别是61#～70#、71#～80#、81#～90#，…，等等。</description>
+    </item>
+    
+    <item>
+      <title>基本分页存储管理方式</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E5%9F%BA%E6%9C%AC%E5%88%86%E9%A1%B5%E5%AD%98%E5%82%A8%E7%AE%A1%E7%90%86%E6%96%B9%E5%BC%8F/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E5%9F%BA%E6%9C%AC%E5%88%86%E9%A1%B5%E5%AD%98%E5%82%A8%E7%AE%A1%E7%90%86%E6%96%B9%E5%BC%8F/</guid>
+      <description>基本分页存储管理方式 连续分配方式会形成许多“碎片”，虽然可通过“紧凑”方法将许多碎片拼接成可用的大块空间，但须为之付出很大开销。$\color{maroon}{如果允许将一个进程直接分散地装入到许多不相邻接的分区中}$，则无须再进行“紧凑”。 基于这一思想而产生了离散分配方式。
+  如果离散分配的基本单位是页，则称为分页存储管理方式；
+  如果离散分配的基本单位是段，则称为分段存储管理方式
+  页面与页表   页面
+  页面和物理块
+分页存储管理是将一个 进程的逻辑地址空间 分成若干个大小相等的片，称为页面或页，并为各页加以编号，从 0 开始，如第 0 页、第 1 页等。
+也把 内存空间 分成与页面相同大小的若干个存储块，称为(物理)块或页框(frame)，也同样为它们加以编号，如0#块、1#块等等。
+在为进程分配内存时，以块为单位将进程中的若干个页分别装入到多个可以不相邻接的物理块中。由于进程的最后一页经常装不满一块而形成了不可利用的碎片，称之为“页内碎片”。
+  页面大小
+在分页系统中的页面其大小应适中。页面若太小，一方面虽然可使内存碎片减小，从而减少了内存碎片的总空间，有利于提高内存利用率，但另一方面也会使每个进程占用较多的页面，从而导致进程的页表过长，占用大量内存；此外，还会降低页面换进换出的效率。然而，如果选择的页面较大，虽然可以减少页表的长度，提高页面换进换出的速度，但却又会使页内碎片增大。因此，页面的大小应选择适中，且页面大小应是 2 的幂，通常为 512 B～8 KB。
+    地址结构
+前一部分为页号P，后一部分为位移量W(或称为页内地址)。图中的地址长度为32位，其中 0～11 位为页内地址，即每页的大小为4KB；12～31 位为页号，地址空间最多允许有 1 M 页。
+对于某特定机器，其地址结构是一定的。若给定一个逻辑地址空间中的地址为 A，页面的大小为 L，则页号 P 和页内地址 d可按下式求得：
+P = INT(A/L) d = MOD(A/L)   页面
+在分页系统中，允许将进程的各个页离散地存储在内存不同的物理块中，但系统应能保证进程的正确运行，即能在内存中找到每个页面所对应的物理块。为此，系统又为每个进程建立了一张页面映像表，简称页表。在进程地址空间内的所有页(0～n)，依次在页表中有一页表项，其中记录了相应页在内存中对应的物理块号。在配置了页表后，进程执行时，通过查找该表，即可找到每页在内存中的物理块号。可见，页表的作用是实现从页号到物理块号的地址映射。
+即使在简单的分页系统中，也常在页表的表项中设置一存取控制字段，用于对该存储块中的内容加以保护。当存取控制字段仅有一位时，可用来规定该存储块中的内容是允许读/写，还是只读；若存取控制字段为二位，则可规定为读/写、只读和只执行等存取方式。如果有一进程试图去写一个只允许读的存储块时，将引起操作系统的一次中断。如果要利用分页系统去实现虚拟存储器，则还须增设一数据项。
+  地址变换机构</description>
+    </item>
+    
+    <item>
+      <title>对换</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E5%AF%B9%E6%8D%A2/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E5%AF%B9%E6%8D%A2/</guid>
+      <description>对换   对换(Swapping)的引入
+在多道程序环境下，一方面，在内存中的某些进程由于某事件尚未发生而被阻塞运行，但它却占用了大量的内存空间，甚至有时可能出现在内存中所有进程都被阻塞而迫使CPU停止下来等待的情况；另一方面，却又有着许多作业在外存上等待，因无内存而不能入内存运行的情况。显然这对系统资源是一种严重的浪费，且使系统吞吐量下降。为了解决这一问题，在系统中又增设了对换(也称交换)设施。所谓“对换”，是指把内存中暂时不能运行的进程或者暂时不用的程序和数据调出到外存上，以便腾出足够的内存空间，再把已具备运行条件的进程或进程所需要的程序和数据调入内存。对换是提高内存利用率的有效措施。
+如果对换是以整个进程为单位的，便称之为“整体对换”或“进程对换”。而如果对换是以“页”或“段”为单位进行的，则分别称之为“页面对换”或“分段对换”，又统称为“部分对换”。
+  实现进程对换，系统必须能实现三方面的功能
+  对换空间的管理
+在具有对换功能的OS中，通常把外存分为文件区和对换区。前者用于存放文件，后者用于存放从内存换出的进程。
+  进程的换出
+每当一进程由于创建子进程而需要更多的内存空间，但又无足够的内存空间等情况发生时，系统应将某进程换出。其过程是：系统首先选择处于阻塞状态且优先级最低的进程作为换出进程，然后启动磁盘，将该进程的程序和数据传送到磁盘的对换区上。若传送过程未出现错误，便可回收该进程所占用的内存空间，并对该进程的进程控制块做相应的修改。
+  进程的换入
+系统应定时地查看所有进程的状态，从中找出“就绪”状态但已换出的进程，将其中换出时间最久(换出到磁盘上)的进程作为换入进程，将之换入，直至已无可换入的进程或无可换出的进程为止。
+    </description>
+    </item>
+    
+    <item>
+      <title>操作系统引论</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-01-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%BC%95%E8%AE%BA/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-01-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%BC%95%E8%AE%BA/</guid>
+      <description>第一章 操作系统引论   操作系统的目标和作用
+ OS 作为用户与计算机硬件系统之间的接口 OS 作为计算机系统资源(处理器、存储器、I/O 设备以及信息(数据和程序))的管理者 OS 实现了对计算机资源的抽象    操作系统的基本特性
+  并发性
+并行性是指两个或多个事件在同一时刻发生；而并发性是指两个或多个事件在同一时间间隔内发生。
+  共享性
+指系统中的资源可供内存中多个并发执行的进程(线程)共同使用
+  虚拟技术
+ 时分复用技术 空分复用技术    异步性
+由于资源等因素的限制，使进程的执行通常都不是“一气呵成”，而是以“停停走走”的方式运行
+    操作系统的主要功能
+  处理机管理功能
+在传统的多道程序系统中，处理机的分配和运行都是以进程为基本单位，因而对处理机的管理可归结为对进程的管理；在引入了线程的 OS 中，也包含对线程的管理。处理机管理的主要功能是创建和撤消进程(线程)，对诸进程(线程)的运行进行协调，实现进程(线程)之间的信息交换，以及按照一定的算法把处理机分配给进程(线程)。
+  存储器的功能
+存储器管理应具有内存分配、内存保护、地址映射和内存扩充
+  设备管理功能
+设备管理用于管理计算机系统中所有的外围设备，而设备管理的主要任务是：完成用户进程提出的 I/O 请求；为用户进程分配其所需的 I/O 设备；提高 CPU 和 I/O 设备的利用率；提高 I/O 速度；方便用户使用 I/O 设备。为实现上述任务，设备管理应具有缓冲管理、设备分配和设备处理以及虚拟设备等功能。
+  文件管理功能</description>
+    </item>
+    
+    <item>
+      <title>线程的基本概念</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5/</guid>
+      <description>线程的基本概念 线程的引入 如果说，在操作系统中引入进程的目的，是为了使多个程序能并发执行，以提高资源利用率和系统吞吐量，那么，在操作系统中再引入线程，则是为了减少程序在并发执行时所付出的时空开销，使 OS 具有更好的并发性。
+由于进程是一个资源的拥有者，因而在创建、撤消和切换中，系统必须为之付出较大的时空开销。线程作为调度和分派的基本单位。
+线程与进程的比较 线程具有许多传统进程所具有的特征，所以又称为轻型进程(Light-Weight Process)或进程元，相应地把传统进程称为重型进程(Heavy-WeightProcess)
+ 调度  在传统的操作系统中，作为拥有资源的基本单位和独立调度、分派的基本单位都是进程。而在引入线程的操作系统中，则把线程作为调度和分派的基本单位，而进程作为资源拥有的基本单位，使线程基本上不拥有资源，这样线程便能轻装前进，从而可显著地提高系统的并发程度。在同一进程中，线程的切换不会引起进程的切换，但从一个进程中的线程切换到另一个进程中的线程时，将会引起进程的切换。
+  并发性
+在引入线程的操作系统中，不仅进程之间可以并发执行，而且在一个进程中的多个线程之间亦可并发执行，使得操作系统具有更好的并发性，从而能更加有效地提高系统资源的利用率和系统的吞吐量
+  拥有资源
+进程是系统中拥有资源的一个基本单位。一般而言，线程自己不拥有系统资源(也有一点必不可少的资源)，但它可以访问其隶属进程的资源，即一个进程的代码段、数据段及所拥有的系统资源，如已打开的文件、I/O设备等，可以供该进程中的所有线程所共享。
+  系统开销
+在创建或撤消进程时，系统都要为之创建和回收进程控制块，分配或回收资源，如内存空间和I/O设备等，操作系统所付出的开销明显大于线程创建或撤消时的开销。类似地，在进程切换时，涉及到当前进程CPU环境的保存及新被调度运行进程的CPU环境的设置，而线程的切换则仅需保存和设置少量寄存器内容，不涉及存储器管理方面的操作，所以就切换代价而言，进程也是远高于线程的。此外，由于一个进程中的多个线程具有相同的地址空间，在同步和通信的实现方面线程也比进程容易。在一些操作系统中，线程的切换、同步和通信都无须操作系统内核的干预。
+  线程的属性   轻型实体
+线程中的实体基本上不拥有系统资源，只是有一点必不可少的、能保证其独立运行的资源，比如，在每个线程中都应具有一个用于控制线程运行的线程控制块 TCB，用于指示被执行指令序列的程序计数器，保留局部变量、少数状态参数和返回地址等的一组寄存器和堆栈。
+  独立调度和分派的基本单位
+  可并发执行
+  共享进程资源
+  线程的状态   状态参数
+在 OS 中的每一个线程都可以利用线程标识符和一组状态参数进行描述。状态参数通常有这样几项：
+  寄存器状态，它包括程序计数器 PC（存放下一条指令所在单元） 和堆栈指针中的内容；
+  堆栈，在堆栈中通常保存有局部变量和返回地址；
+  线程运行状态，用于描述线程正处于何种运行状态；
+  优先级，描述线程执行的优先程度；
+  线程专有存储器，用于保存线程自己的局部变量拷贝；
+  信号屏蔽，即对某些信号加以屏蔽。</description>
+    </item>
+    
+    <item>
+      <title>经典进程的同步问题</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E7%BB%8F%E5%85%B8%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%90%8C%E6%AD%A5%E9%97%AE%E9%A2%98/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E7%BB%8F%E5%85%B8%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%90%8C%E6%AD%A5%E9%97%AE%E9%A2%98/</guid>
+      <description>经典进程的同步问题 生产者—消费者问题   利用记录型信号量解决
+假定在生产者和消费者之间的公用缓冲池中，具有n个缓冲区，这时可利用互斥信号量mutex实现诸进程对缓冲池的互斥使用。利用信号量emptyCount和fullCount分别表示缓冲池中 空缓冲区 和 满缓冲区 的数量
+mutex, emptyCount, fullCount := 1, n, 0 func proceducer() { wait(emptyCount) wait(mutex) // 生产一个产品，放入一个空的缓冲区中 signal(mutex) signal(fullCount) } func consumer() { wait(fullCount) wait(mutex)； // 消费一个产品，取走一个满缓冲区的内容 signal(mutex)； signal(emptyCount)； }   利用 AND 信号量解决
+对于生产者—消费者问题，也可利用AND信号量来解决，即用 Swait(empty，mutex) 来代替 wait(empty) 和 wait(mutex)；用 Ssignal(mutex，full) 来代替 signal(mutex) 和 signal(full) ；用 Swait(full，mutex) 来代替 wait(full) 和 wait(mutex)，以及用 Ssignal(mutex，empty) 代替 Signal(mutex) 和 Signal(empty)。
+mutex, emptyCount, fullCount := 1, n, 0 func proceducer() { Swait(emptyCount, mutex) // 生产一个产品，放入一个空的缓冲区中 Ssignal(mutex，fullCount) } func consumer() { Swait(fullCount，mutex) // 消费一个产品，取走一个满缓冲区的内容 Ssignal(mutex，emptyCount) }   利用管程解决</description>
+    </item>
+    
+    <item>
+      <title>虚拟存储器的基本概念</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%99%9A%E6%8B%9F%E5%AD%98%E5%82%A8%E5%99%A8%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%99%9A%E6%8B%9F%E5%AD%98%E5%82%A8%E5%99%A8%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5/</guid>
+      <description>虚拟存储器的基本概念 虚拟存储器的引入   常规存储器管理方式的特征
+  一次性。在前面所介绍的几种存储管理方式中，都要求将作业全部装入内存后方能运行，即作业在运行前需一次性地全部装入内存，而正是这一特征导致了上述两种情况的发生。此外，还有许多作业在每次运行时，并非其全部程序和数据都要用到。如果一次性地装入其全部程序，也是一种对内存空间的浪费。
+  驻留性。作业装入内存后，便一直驻留在内存中，直至作业运行结束。尽管运行中的进程会因 I/O 而长期等待，或有的程序模块在运行过一次后就不再需要(运行)了，但它们都仍将继续占用宝贵的内存资源。
+    局部性原理
+  程序执行时，除了少部分的转移和过程调用指令外，在大多数情况下仍是顺序执行的。该论点也在后来的许多学者对高级程序设计语言(如 FORTRAN 语言、PASCAL 语言)及 C 语言规律的研究中被证实。
+  过程调用将会使程序的执行轨迹由一部分区域转至另一部分区域，但经研究看出，过程调用的深度在大多数情况下都不超过
+  这就是说，程序将会在一段时间内都局限在这些过程的范围内运行。
+  程序中存在许多循环结构，这些虽然只由少数指令构成，但是它们将多次执行。
+  程序中还包括许多对数据结构的处理，如对数组进行操作，它们往往都局限于很小的范围内。
+  时间局限性。如果程序中的某条指令一旦执行，则不久以后该指令可能再次执行；如果某数据被访问过，则不久以后该数据可能再次被访问。产生时间局限性的典型原因是由于在程序中存在着大量的循环操作。
+  空间局限性。一旦程序访问了某个存储单元，在不久之后，其附近的存储单元也将被访问，即程序在一段时间内所访问的地址，可能集中在一定的范围之内，其典型情况便是程序的顺序执行。
+    虚拟存储器的定义
+基于局部性原理，应用程序在运行之前，没有必要全部装入内存，仅须将那些当前要运行的少数页面或段先装入内存便可运行，其余部分暂留在盘上。程序在运行时，如果它所要访问的页(段)已调入内存，便可继续执行下去；但如果程序所要访问的页(段)尚未调入内存(称为缺页或缺段)，此时程序应利用OS所提供的请求调页(段)功能，将它们调入内存，以使进程能继续执行下去。如果此时内存已满，无法再装入新的页(段)，则还须再利用页(段)的置换功能，将内存中暂时不用的页(段)调至盘上，腾出足够的内存空间后，再将要访问的页(段)调入内存，使程序继续执行下去。这样，便可使一个大的用户程序能在较小的内存空间中运行；也可在内存中同时装入更多的进程使它们并发执行。从用户角度看，该系统所具有的内存容量，将比实际内存容量大得多。但须说明，用户所看到的大容量只是一种感觉，是虚的，故人们把这样的存储器称为虚拟存储器。
+  </description>
+    </item>
+    
+    <item>
+      <title>调度算法</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%B0%83%E5%BA%A6%E7%AE%97%E6%B3%95/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%B0%83%E5%BA%A6%E7%AE%97%E6%B3%95/</guid>
+      <description>调度算法 先来先服务和短作业(进程)优先调度算法   先来先服务调度算法
+先来先服务(FCFS)调度算法是一种最简单的调度算法，该算法既可用于作业调度，也可用于进程调度。当在作业调度中采用该算法时，每次调度都是从后备作业队列中选择一个或多个最先进入该队列的作业，将它们调入内存，为它们分配资源、创建进程，然后放入就绪队列。在进程调度中采用 FCFS算法时，则每次调度是从就绪队列中选择一个最先进入该队列的进程，为之分配处理机，使之投入运行。该进程一直运行到完成或发生某事件而阻塞后才放弃处理机。
+  短作业(进程)优先调度算法
+短作业(进程)优先调度算法SJ(P)F，是指对短作业或短进程优先调度的算法。它们可以分别用于作业调度和进程调度。短作业优先(SJF)的调度算法是从后备队列中选择一个或若干个估计运行时间最短的作业，将它们调入内存运行。而短进程优先(SPF)调度算法则是从就绪队列中选出一个估计运行时间最短的进程，将处理机分配给它，使它立即执行并一直执行到完成，或发生某事件而被阻塞放弃处理机时再重新调度。
+  高优先权优先调度算法   非抢占式优先权算法
+在这种方式下，系统一旦把处理机分配给就绪队列中优先权最高的进程后，该进程便一直执行下去，直至完成；或因发生某事件使该进程放弃处理机时，系统方可再将处理机重新分配给另一优先权最高的进程。
+  抢占式优先权调度算法
+在这种方式下，系统同样是把处理机分配给优先权最高的进程，使之执行。但在其执行期间，只要又出现了另一个其优先权更高的进程，进程调度程序就立即停止当前进程(原优先权最高的进程)的执行，重新将处理机分配给新到的优先权最高的进程
+  基于时间片的轮转调度算法   时间片轮转法
+  基本原理
+在早期的时间片轮转法中，系统将所有的就绪进程按先来先服务的原则排成一个队列，每次调度时，把CPU分配给队首进程，并令其执行一个时间片。时间片的大小从几ms到几百ms。当执行的时间片用完时，由一个计时器发出时钟中断请求，调度程序便据此信号来停止该进程的执行，并将它送往就绪队列的末尾；然后，再把处理机分配给就绪队列中新的队首进程，同时也让它执行一个时间片。这样就可以保证就绪队列中的所有进程在一给定的时间内均能获得一时间片的处理机执行时间。
+  时间片大小的确定
+在时间片轮转算法中，时间片的大小对系统性能有很大的影响，如选择很小的时间片将有利于短作业，因为它能较快地完成，但会频繁地发生中断、进程上下文的切换，从而增加系统的开销；反之，如选择太长的时间片，使得每个进程都能在一个时间片内完成，时间片轮转算法便退化为 FCFS 算法，无法满足交互式用户的需求。一个较为可取的大小是，时间片略大于一次典型的交互所需要的时间。这样可使大多数进程在一个时间片内完成。
+    多级反馈队列调度算法
+前面介绍的各种用作进程调度的算法都有一定的局限性。如短进程优先的调度算法，仅照顾了短进程而忽略了长进程，而且如果并未指明进程的长度，则短进程优先和基于进程长度的抢占式调度算法都将无法使用。而多级反馈队列调度算法则不必事先知道各种进程所需的执行时间，而且还可以满足各种类型进程的需要，因而它是目前被公认的一种较好的进程调度算法。
+  应设置多个就绪队列，并为各个队列赋予不同的优先级
+  当一个新进程进入内存后，首先将它放入第一队列的末尾，按 FCFS 原则排队等待调度。当轮到该进程执行时，如它能在该时间片内完成，便可准备撤离系统；如果它在一个时间片结束时尚未完成，调度程序便将该进程转入第二队列的末尾，再同样地按FCFS原则等待调度执行；如果它在第二队列中运行一个时间片后仍未完成，再依次将它放入第三队列，……，如此下去，当一个长作业(进程)从第一队列依次降到第n队列后，在第n队列中便采取按时间片轮转的方式运行。
+  仅当第一队列空闲时，调度程序才调度第二队列中的进程运行
+    </description>
+    </item>
+    
+    <item>
+      <title>进程同步</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9B%E7%A8%8B%E5%90%8C%E6%AD%A5/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9B%E7%A8%8B%E5%90%8C%E6%AD%A5/</guid>
+      <description>进程同步 进程同步的基本概念   两种形式的制约关系
+  间接相互制约关系
+同处于一个系统中的进程，通常都共享着某种系统资源，如共享CPU、共享 I/O 设备等。所谓间接相互制约即源于这种资源共享，例如，有两个进程 A和 B，如果在A进程提出打印请求时，系统已将惟一的一台打印机分配给了进程 B，则此时进程A只能阻塞；一旦进程B将打印机释放，则A进程才能由阻塞改为就绪状态。
+  直接相互制约关系。
+这种制约主要源于进程间的合作。例如，有一输入进程A通过单缓冲向进程B提供数据。当该缓冲空时，计算进程因不能获得所需数据而阻塞，而当进程A把数据输入缓冲区后，便将进程B唤醒；反之，当缓冲区已满时，进程 A 因不能再向缓冲区投放数据而阻塞，当进程B将缓冲区数据取走后便可唤醒 A。
+    临界资源
+  临界区
+人们把在每个进程中访问临界资源的那段代码称为临界区(critical section)
+  同步机制应遵循的规则
+  空闲让进。当无进程处于临界区时，表明临界资源处于空闲状态，应允许一个请求进入临界区的进程立即进入自己的临界区，以有效地利用临界资源。
+  忙则等待。当已有进程进入临界区时，表明临界资源正在被访问，因而其它试图进入临界区的进程必须等待，以保证对临界资源的互斥访问。
+  有限等待。对要求访问临界资源的进程，应保证在有限时间内能进入自己的临界区，以免陷入“死等”状态。
+  让权等待。当进程不能进入自己的临界区时，应立即释放处理机，以免进程陷入“忙等”状态
+    信号量机制   整型信号量
+把整型信号量定义为一个用于表示资源数目的整型量S，它与一般整型量不同，除初始化外，仅能通过两个标准的原子操作(AtomicOperation)wait(S)和 signal(S)来访问
+func wait(s int) { for s &amp;lt;= 0 { } s = s -1 } func signal(s int) { s = s + 1 }   记录型信号量</description>
+    </item>
+    
+    <item>
+      <title>进程控制</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9B%E7%A8%8B%E6%8E%A7%E5%88%B6/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9B%E7%A8%8B%E6%8E%A7%E5%88%B6/</guid>
+      <description>进程控制 进程图 子进程可以继承父进程所拥有的资源，例如，继承父进程打开的文件，继承父进程所分配到的缓冲区等。当子进程被撤消时，应将其从父进程那里获得的资源归还给父进程。此外，在撤消父进程时，也必须同时撤消其所有的子进程。为了标识进程之间的家族关系，在PCB中都设置了家族关系表项，以标明自己的父进程及所有的子进程。
+进程的创建 一旦操作系统发现了要求创建新进程的事件后，便调用进程创建原语 Creat( )按下述步骤创建一个新进程。
+  申请空白 PCB
+为新进程申请获得惟一的数字标识符，并从 PCB 集合中索取一个 空白 PCB。
+  为新进程分配资源
+为新进程的程序和数据以及用户栈分配必要的内存空间。
+  初始化进程控制块
+  初始化标识信息
+将系统分配的标识符和父进程标识符填入新 PCB 中
+  初始化处理机状态信息
+使程序计数器指向程序的入口地址，使栈指针指向栈顶；
+  初始化处理机控制信息
+将进程的状态设置为就绪状态或静止就绪状态，对于优先级，通常是将它设置为最低优先级，除非用户以显式方式提出高优先级要求。
+  将新进程插入就绪队列
+如果进程就绪队列能够接纳新进程，便将新进程插入就绪队列
+    进程的终止 如果系统中发生了上述要求终止进程的某事件，OS便调用进程终止原语，按下述过程去终止指定的进程。
+  根据被终止进程的标识符，从PCB集合中检索出该进程的PCB，从中读出该进程的状态。
+  若被终止进程正处于执行状态，应立即终止该进程的执行，并置调度标志为真，用于指示该进程被终止后应重新进行调度。
+  若该进程还有子孙进程，还应将其所有子孙进程予以终止，以防它们成为不可控的进程。
+  将被终止进程所拥有的全部资源，或者归还给其父进程，或者归还给系统。
+  将被终止进程(PCB)从所在队列(或链表)中移出，等待其他程序来搜集信息。
+  进程的阻塞 正在执行的进程，当发现上述某事件时，由于无法继续执行，于是进程便通过调用阻塞原语 block 把自己阻塞。可见，进程的阻塞是进程自身的一种主动行为。进入 block过程后，由于此时该进程还处于执行状态，所以应先立即停止执行，把进控制块中的现行状态由“执行”改为“阻塞”，并将PCB插入阻塞队列。如果系统中设置了因不同事件而阻塞的多个阻塞队列，则应将本进程插入到具有相同事件的阻塞(等待)队列。最后，转调度程序进行重新调度，将处理机分配给另一就绪进程并进行切换，亦即，保留被阻塞进程的处理机状态(在 PCB 中)，再按新进程的 PCB 中的处理机状态设置 CPU 的环境。</description>
+    </item>
+    
+    <item>
+      <title>进程的描述操作系统引论</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9B%E7%A8%8B%E7%9A%84%E6%8F%8F%E8%BF%B0/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9B%E7%A8%8B%E7%9A%84%E6%8F%8F%E8%BF%B0/</guid>
+      <description>进程的描述 在多道程序环境下，程序的执行属于并发执行，此时它们将失去其封闭性，并具有间断性及不可再现性的特征。这决定了通常的程序是不能参与并发执行的，因为程序执行的结果是不可再现的。这样，程序的运行也就失去了意义。为使程序能并发执行，且为了对并发执行的程序加以描述和控制，人们引入了“进程”的概念。
+  结构特征
+通常的程序是不能并发执行的。为使程序(含数据)能独立运行，应为之配置一进程控制块，即PCB(ProcessControlBlock)；而由 程序段 、相关的 数据段 和 PCB 三部分便构了进程实体。所谓创建进程，实质上是创建进程实体 中的 PCB；而撤消进程，实质上是撤消进程的 PCB，本
+  动态性
+进程的实质是进程实体的一次执行过程，“它由创建而产生，由调度而执行，由撤消而消亡
+  并发性
+这是指多个进程实体同存于内存中，且能在一段时间内同时运行
+  独立性
+指进程实体是一个能独立运行、独立分配资源和独立接受调 度的基本单位
+  异步性
+指进程按各自独立的、不可预知的速度向前推进，或说进程实体按异步方式运行
+  进程的三种基本状态   就绪(Ready)状态
+当进程已分配到除 CPU以外的所有必要资源后，只要再获得CPU，便可立即执行，进程这时的状态称为就绪状态。在一个系统中处于就绪状态的进程可能有多个，通常将它们排成一个队列，称为就绪队列。
+  执行状态
+进程已获得 CPU，其程序正在执行。在单处理机系统中，只有一个进程处于执行状态；在多处理机系统中，则有多个进程处于执行状态。
+  阻塞状态
+正在执行的进程由于发生某事件而暂时无法继续执行时，便放弃处理机而处于暂停状态，亦即进程的执行受到阻塞，把这种暂停状态称为阻塞状态。
+  进程状态转化图
+  挂起状态的引入   引入原因
+  终端用户的请求。当终端用户在自己的程序运行期间发现有可疑问题时，希望暂时使自己的程序静止下来。亦即，使正在执行的进程暂停执行；若此时用户进程正处于就绪状态而未执行，则该进程暂不接受调度，以便用户研究其执行情况或对程序进行修改。我们把这种静止状态称为挂起状态。
+  父进程请求。有时父进程希望挂起自己的某个子进程，以便考查和修改该子进程，或者协调各子进程间的活动。
+  负荷调节的需要。当实时系统中的工作负荷较重，已可能影响到对实时任务的控制时，可由系统把一些不重要的进程挂起，以保证系统能正常运行。
+  操作系统的需要。操作系统有时希望挂起某些进程，以便检查运行中的资源使用情况或进行记账。</description>
+    </item>
+    
+    <item>
+      <title>进程通信的类型</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9B%E7%A8%8B%E9%80%9A%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9B%E7%A8%8B%E9%80%9A%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B/</guid>
+      <description>进程通信的类型 共享存储器系统 相互通信的进程共享某些数据结构或共享存储区，进程之间能够通过这些空间进行通信
+  基于共享数据结构的通信方式
+在这种通信方式中，要求诸进程公用某些数据结构，借以实现诸进程间的信息交换。如在生产者—消费者问题中，就是用 有界缓冲区 这种数据结构来实现通信的。
+  基于共享存储区的通信方式
+为了传输大量数据，在存储器中划出了一块 共享存储区，诸进程可通过对共享存储区中数据的读或写来实现通信。这种通信方式属于高级通信。进程在通信前，先向系统申请获得共享存储区中的一个分区，并指定该分区的关键字；若系统已经给其他进程分配了这样的分区，则将该分区的描述符返回给申请者，继之，由申请者把获得的共享存储分区连接到本进程上；此后，便可像读、写普通存储器一样地读、写该公用存储分区。
+  消息传递系统   进程间的数据交换是以格式化的消息(message)为单位的
+  直接通信方式
+这是指发送进程利用OS所提供的发送命令，直接把消息发送给目标进程。此时，要求发送进程和接收进程都以显式方式提供对方的标识符。通常，系统提供下述两条通信命令(原语)：
+Send(Receiver，message)； 发送一个消息给接收进程； Receive(Sender，message)； 接收 Sender 发来的消息；   间接通信方式
+间接通信方式指进程之间的通信需要通过作为共享数据结构的实体。该实体用来暂存发送进程发送给目标进程的消息；接收进程则从该实体中取出对方发送给自己的消息。通常把这种中间实体称为信箱。消息在信箱中可以安全地保存，只允许核准的目标用户随时读取。因此，利用信箱通信方式，既可实现实时通信，又可实现非实时通信
+Send(mailbox，message)； 将一个消息发送到指定信箱； Receive(mailbox，message)； 从指定信箱中接收一个消息；   信箱的分类
+  私用信箱
+信箱的拥有者有权从信箱中读取消息，其他用户则只能将自己构成的消息发送到该信箱中。
+  公用信箱 它由操作系统创建，并提供给系统中的所有核准进程使用。核准进程既可把消息发送到该信箱中，也可从信箱中读取发送给自己的消息
+  共享信箱
+它由某进程创建，在创建时或创建后指明它是可共享的，同时须指出共享进程(用户)的名字。信箱的拥有者和共享者都有权从信箱中取走发送给自己的消息。可以是一对一关系、多对一关系、一对多关系、多对多关系
+        管道通信系统 所谓“管道”，是指用于连接一个读进程和一个写进程以实现它们之间通信的一个共享文件，又名pipe文件。向管道(共享文件)提供输入的发送进程(即写进程)，以字符流形式将大量的数据送入管道；而接受管道输出的接收进程(即读进程)，则从管道中接收(读)数据。由于发送进程和接收进程是利用管道进行通信的，故又称为管道通信。
+管道机制必须提供以下三方面的协调能力:
+  互斥
+当一个进程正在对 pipe执行读/写操作时，其它(另一)进程必须等待。
+  同步</description>
+    </item>
+    
+    <item>
+      <title>连续分配存储管理方式</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9E%E7%BB%AD%E5%88%86%E9%85%8D%E5%AD%98%E5%82%A8%E7%AE%A1%E7%90%86%E6%96%B9%E5%BC%8F/</link>
+      <pubDate>Sun, 02 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9E%E7%BB%AD%E5%88%86%E9%85%8D%E5%AD%98%E5%82%A8%E7%AE%A1%E7%90%86%E6%96%B9%E5%BC%8F/</guid>
+      <description>连续分配存储管理方式 固定分区分配 将内存用户空间划分为若干个固定大小的区域，在每个分区中只装入一道作业，这样，把用户空间划分为几个分区，便允许有几道作业并发运行。当有一空闲分区时，便可以再从外存的后备作业队列中选择一个适当大小的作业装入该分区，当该作业结束时，又可再从后备作业队列中找出另一作业调入该分区。
+  划分分区的方法
+  分区大小相等，即使所有的内存分区大小相等。其缺点是缺乏灵活性，即当程序太小时，会造成内存空间的浪费；当程序太大时，一个分区又不足以装入该程序，致使该程序无法运行。尽管如此，这种划分方式仍被用于利用一台计算机去控制多个相同对象的场合，因为这些对象所需的内存空间是大小相等的。例
+  分区大小不等。为了克服分区大小相等而缺乏灵活性的这个缺点，可把内存区划分成含有多个较小的分区、适量的中等分区及少量的大分区。这样，便可根据程序的大小为之分配适当的分区。
+    内存分配
+为了便于内存分配，通常将分区按大小进行排队，并为之建立一张分区使用表，其中各表项包括每个分区的起始地址、大小及状态(是否已分配)，当有一用户程序要装入时，由内存分配程序检索该表，从中找出一个能满足要求的、尚未分配的分区，将之分配给该程序，然后将该表项中的状态置为“已分配”；若未找到大小足够的分区，则拒绝为该用户程序分配内存。
+  动态分区分配   分区分配中的数据结构
+系统中配置着相应的数据结构，用来描述空闲分区和已分配分区的情况，为分配提供依据。常用的数据结构有以下两种形式
+  空闲分区表
+在系统中设置一张空闲分区表，用于记录每个空闲分区的情况。每个空闲分区占一个表目，表目中包括分区序号、分区始址及分区的大小等数据项。
+  空闲分区链
+为了实现对空闲分区的分配和链接，在每个分区的起始部分，设置一些用于控制分区分配的信息，以及用于链接各分区所用的前向指针；在分区尾部则设置一后向指针，通过前、后向链接指针，可将所有的空闲分区链接成一个双向链
+    分区分配算法
+为把一个新作业装入内存，须按照一定的分配算法，从空闲分区表或空闲分区链中选出一分区分配给该作业。
+  首次适应算法(first fit)
+我们以空闲分区链为例来说明采用FF算法时的分配情况。FF算法要求空闲分区链以地址递增的次序链接。在分配内存时，从链首开始顺序查找，直至找到一个大小能满足要求的空闲分区为止；然后再按照作业的大小，从该分区中划出一块内存空间分配给请求者，余下的空闲分区仍留在空闲链中。若从链首直至链尾都不能找到一个能满足要求的分区，则此次内存分配失败，返回。该算法倾向于优先利用内存中低址部分的空闲分区，从而保留了高址部分的大空闲区。这给为以后到达的大作业分配大的内存空间创造了条件。其缺点是低址部分不断被划分，会留下许多难以利用的、很小的空闲分区，而每次查找又都是从低址部分开始，这无疑会增加查找可用空闲分区时的开销。
+  循环首次适应算法(next fit)
+该算法是由首次适应算法演变而成的。在为进程分配内存空间时，不再是每次都从链首开始查找，而是从上次找到的空闲分区的下一个空闲分区开始查找，直至找到一个能满足要求的空闲分区，从中划出一块与请求大小相等的内存空间分配给作业。为实现该算法，应设置一起始查寻指针，用于指示下一次起始查寻的空闲分区，并采用循环查找方式，即如果最后一个(链尾)空闲分区的大小仍不能满足要求，则应返回到第一个空闲分区，比较其大小是否满足要求。找到后，应调整起始查寻指针。该算法能使内存中的空闲分区分布得更均匀，从而减少了查找空闲分区时的开销，但这样会缺乏大的空闲分区。
+  最佳适应算法(best fit)
+所谓“最佳”是指每次为作业分配内存时，总是把能满足要求、又是最小的空闲分区分配给作业，避免“大材小用”。为了加速寻找，该算法要求将所有的空闲分区按其容量以从小到大的顺序形成一空闲分区链。这样，第一次找到的能满足要求的空闲区，必然是最佳的。孤立地看，最佳适应算法似乎是最佳的，然而在宏观上却不一定。因为每次分配后所切割下来的剩余部分总是最小的，这样，在存储器中会留下许多难以利用的小空闲区。
+  最坏适应算法(worst fit)
+最坏适应分配算法要扫描整个空闲分区表或链表，总是挑选一个最大的空闲区分割给作业使用，其优点是可使剩下的空闲区不至于太小，产生碎片的几率最小，对中、小作业有利，同时最坏适应分配算法查找效率很高。该算法要求将所有的空闲分区按其容量以从大到小的顺序形成一空闲分区链，查找时只要看第一个分区能否满足作业要求。但是该算法的缺点也是明显的，它会使存储器中缺乏大的空闲分区。最坏适应算法与前面所述的首次适应算法、循环首次适应算法、最佳适应算法一起，也称为顺序搜索法。
+  快速适应算法(quick fit)
+该算法又称为分类搜索法，是将空闲分区根据其容量大小进行分类，对于每一类具有相同容量的所有空闲分区，单独设立一个空闲分区链表，这样，系统中存在多个空闲分区链表，同时在内存中设立一张管理索引表，该表的每一个表项对应了一种空闲分区类型，并记录了该类型空闲分区链表表头的指针。空闲分区的分类是根据进程常用的空间大小进行划分，如 2 KB、4 KB、8 KB 等，对于其它大小的分区，如 7 KB 这样的空闲区，既可以放在 8 KB 的链表中，也可以放在一个特殊的空闲区链表中。</description>
+    </item>
+    
+    <item>
+      <title>Java和Golang的区别</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2018-09-01-java-golang-defference/</link>
+      <pubDate>Tue, 22 May 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2018-09-01-java-golang-defference/</guid>
+      <description>Golang与Java的区别 1. 结构体 -&amp;gt; 类 // 包名即为包含该文件的目录名字 package collection // 声明一个结构体，类似Java中的类 type Stack struct { data []string } // 声明一个Push函数，并通过一个Stack的指针对象实现该方法 // 类似声明了Stack的成员方法 func (s *Stack) Push(x string) { s.data = append(s.data, x) } func (s *Stack) Pop() string { n := len(s.data) - 1 res := s.data[n] s.data[n] = &amp;#34;&amp;#34; // to avoid memory leak  s.data = s.data[:n] return res } func (s *Stack) Size() int { return len(s.data) }   结构体对应Java里的类, 但结构体里只能有变量，不能有方法</description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://lambertxiao.github.io/posts/filecoin/doc/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/filecoin/doc/</guid>
+      <description>基于内容寻址
+  点对点
+  IPFS就是提供了一套协议？
+  一种内容可寻址的对等超媒体分发协议
+Filecoin  加密货币，支付系统，是一套激励机制 提供数据存储和获取的方式
+数据监管
+存储的性能，不同的底层系统，性能怎么保证？ 按存储量卖钱？按性能卖钱
+Filecoin和法币的汇率
+lotus是filecoin的实现
+filecoin怎么保证数据不丢？
+鼓励矿工执行winning post，大家来保证你的数据是不是存储正确的
+Window PoSt 是矿工在对应的周期内对已经提交的扇区进行证明，证明扇区保存的数据依然存在。 Winning PoSt 是矿工在出块时对已经提交的扇区进行证明，证明扇区保存的数据依然存在。
+存储的是密封的数据
+密封，增加算力成本
+window post
+ 证明存储的可用性和可靠性 sector：扇区，32GiB 或 64GiB Partition：一个parition 2349或2300个sector Deadline：每半小时一个，一天48个Deadline 一个Deadline证明1或多个Partition  多轮证明
+存储商要押钱
+算力降低，出块概率低
+惩罚高，所以留下来的供应商都比较优质
+检索服务商 目前没有读的能力</description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-sync.pool%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0/2-poolchain/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-sync.pool%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0/2-poolchain/</guid>
+      <description>poolChain是poolDequeue的动态大小版本，本质上也是个双向链表，特别之处在于，它每次出队的元素个数是前一次出队的两倍。一旦出队满了m
+// poolChain is a dynamically-sized version of poolDequeue. // // This is implemented as a doubly-linked list queue of poolDequeues // where each dequeue is double the size of the previous one. Once a // dequeue fills up, this allocates a new one and only ever pushes to // the latest dequeue. Pops happen from the other end of the list and // once a dequeue is exhausted, it gets removed from the list.</description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://lambertxiao.github.io/posts/linux0.11-%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/blk_dev_init/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/linux0.11-%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/blk_dev_init/</guid>
+      <description>块设备初始化  kernal/blk_drv.c
+ void blk_dev_init(void) { int i; for (i=0 ; i&amp;lt;NR_REQUEST ; i++) { request[i].dev = -1; request[i].next = NULL; } }  kernel/blk_drv.h
+ /* * NR_REQUEST is the number of entries in the request-queue. * NOTE that writes may use only the low 2/3 of these: reads * take precedence. * * 32 seems to be a reasonable number: enough to get some benefit * from the elevator-mechanism, but not so much as to lock a lot of * buffers when they are in the queue.</description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://lambertxiao.github.io/posts/linux0.11-%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/main/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/linux0.11-%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/main/</guid>
+      <description>main函数  init/main.c
+ // 下面三行分别将指定的线性地址强行转换为给定数据类型的指针，并获取指针所指 // 的内容。由于内核代码段被映射到从物理地址零开始的地方，因此这些线性地址 // 正好也是对应的物理地址。这些指定地址处内存值的含义请参见setup程序读取并保存的参数。 #define EXT_MEM_K (*(unsigned short *)0x90002) // 直接将内存地址转化为结构体指针 #define DRIVE_INFO (*(struct drive_info *)0x90080) #define ORIG_ROOT_DEV (*(unsigned short *)0x901FC)  static long memory_end = 0; // 机器具有的物理内存容量（字节数） static long buffer_memory_end = 0; // 高速缓冲区末端地址 static long main_memory_start = 0; // 主内存（将用于分页）开始的位置  int ROOT_DEV = 0; // 根文件系统设备号。 struct drive_info { char dummy[32] } drive_info; // 用于存放硬盘参数表信息  // 内核初始化主程序。初始化结束后将以任务0（idle任务即空闲任务）的身份运行。 void main(void) /* This really IS void, no error here.</description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://lambertxiao.github.io/posts/linux0.11-%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/mem_init/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/linux0.11-%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/mem_init/</guid>
+      <description>设置主存区域的mem_init函数  mm/memory.c
+ // 物理内存管理初始化 // 该函数对1MB以上的内存区域以页面为单位进行管理前的初始化设置工作。一个页面长度 // 为4KB bytes.该函数把1MB以上所有物理内存划分成一个个页面，并使用一个页面映射字节 // 数组mem_map[]来管理所有这些页面。对于具有16MB内存容量的机器，该数组共有3840 // 项((16MB-1MB)/4KB)，即可管理3840个物理页面。每当一个物理内存页面被占用时就把 // mem_map[]中对应的字节值增1；若释放一个物理页面，就把对应字节值减1。若字节值为0， // 则表示对应页面空闲；若字节值大于或等于1，则表示对应页面被占用或被不同程序共享占用。 // 在该版本的Linux内核中，最多能管理16MB的物理内存，大于16MB的内存将弃之不用。 // 对于具有16MB内存的PC机系统，在没有设置虚拟盘RAMDISK的情况下start_mem通常是4MB， // end_mem是16MB。因此此时主内存区范围是4MB-16MB,共有3072个物理页面可供分配。而 // 范围0-1MB内存空间用于内核系统（其实内核只使用0-640Kb，剩下的部分被部分高速缓冲和 // 设备内存占用）。 // 参数start_mem是可用做页面分配的主内存区起始地址（已去除RANDISK所占内存空间）。 // end_mem是实际物理内存最大地址。而地址范围start_mem到end_mem是主内存区。  static long HIGH_MEMORY = 0; // 全局变量，存放实际物理内存最高端地址  // linux0.11内核默认支持的最大内存容量是16MB，可以修改这些定义适合更多的内存。 // 内存低端(1MB) #define LOW_MEM 0x100000 // 分页内存15 MB，主内存区最多15M. #define PAGING_MEMORY (15*1024*1024) // 分页后的物理内存页面数（3840） #define PAGING_PAGES (PAGING_MEMORY&amp;gt;&amp;gt;12) // 指定地址映射为页号 #define MAP_NR(addr) (((addr)-LOW_MEM)&amp;gt;&amp;gt;12) // 页面被占用标志. #define USED 100  static unsigned char mem_map [ PAGING_PAGES ] = {0,}; void mem_init(long start_mem, long end_mem) { int i; // 首先将1MB到16MB范围内所有内存页面对应的内存映射字节数组项置为已占用状态，  // 即各项字节全部设置成USED(100)。PAGING_PAGES被定义为(PAGING_MEMORY&amp;gt;&amp;gt;12)，  // 即1MB以上所有物理内存分页后的内存页面数(15MB/4KB = 3840).</description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://lambertxiao.github.io/posts/linux0.11-%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/trap_init/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/linux0.11-%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/trap_init/</guid>
+      <description>中断程序初始化的trap_init  kernal/traps.c
+ // 异常(陷阱)中断程序初始化子程序。设置他们的中断调用门(中断向量)。 // set_trap_gate()与set_system_gate()都使用了中断描述符表IDT中的陷阱门(Trap Gate), // 他们之间的主要区别在于前者设置的特权级为0，后者是3.因此断点陷阱中断int3、溢出中断 // overflow和边界出错中断bounds可以由任何程序产生。 // 这两个函数均是嵌入式汇编宏程序(include/asm/system.h中)  // 以下定义了一些中断处理程序原型，用于在函数trap_init()中设置相应中断门描述符。 // 这些代码在kernal/asm.s或system_call.s中。 void divide_error(void); void debug(void); void nmi(void); void int3(void); void overflow(void); void bounds(void); void invalid_op(void); void device_not_available(void); void double_fault(void); void coprocessor_segment_overrun(void); void invalid_TSS(void); void segment_not_present(void); void stack_segment(void); void general_protection(void); void page_fault(void); void coprocessor_error(void); void reserved(void); void parallel_interrupt(void); void irq13(void); void trap_init(void) { int i; // 设置除操作出错的中断向量值。 	set_trap_gate(0,&amp;amp;divide_error); set_trap_gate(1,&amp;amp;debug); set_trap_gate(2,&amp;amp;nmi); set_system_gate(3,&amp;amp;int3);	/* int3-5 can be called from all */ set_system_gate(4,&amp;amp;overflow); set_system_gate(5,&amp;amp;bounds); set_trap_gate(6,&amp;amp;invalid_op); set_trap_gate(7,&amp;amp;device_not_available); set_trap_gate(8,&amp;amp;double_fault); set_trap_gate(9,&amp;amp;coprocessor_segment_overrun); set_trap_gate(10,&amp;amp;invalid_TSS); set_trap_gate(11,&amp;amp;segment_not_present); set_trap_gate(12,&amp;amp;stack_segment); set_trap_gate(13,&amp;amp;general_protection); set_trap_gate(14,&amp;amp;page_fault); set_trap_gate(15,&amp;amp;reserved); set_trap_gate(16,&amp;amp;coprocessor_error); // 下面把int17-47的陷阱门先均设置为reserved,以后各硬件初始化时会重新设置自己的陷阱门。 	for (i=17;i&amp;lt;48;i++) set_trap_gate(i,&amp;amp;reserved); // 设置协处理器中断0x2d(45)陷阱门描述符，并允许其产生中断请求。设置并行口中断描述符。 	set_trap_gate(45,&amp;amp;irq13); outb_p(inb_p(0x21)&amp;amp;0xfb,0x21); // 允许8259A主芯片的IRQ2中断请求。 	outb(inb_p(0xA1)&amp;amp;0xdf,0xA1); // 允许8259A从芯片的IRQ3中断请求。 	set_trap_gate(39,&amp;amp;parallel_interrupt); // 设置并行口1的中断0x27陷阱门的描述符。 }  include/linux/head.</description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://lambertxiao.github.io/posts/%E5%AD%98%E5%82%A8-ceph/doc/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E5%AD%98%E5%82%A8-ceph/doc/</guid>
+      <description>Ceph
+  Monitor 持有整个集群的状态，包含monitor映射，manager映射，osd映射，mds映射，crush映射，monitor必须做冗余和高可用
+  Manager 负责追踪运行时指标以及集群的状态，对外提供了web端的dashboard和restapi
+  OSD 负责存储数据，处理数据多副本，数据修复，rebalance，并且提供一些监控信息给monitor，同样需要冗余和高可用
+  MDS 负责存储集群的数据，只有ceph文件存储才需要用到，ceph的块存储和对象存储用不到，MDS允许通过posix文件接口来访问
+  ceph使用一个叫逻辑存储池的方法来存储数据，数据以对象的形式存在。ceph会计算对象属于哪个group，group又属于哪个OSD，通过一个叫CRUSH的算法来实现。CRUSH算法使得ceph集群可伸缩，rebalance，可修复</description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E4%B8%89%E6%80%BB%E7%BA%BF/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E4%B8%89%E6%80%BB%E7%BA%BF/</guid>
+      <description>三总线 地址总线： 是专门用来传送地址的，是单向的，地址从CPU传向外部存储器或IO端口。地址总线的位数决定了CPU可寻址的内存空间大小。比如16位就是2的16次方等于64KB
+数据总线： 用来传输数据信息，是双向的，即可以把CPU的数据传送到存储器或IO接口等其他部件，也可以将其他部件的数据传到CPU
+控制总线： 用来传送控制信号和时序信号，双向的
+ 控制信号如微处理器送往存储器和IO接口电路的，如读写信号、片选信号、中断响应信号  </description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E5%86%85%E5%AD%98/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E5%86%85%E5%AD%98/</guid>
+      <description>内存 虚拟内存 内存空间划分   用户空间
+  内核空间
+  内存寻址 内存区域中的每一个单元都是有地址的，这些地址是由指针来标识和定位的，通过指针来寻找内存单元的操作也被称为内存寻址。
+内存管理   分页式
+  分段式
+  物理内存 内存卡</description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E5%AF%84%E5%AD%98%E5%99%A8/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E5%AF%84%E5%AD%98%E5%99%A8/</guid>
+      <description>寄存器 </description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%B9%B6%E6%9F%A5%E9%9B%86/doc/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%B9%B6%E6%9F%A5%E9%9B%86/doc/</guid>
+      <description>684. 冗余连接 684. 冗余连接 树可以看成是一个连通且 无环 的 无向 图。
+给定往一棵 n 个节点 (节点值 1～n) 的树中添加一条边后的图。添加的边的两个顶点包含在 1 到 n 中间，且这条附加的边不属于树中已存在的边。图的信息记录于长度为 n 的二维数组 edges ，edges[i] = [ai, bi] 表示图中在 ai 和 bi 之间存在一条边。
+请找出一条可以删去的边，删除后可使得剩余部分是一个有着 n 个节点的树。如果有多个答案，则返回数组 edges 中最后出现的边。
+思路：
+假设对于所有的边 [[1,2], [2,3], [3,4], [1,4], [1,5]]
+ 初始时，定义所有节点的代表节点集合parent  parent[i] = i
+表示i节点的代表节点是自身i
+对于上面的边，五条边，则应该有6个节点，len(parent) = 6
+parent = [0, 1, 2, 3, 4, 5]
+ 循环所有的边，判断能否加入这条边到树中
+ 对于边x-y，如果x的代表节点不等于y的代表节点，说明没有一条路径能让x直接到y，则此时x-y这条边能加入树中，    func findRedundantConnection(edges [][]int) []int { // 1.</description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C-upnp/doc/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C-upnp/doc/</guid>
+      <description>最近在看libp2p的源码，发现需要先储备一些网络方面的知识才能看得懂，如UPnP
+ 什么是UPnP UPnP全名是Universal Plug and Play，即通用即插即用。简单的来说，UPnP 最大的愿景就是希望任何设备只要一接上网络，所有在网络上的设备马上就能知道有新设备加入，这些设备彼此之间能互相沟通，更能直接使用或控制它，一切都不需要设定，完全的Plug and Play。
+组成  设备 控制点  步骤  寻址(Addressing)  开始会给所有设备或者控制点分配一个分配一个IP。 这个过程是这样的，设备或控制点向 DHCP 客户端发送一个 DHCPDISCOVER 消息，DHCP 客户端负责分配向他们分配 IP，如果局域网内没有 DHCP 服务，UPnP 设备将按照 Auto-IP 的协议通过算法呢从 169.254.1.0 to 169.254.254.255 地址范围内获取一个未被使用的 IP 地址。 对于新设备首次与网络建立连接时也会有这个寻址过程。
+发现(Discovery)  这步是 UPnP 真正工作的第一步。 当一个设备被加入到网络中时，UPnP 发现协议允许它向控制点介绍自己的功能，设备会向多次向固定的地址及端口(239.255.255.250:1900)发送消息，控制点会监控给地址及端口。当一个控制点被加入到网络时，UPnP 发现协议允许它搜寻这个网络内它感兴趣的设备。这个过程内彼此交换剪短的信息，如类型、全局唯一标识符、指向详细信息的链接及当前状态(可选)。
+描述(Description)  控制点通过1.发现(Discovery)过程中设备提供的指向设备详细信息的链接，获取设备的详细信息(Device description)及其提供的服务的详细信息(Service description)。
+控制(Control)  控制点通过描述过程对设备的了解，控制点可以发送控制信息控制设备，设备在执行完命令后会给与控制点一个反馈。
+事件(Eventing)  控制点可以监听设备的状态，这样设备的状态或信息发生了变化，只要产生一个事件广播出去，控制点即可进行响应，类似一般的订阅者模式。
+展现(Presentation)  控制点可以从设备获取一个 HTML 页面，用于控制设备或展现设备信息，是对上面3.控制(Control)和4.事件(Eventing)过程的一个补充(即时展现)。</description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/http2/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/http2/</guid>
+      <description>Http2 </description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://lambertxiao.github.io/posts/%E8%8B%B1%E8%AF%AD%E5%8D%95%E8%AF%8D%E7%A7%AF%E7%B4%AF/doc/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E8%8B%B1%E8%AF%AD%E5%8D%95%E8%AF%8D%E7%A7%AF%E7%B4%AF/doc/</guid>
+      <description></description>
+    </item>
+    
+    
+    
+    
+    
+  </channel>
+</rss>

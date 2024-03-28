@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>storage on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/storage/</link>
+    <description>Recent content in storage on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Sun, 26 Mar 2023 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/storage/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>如何使用liburing读写磁盘</title>
+      <link>https://lambertxiao.github.io/posts/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8liburing%E8%AF%BB%E5%86%99%E7%A3%81%E7%9B%98/doc/</link>
+      <pubDate>Sun, 26 Mar 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8liburing%E8%AF%BB%E5%86%99%E7%A3%81%E7%9B%98/doc/</guid>
+      <description>什么是liburing liburing是一个用于异步IO库，它提供了简洁易用的API来处理文件I/O、网络I/O以及事件驱动I/O等各种I/O操作。liburing库基于Linux内核中的io_uring特性实现，将I/O请求从应用层转移到内核层以提高应用程序的I/O性能。
+ 由于liburing在内核版本5.1才引入，所以需要运行环境的linux内核版本大于等于5.1
+ 为什么使用liburing liburing库对于一些高并发、高吞吐量的程序，特别是网络服务器、云存储等高性能系统的设计和实现有很大的帮助作用。
+如何使用 建议参考源码里的步骤自行编译安装，源码：https://github.com/axboe/liburing
+常用函数介绍：
+ io_uring_queue_init：用于初始化io_uring并且返回其句柄。 io_uring_queue_exit：用于关闭并释放io_uring的句柄。 io_uring_get_sqe：用于获取一个可用的sqe，即I/O请求对应的队列元素数据结构。 io_uring_prep_readv：用于准备一个异步读请求。 io_uring_prep_writev：用于准备一个异步写请求。 io_uring_sqe_set_data：用于将用户私有数据关联到一个sqe（请求）中。 io_uring_submit：用于提交一个或一批异步IO请求到io_uring。 io_uring_peek_cqe：用于查看完成队列（cq）中的未处理项数量。 io_uring_wait_cqe：阻塞等待一个处理完成的io。 io_uring_cqe_get_data：用于获取特定的完成队列项（cqe），其中包含先前提交的IO请求的结果以及相关的私有数据。 io_uring_cqe_seen：用于标记一个完成队列项（cqe）已被处理过。  下面使用liburing封装一个DiskUtil实现对文件的基本读写
+编写disk_util.h头文件
+#include &amp;lt;functional&amp;gt;#include &amp;lt;string&amp;gt;#include &amp;lt;liburing.h&amp;gt;#include &amp;lt;thread&amp;gt; enum IO_OP { OP_READ = 0, OP_WRITE = 1 }; struct IORequest { IO_OP opcode; // 0: read, 1: write  char* buffer; off_t offset; size_t length; std::function&amp;lt;void(int)&amp;gt; callback; }; class DiskUtil { public: DiskUtil(const std::string&amp;amp; file_path, int block_size); ~DiskUtil(); void submit_request(IORequest* req); void start(); void stop(); private: void io_worker_thread(); int open_file(); void close_file(); void process_io_request(IORequest* req); int submit_io_request(IORequest* req); void complete_io_request(); private: int fd_ = -1; io_uring io_ring_; const std::string file_path_; const int block_size_; std::thread io_worker_; bool is_running_ = false; }; 编写disk_tool.</description>
+    </item>
+    
+    <item>
+      <title>如何使用libaio读写磁盘</title>
+      <link>https://lambertxiao.github.io/posts/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8libaio%E8%AF%BB%E5%86%99%E7%A3%81%E7%9B%98/doc/</link>
+      <pubDate>Sat, 25 Mar 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8libaio%E8%AF%BB%E5%86%99%E7%A3%81%E7%9B%98/doc/</guid>
+      <description>什么是libaio libaio是Linux异步I/O文件操作库，它能够提供更高效的文件异步I/O读写方式。
+为什么使用libaio 异步I/O操作是指将数据传输请求发送给操作系统后，操作系统会立即返回并继续执行其他任务，而不必等待数据传输完成，这种操作方式可以充分利用CPU和I/O设备的资源，提高系统的I/O性能。
+相比于传统的同步I/O操作方式，异步I/O操作需要通过系统调用和事件通知机制实现，在编程实现上具有较高的难度。而libaio封装了这些细节，使得开发人员可以更方便地使用异步I/O操作，从而提高应用程序的I/O性能。因此，如果需要高效的文件I/O操作，并期望充分利用系统资源，可以考虑使用libaio。
+如何使用 安装libaio
+apt install libaio-dev 接口介绍
+ io_setup：用于初始化异步IO环境并返回其句柄。 io_destroy：用于清除异步IO环境并关闭相应的文件描述符。 io_getevents：用于等待指定数量的IO事件（如读、写或错误）并将它们存储在指定的缓冲区中。 io_prep_pread：用于为读取一个文件块准备异步IO操作。 io_prep_pwrite：用于为写入一个文件块准备异步IO操作。 io_submit：用于提交一或多个异步IO请求，并将其排入异步IO环境中，等待事件处理。  下面使用libaio封装一个DiskUtil实现对文件的基本读写
+编写disk_util.h头文件
+#include &amp;lt;functional&amp;gt;#include &amp;lt;string&amp;gt;#include &amp;lt;libaio.h&amp;gt;#include &amp;lt;thread&amp;gt; enum IO_OP { OP_READ = 0, OP_WRITE = 1 }; struct IORequest { IO_OP opcode; // 0: read, 1: write  char* buffer; off_t offset; size_t length; std::function&amp;lt;void(int)&amp;gt; callback; }; class DiskUtil { public: DiskUtil(const std::string&amp;amp; file_path, int block_size); ~DiskUtil(); void submit_request(IORequest* req); void start(); void stop(); private: void io_worker_thread(); int open_file(); void close_file(); void process_io_request(IORequest* req); int submit_io_request(IORequest* req); void complete_io_request(io_context_t ctx, io_event* events, int num_events); private: int fd_ = -1; const std::string file_path_; const int block_size_; // 对应一个会话的上下文  io_context_t io_ctx_ = 0; std::thread io_worker_; bool is_running_ = false; }; 编写disk_tool.</description>
+    </item>
+    
+  </channel>
+</rss>

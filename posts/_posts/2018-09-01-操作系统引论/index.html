@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>操作系统引论 | Lambert&#39;s blog</title>
+<meta name="keywords" content="操作系统, os" />
+<meta name="description" content="第一章 操作系统引论   操作系统的目标和作用
+ OS 作为用户与计算机硬件系统之间的接口 OS 作为计算机系统资源(处理器、存储器、I/O 设备以及信息(数据和程序))的管理者 OS 实现了对计算机资源的抽象    操作系统的基本特性
+  并发性
+并行性是指两个或多个事件在同一时刻发生；而并发性是指两个或多个事件在同一时间间隔内发生。
+  共享性
+指系统中的资源可供内存中多个并发执行的进程(线程)共同使用
+  虚拟技术
+ 时分复用技术 空分复用技术    异步性
+由于资源等因素的限制，使进程的执行通常都不是“一气呵成”，而是以“停停走走”的方式运行
+    操作系统的主要功能
+  处理机管理功能
+在传统的多道程序系统中，处理机的分配和运行都是以进程为基本单位，因而对处理机的管理可归结为对进程的管理；在引入了线程的 OS 中，也包含对线程的管理。处理机管理的主要功能是创建和撤消进程(线程)，对诸进程(线程)的运行进行协调，实现进程(线程)之间的信息交换，以及按照一定的算法把处理机分配给进程(线程)。
+  存储器的功能
+存储器管理应具有内存分配、内存保护、地址映射和内存扩充
+  设备管理功能
+设备管理用于管理计算机系统中所有的外围设备，而设备管理的主要任务是：完成用户进程提出的 I/O 请求；为用户进程分配其所需的 I/O 设备；提高 CPU 和 I/O 设备的利用率；提高 I/O 速度；方便用户使用 I/O 设备。为实现上述任务，设备管理应具有缓冲管理、设备分配和设备处理以及虚拟设备等功能。
+  文件管理功能">
+<meta name="author" content="Theme PaperMod">
+<link rel="canonical" href="https://lambertxiao.github.io/posts/_posts/2018-09-01-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%BC%95%E8%AE%BA/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js" integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5&#43;kdJvBz5iKbt6B5PJI="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="操作系统引论" />
+<meta property="og:description" content="第一章 操作系统引论   操作系统的目标和作用
+ OS 作为用户与计算机硬件系统之间的接口 OS 作为计算机系统资源(处理器、存储器、I/O 设备以及信息(数据和程序))的管理者 OS 实现了对计算机资源的抽象    操作系统的基本特性
+  并发性
+并行性是指两个或多个事件在同一时刻发生；而并发性是指两个或多个事件在同一时间间隔内发生。
+  共享性
+指系统中的资源可供内存中多个并发执行的进程(线程)共同使用
+  虚拟技术
+ 时分复用技术 空分复用技术    异步性
+由于资源等因素的限制，使进程的执行通常都不是“一气呵成”，而是以“停停走走”的方式运行
+    操作系统的主要功能
+  处理机管理功能
+在传统的多道程序系统中，处理机的分配和运行都是以进程为基本单位，因而对处理机的管理可归结为对进程的管理；在引入了线程的 OS 中，也包含对线程的管理。处理机管理的主要功能是创建和撤消进程(线程)，对诸进程(线程)的运行进行协调，实现进程(线程)之间的信息交换，以及按照一定的算法把处理机分配给进程(线程)。
+  存储器的功能
+存储器管理应具有内存分配、内存保护、地址映射和内存扩充
+  设备管理功能
+设备管理用于管理计算机系统中所有的外围设备，而设备管理的主要任务是：完成用户进程提出的 I/O 请求；为用户进程分配其所需的 I/O 设备；提高 CPU 和 I/O 设备的利用率；提高 I/O 速度；方便用户使用 I/O 设备。为实现上述任务，设备管理应具有缓冲管理、设备分配和设备处理以及虚拟设备等功能。
+  文件管理功能" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://lambertxiao.github.io/posts/_posts/2018-09-01-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%BC%95%E8%AE%BA/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2018-09-02T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2018-09-02T00:00:00&#43;00:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="操作系统引论"/>
+<meta name="twitter:description" content="第一章 操作系统引论   操作系统的目标和作用
+ OS 作为用户与计算机硬件系统之间的接口 OS 作为计算机系统资源(处理器、存储器、I/O 设备以及信息(数据和程序))的管理者 OS 实现了对计算机资源的抽象    操作系统的基本特性
+  并发性
+并行性是指两个或多个事件在同一时刻发生；而并发性是指两个或多个事件在同一时间间隔内发生。
+  共享性
+指系统中的资源可供内存中多个并发执行的进程(线程)共同使用
+  虚拟技术
+ 时分复用技术 空分复用技术    异步性
+由于资源等因素的限制，使进程的执行通常都不是“一气呵成”，而是以“停停走走”的方式运行
+    操作系统的主要功能
+  处理机管理功能
+在传统的多道程序系统中，处理机的分配和运行都是以进程为基本单位，因而对处理机的管理可归结为对进程的管理；在引入了线程的 OS 中，也包含对线程的管理。处理机管理的主要功能是创建和撤消进程(线程)，对诸进程(线程)的运行进行协调，实现进程(线程)之间的信息交换，以及按照一定的算法把处理机分配给进程(线程)。
+  存储器的功能
+存储器管理应具有内存分配、内存保护、地址映射和内存扩充
+  设备管理功能
+设备管理用于管理计算机系统中所有的外围设备，而设备管理的主要任务是：完成用户进程提出的 I/O 请求；为用户进程分配其所需的 I/O 设备；提高 CPU 和 I/O 设备的利用率；提高 I/O 速度；方便用户使用 I/O 设备。为实现上述任务，设备管理应具有缓冲管理、设备分配和设备处理以及虚拟设备等功能。
+  文件管理功能"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://lambertxiao.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "操作系统引论",
+      "item": "https://lambertxiao.github.io/posts/_posts/2018-09-01-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%BC%95%E8%AE%BA/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "操作系统引论",
+  "name": "操作系统引论",
+  "description": "第一章 操作系统引论   操作系统的目标和作用\n OS 作为用户与计算机硬件系统之间的接口 OS 作为计算机系统资源(处理器、存储器、I/O 设备以及信息(数据和程序))的管理者 OS 实现了对计算机资源的抽象    操作系统的基本特性\n  并发性\n并行性是指两个或多个事件在同一时刻发生；而并发性是指两个或多个事件在同一时间间隔内发生。\n  共享性\n指系统中的资源可供内存中多个并发执行的进程(线程)共同使用\n  虚拟技术\n 时分复用技术 空分复用技术    异步性\n由于资源等因素的限制，使进程的执行通常都不是“一气呵成”，而是以“停停走走”的方式运行\n    操作系统的主要功能\n  处理机管理功能\n在传统的多道程序系统中，处理机的分配和运行都是以进程为基本单位，因而对处理机的管理可归结为对进程的管理；在引入了线程的 OS 中，也包含对线程的管理。处理机管理的主要功能是创建和撤消进程(线程)，对诸进程(线程)的运行进行协调，实现进程(线程)之间的信息交换，以及按照一定的算法把处理机分配给进程(线程)。\n  存储器的功能\n存储器管理应具有内存分配、内存保护、地址映射和内存扩充\n  设备管理功能\n设备管理用于管理计算机系统中所有的外围设备，而设备管理的主要任务是：完成用户进程提出的 I/O 请求；为用户进程分配其所需的 I/O 设备；提高 CPU 和 I/O 设备的利用率；提高 I/O 速度；方便用户使用 I/O 设备。为实现上述任务，设备管理应具有缓冲管理、设备分配和设备处理以及虚拟设备等功能。\n  文件管理功能",
+  "keywords": [
+    "操作系统", "os"
+  ],
+  "articleBody": "第一章 操作系统引论   操作系统的目标和作用\n OS 作为用户与计算机硬件系统之间的接口 OS 作为计算机系统资源(处理器、存储器、I/O 设备以及信息(数据和程序))的管理者 OS 实现了对计算机资源的抽象    操作系统的基本特性\n  并发性\n并行性是指两个或多个事件在同一时刻发生；而并发性是指两个或多个事件在同一时间间隔内发生。\n  共享性\n指系统中的资源可供内存中多个并发执行的进程(线程)共同使用\n  虚拟技术\n 时分复用技术 空分复用技术    异步性\n由于资源等因素的限制，使进程的执行通常都不是“一气呵成”，而是以“停停走走”的方式运行\n    操作系统的主要功能\n  处理机管理功能\n在传统的多道程序系统中，处理机的分配和运行都是以进程为基本单位，因而对处理机的管理可归结为对进程的管理；在引入了线程的 OS 中，也包含对线程的管理。处理机管理的主要功能是创建和撤消进程(线程)，对诸进程(线程)的运行进行协调，实现进程(线程)之间的信息交换，以及按照一定的算法把处理机分配给进程(线程)。\n  存储器的功能\n存储器管理应具有内存分配、内存保护、地址映射和内存扩充\n  设备管理功能\n设备管理用于管理计算机系统中所有的外围设备，而设备管理的主要任务是：完成用户进程提出的 I/O 请求；为用户进程分配其所需的 I/O 设备；提高 CPU 和 I/O 设备的利用率；提高 I/O 速度；方便用户使用 I/O 设备。为实现上述任务，设备管理应具有缓冲管理、设备分配和设备处理以及虚拟设备等功能。\n  文件管理功能\n文件管理的主要任务是对用户文件和系统文件进行管理，以方便用户使用，并保证文件的安全性。\n    处理机管理功能   进程控制\n进程控制的主要功能是为作业创建进程，撤消已结束的进程\n  进程同步\n 进程互斥方式 指诸进程(线程)在对临界资源进行访问时，应采用互斥方式； 进程同步方式 指在相互合作去完成共同任务的诸进程(线程)间，由同步机构对它们的执行次序加以协调。    进程通信\n进程通信的任务就是用来实现在相互合作的进程之间的信息交换。由源进程利用发送命令直接将消息(Message)挂到目标进程的消息队列上，以后由目标进程利用接收命令从其消息队列中取出消息\n  调度\n 作业调度 作业调度的基本任务是从后备队列中按照一定的算法，选择出若干个作业，为它们分配运行所需的资源(首先是分配内存)。在将它们调入内存后，便分别为它们建立进程，使它们都成为可能获得处理机的就绪进程，并按照一定的算法将它们插入就绪队列。 进程调度 进程调度的任务是从进程的就绪队列中，按照一定的算法选出一个进程，把处理机分配给它，并为它设置运行现场，使进程投入执行。值得提出的是，在多线程OS中，通常是把线程作为独立运行和分配处理机的基本单位，为此，须把就绪线程排成一个队列，每次调度时，是从就绪线程队列中选出一个线程，把处理机分配给它。    存储器的功能   内存分配\n主要任务是为每道程序分配内存空间\n  静态分配\n静态分配方式中，每个作业的内存空间是在作业装入时确定的，的整个运行期间，不允许该作业再申请新的内存空间\n  动态分配\n每个作业所要求的基本内存空间也是在装入时确定的，但允许作业在运行过程中继续申请新的附加内存空间，以适应程序和数据的动态增长，也允许作业在内存中“移动”。\n 内存分配数据结构。该结构用于记录内存空间的使用情况，作为内存分配的依据； 内存分配功能。系统按照一定的内存分配算法为用户程序分配内存空间； 内存回收功能。系统对于用户不再需要的内存，通过用户的释放请求去完成系统的回收功能。      内存保护\n内存保护的主要任务是确保每道用户程序都只在自己的内存空间内运行，彼此互不干扰；为了确保每道程序都只在自己的内存区中运行，必须设置内存保护机制。一种比较简单的内存保护机制是设置两个界限寄存器，分别用于存放正在执行程序的上界和下界。系统须对每条指令所要访问的地址进行检查，如果发生越界，便发出越界中断请求，以停止该程序的执行。\n  地址映射\n一个应用程序(源程序)经编译后，通常会形成若干个目标程序；这些目标程序再经过链接便形成了可装入程序。这些程序的地址都是从“0”开始的，程序中的其它地址都是相对于起始地址计算的。由这些地址所形成的地址范围称为“地址空间”，其中的地址称为“逻辑地址”或“相对地址”。\n  内存扩充\n存储器管理中的内存扩充任务并非是去扩大物理内存的容量，而是借助于虚拟存储技术，从逻辑上去扩充内存容量，使用户所感觉到的内存容量比实际内存容量大得多，以便让更多的用户程序并发运行。这样，既满足了用户的需要，又改善了系统的性能。为此，只需增加少量的硬件。为了能在逻辑上扩充内存，系统必须具有内存扩充机制，用于实现下述各功能：\n  请求调入功能。允许在装入一部分用户程序和数据的情况下，便能启动该程序运行。在程序运行过程中，若发现要继续运行时所需的程序和数据尚未装入内存，可向OS发出请求，由OS从磁盘中将所需部分调入内存，以便继续运行。\n  置换功能。若发现在内存中已无足够的空间来装入需要调入的程序和数据时，系统应能将内存中的一部分暂时不用的程序和数据调至盘上，以腾出内存空间，然后再将所需调入的部分装入内存。\n    设备管理功能   缓冲管理\n如果在 I/O 设备和 CPU之间引入缓冲，则可有效地缓和 CPU 与 I/O 设备速度不匹配的矛盾，提高 CPU 的利用率，进而提高系统吞吐量。\n  设备分配\n是根据用户进程的 I/O 请求、系统的现有资源情况以及按照某种设备的分配策略，为之分配其所需的设备。\n  设备处理\n其基本任务是用于实现 CPU 和设备控制器之间的通信，即由 CPU 向设备控制器发出 I/O 命令，要求它完成指定的 I/O 操作；反之，由 CPU接收从控制器发来的中断请求，并给予迅速的响应和相应的处理\n  文件管理功能   文件存储空间的管理\n为了方便用户的使用，对于一些当前需要使用的系统文件和用户文件，都必须放在可随机存取的磁盘上。在多用户环境下，若由用户自己对文件的存储进行管理，不仅非常困难，而且也必然是十分低效的。因而，需要由文件系统对诸多文件及文件的存储空间实施统一的管理。其主要任务是为每个文件分配必要的外存空间，提高外存的利用率，并能有助于提高文件系统的存、取速度。\n为此，系统应设置相应的数据结构，用于记录文件存储空间的使用情况，以供分配存储空间时参考；系统还应具有对存储空间进行分配和回收的功能。为了提高存储空间的利用率，对存储空间的分配，通常是采用离散分配方式，以减少外存零头，并以盘块为基本分配单位。盘块的大小通常为 1～8 KB。\n  目录管理\n  文件的读/写管理和保护\n  ",
+  "wordCount" : "111",
+  "inLanguage": "en",
+  "datePublished": "2018-09-02T00:00:00Z",
+  "dateModified": "2018-09-02T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "Theme PaperMod"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lambertxiao.github.io/posts/_posts/2018-09-01-%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%BC%95%E8%AE%BA/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lambert's blog",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lambertxiao.github.io/avatar.jpeg"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      操作系统引论
+    </h1>
+    <div class="post-meta"><span title='2018-09-02 00:00:00 +0000 UTC'>September 2, 2018</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Theme PaperMod&nbsp;|&nbsp;<a href="https://github.com/adityatelange/hugo-PaperMod/tree/exampleSite/content/posts/_posts/2018-09-01-%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%e5%bc%95%e8%ae%ba.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#%e7%ac%ac%e4%b8%80%e7%ab%a0-%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%e5%bc%95%e8%ae%ba" aria-label="第一章 操作系统引论">第一章 操作系统引论</a><ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#span-idp1%e5%a4%84%e7%90%86%e6%9c%ba%e7%ae%a1%e7%90%86%e5%8a%9f%e8%83%bdspan" aria-label="处理机管理功能"><span id="p1">处理机管理功能</span></a></li>
+                <li>
+                    <a href="#span-idp2%e5%ad%98%e5%82%a8%e5%99%a8%e7%9a%84%e5%8a%9f%e8%83%bdspan" aria-label="存储器的功能"><span id="p2">存储器的功能</span></a></li>
+                <li>
+                    <a href="#span-idp3%e8%ae%be%e5%a4%87%e7%ae%a1%e7%90%86%e5%8a%9f%e8%83%bdspan" aria-label="设备管理功能"><span id="p3">设备管理功能</span></a></li>
+                <li>
+                    <a href="#span-idp4%e6%96%87%e4%bb%b6%e7%ae%a1%e7%90%86%e5%8a%9f%e8%83%bdspan" aria-label="文件管理功能"><span id="p4">文件管理功能</span></a>
+                </li>
+            </ul>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h1 id="第一章-操作系统引论">第一章 操作系统引论<a hidden class="anchor" aria-hidden="true" href="#第一章-操作系统引论">#</a></h1>
+<ul>
+<li>
+<p>操作系统的目标和作用</p>
+<ul>
+<li>OS 作为用户与计算机硬件系统之间的接口</li>
+<li>OS 作为计算机系统资源(处理器、存储器、I/O 设备以及信息(数据和程序))的管理者</li>
+<li>OS 实现了对计算机资源的抽象</li>
+</ul>
+</li>
+<li>
+<p>操作系统的基本特性</p>
+<ul>
+<li>
+<p>并发性</p>
+<p>并行性是指两个或多个事件在同一时刻发生；而并发性是指两个或多个事件在同一时间间隔内发生。</p>
+</li>
+<li>
+<p>共享性</p>
+<p>指系统中的资源可供内存中多个并发执行的进程(线程)共同使用</p>
+</li>
+<li>
+<p>虚拟技术</p>
+<ul>
+<li>时分复用技术</li>
+<li>空分复用技术</li>
+</ul>
+</li>
+<li>
+<p>异步性</p>
+<p>由于资源等因素的限制，使进程的执行通常都不是“一气呵成”，而是以“停停走走”的方式运行</p>
+</li>
+</ul>
+</li>
+<li>
+<p>操作系统的主要功能</p>
+<ul>
+<li>
+<p><a href="#%E5%A4%84%E7%90%86%E6%9C%BA%E7%AE%A1%E7%90%86%E5%8A%9F%E8%83%BD">处理机管理功能</a></p>
+<p>在传统的多道程序系统中，处理机的分配和运行都是以进程为基本单位，因而对处理机的管理可归结为对进程的管理；在引入了线程的 OS 中，也包含对线程的管理。处理机管理的主要功能是创建和撤消进程(线程)，对诸进程(线程)的运行进行协调，实现进程(线程)之间的信息交换，以及按照一定的算法把处理机分配给进程(线程)。</p>
+</li>
+<li>
+<p><a href="#%E5%AD%98%E5%82%A8%E5%99%A8%E7%9A%84%E5%8A%9F%E8%83%BD">存储器的功能</a></p>
+<p>存储器管理应具有内存分配、内存保护、地址映射和内存扩充</p>
+</li>
+<li>
+<p><a href="#%E8%AE%BE%E5%A4%87%E7%AE%A1%E7%90%86%E5%8A%9F%E8%83%BD">设备管理功能</a></p>
+<p>设备管理用于管理计算机系统中所有的外围设备，而设备管理的主要任务是：完成用户进程提出的 I/O 请求；为用户进程分配其所需的 I/O 设备；提高 CPU 和 I/O 设备的利用率；提高 I/O 速度；方便用户使用 I/O 设备。为实现上述任务，设备管理应具有缓冲管理、设备分配和设备处理以及虚拟设备等功能。</p>
+</li>
+<li>
+<p><a href="#%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86%E5%8A%9F%E8%83%BD">文件管理功能</a></p>
+<p>文件管理的主要任务是对用户文件和系统文件进行管理，以方便用户使用，并保证文件的安全性。</p>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="span-idp1处理机管理功能span"><span id="p1">处理机管理功能</span><a hidden class="anchor" aria-hidden="true" href="#span-idp1处理机管理功能span">#</a></h3>
+<ul>
+<li>
+<p>进程控制</p>
+<p>进程控制的主要功能是为作业创建进程，撤消已结束的进程</p>
+</li>
+<li>
+<p>进程同步</p>
+<ul>
+<li>进程互斥方式
+指诸进程(线程)在对临界资源进行访问时，应采用互斥方式；</li>
+<li>进程同步方式
+指在相互合作去完成共同任务的诸进程(线程)间，由同步机构对它们的执行次序加以协调。</li>
+</ul>
+</li>
+<li>
+<p>进程通信</p>
+<p>进程通信的任务就是用来实现在相互合作的进程之间的信息交换。由源进程利用发送命令直接将消息(Message)挂到目标进程的消息队列上，以后由目标进程利用接收命令从其消息队列中取出消息</p>
+</li>
+<li>
+<p>调度</p>
+<ul>
+<li>作业调度
+作业调度的基本任务是从后备队列中按照一定的算法，选择出若干个作业，为它们分配运行所需的资源(首先是分配内存)。在将它们调入内存后，便分别为它们建立进程，使它们都成为可能获得处理机的就绪进程，并按照一定的算法将它们插入就绪队列。</li>
+<li>进程调度
+进程调度的任务是从进程的就绪队列中，按照一定的算法选出一个进程，把处理机分配给它，并为它设置运行现场，使进程投入执行。值得提出的是，在多线程OS中，通常是把线程作为独立运行和分配处理机的基本单位，为此，须把就绪线程排成一个队列，每次调度时，是从就绪线程队列中选出一个线程，把处理机分配给它。</li>
+</ul>
+</li>
+</ul>
+<h3 id="span-idp2存储器的功能span"><span id="p2">存储器的功能</span><a hidden class="anchor" aria-hidden="true" href="#span-idp2存储器的功能span">#</a></h3>
+<ul>
+<li>
+<p>内存分配</p>
+<p>主要任务是为每道程序分配内存空间</p>
+<ul>
+<li>
+<p>静态分配</p>
+<p>静态分配方式中，每个作业的内存空间是在作业装入时确定的，的整个运行期间，不允许该作业再申请新的内存空间</p>
+</li>
+<li>
+<p>动态分配</p>
+<p>每个作业所要求的基本内存空间也是在装入时确定的，但允许作业在运行过程中继续申请新的附加内存空间，以适应程序和数据的动态增长，也允许作业在内存中“移动”。</p>
+<ul>
+<li>内存分配数据结构。该结构用于记录内存空间的使用情况，作为内存分配的依据；</li>
+<li>内存分配功能。系统按照一定的内存分配算法为用户程序分配内存空间；</li>
+<li>内存回收功能。系统对于用户不再需要的内存，通过用户的释放请求去完成系统的回收功能。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>内存保护</p>
+<p>内存保护的主要任务是确保每道用户程序都只在自己的内存空间内运行，彼此互不干扰；为了确保每道程序都只在自己的内存区中运行，必须设置内存保护机制。一种比较简单的内存保护机制是设置两个界限寄存器，分别用于存放正在执行程序的上界和下界。系统须对每条指令所要访问的地址进行检查，如果发生越界，便发出越界中断请求，以停止该程序的执行。</p>
+</li>
+<li>
+<p>地址映射</p>
+<p>一个应用程序(源程序)经编译后，通常会形成若干个目标程序；这些目标程序再经过链接便形成了可装入程序。这些程序的地址都是从“0”开始的，程序中的其它地址都是相对于起始地址计算的。由这些地址所形成的地址范围称为“地址空间”，其中的地址称为“逻辑地址”或“相对地址”。</p>
+</li>
+<li>
+<p>内存扩充</p>
+<p>存储器管理中的内存扩充任务并非是去扩大物理内存的容量，而是借助于虚拟存储技术，从逻辑上去扩充内存容量，使用户所感觉到的内存容量比实际内存容量大得多，以便让更多的用户程序并发运行。这样，既满足了用户的需要，又改善了系统的性能。为此，只需增加少量的硬件。为了能在逻辑上扩充内存，系统必须具有内存扩充机制，用于实现下述各功能：</p>
+<ul>
+<li>
+<p>请求调入功能。允许在装入一部分用户程序和数据的情况下，便能启动该程序运行。在程序运行过程中，若发现要继续运行时所需的程序和数据尚未装入内存，可向OS发出请求，由OS从磁盘中将所需部分调入内存，以便继续运行。</p>
+</li>
+<li>
+<p>置换功能。若发现在内存中已无足够的空间来装入需要调入的程序和数据时，系统应能将内存中的一部分暂时不用的程序和数据调至盘上，以腾出内存空间，然后再将所需调入的部分装入内存。</p>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="span-idp3设备管理功能span"><span id="p3">设备管理功能</span><a hidden class="anchor" aria-hidden="true" href="#span-idp3设备管理功能span">#</a></h3>
+<ul>
+<li>
+<p>缓冲管理</p>
+<p>如果在 I/O 设备和 CPU之间引入缓冲，则可有效地缓和 CPU 与 I/O 设备速度不匹配的矛盾，提高 CPU 的利用率，进而提高系统吞吐量。</p>
+</li>
+<li>
+<p>设备分配</p>
+<p>是根据用户进程的 I/O 请求、系统的现有资源情况以及按照某种设备的分配策略，为之分配其所需的设备。</p>
+</li>
+<li>
+<p>设备处理</p>
+<p>其基本任务是用于实现 CPU 和设备控制器之间的通信，即由 CPU 向设备控制器发出 I/O 命令，要求它完成指定的 I/O 操作；反之，由 CPU接收从控制器发来的中断请求，并给予迅速的响应和相应的处理</p>
+</li>
+</ul>
+<h3 id="span-idp4文件管理功能span"><span id="p4">文件管理功能</span><a hidden class="anchor" aria-hidden="true" href="#span-idp4文件管理功能span">#</a></h3>
+<ul>
+<li>
+<p>文件存储空间的管理</p>
+<p>为了方便用户的使用，对于一些当前需要使用的系统文件和用户文件，都必须放在可随机存取的磁盘上。在多用户环境下，若由用户自己对文件的存储进行管理，不仅非常困难，而且也必然是十分低效的。因而，需要由文件系统对诸多文件及文件的存储空间实施统一的管理。其主要任务是为每个文件分配必要的外存空间，提高外存的利用率，并能有助于提高文件系统的存、取速度。</p>
+<p>为此，系统应设置相应的数据结构，用于记录文件存储空间的使用情况，以供分配存储空间时参考；系统还应具有对存储空间进行分配和回收的功能。为了提高存储空间的利用率，对存储空间的分配，通常是采用离散分配方式，以减少外存零头，并以盘块为基本分配单位。盘块的大小通常为 1～8 KB。</p>
+</li>
+<li>
+<p>目录管理</p>
+</li>
+<li>
+<p>文件的读/写管理和保护</p>
+</li>
+</ul>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lambertxiao.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></li>
+      <li><a href="https://lambertxiao.github.io/tags/os/">os</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lambertxiao.github.io/posts/_posts/2018-09-02-%E5%AF%B9%E6%8D%A2/">
+    <span class="title">« Prev Page</span>
+    <br>
+    <span>对换</span>
+  </a>
+  <a class="next" href="https://lambertxiao.github.io/posts/_posts/2018-09-02-%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5/">
+    <span class="title">Next Page »</span>
+    <br>
+    <span>线程的基本概念</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 操作系统引论 on twitter"
+        href="https://twitter.com/intent/tweet/?text=%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%e5%bc%95%e8%ae%ba&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f_posts%2f2018-09-01-%25E6%2593%258D%25E4%25BD%259C%25E7%25B3%25BB%25E7%25BB%259F%25E5%25BC%2595%25E8%25AE%25BA%2f&amp;hashtags=%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%2cos">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 操作系统引论 on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f_posts%2f2018-09-01-%25E6%2593%258D%25E4%25BD%259C%25E7%25B3%25BB%25E7%25BB%259F%25E5%25BC%2595%25E8%25AE%25BA%2f&amp;title=%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%e5%bc%95%e8%ae%ba&amp;summary=%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%e5%bc%95%e8%ae%ba&amp;source=https%3a%2f%2flambertxiao.github.io%2fposts%2f_posts%2f2018-09-01-%25E6%2593%258D%25E4%25BD%259C%25E7%25B3%25BB%25E7%25BB%259F%25E5%25BC%2595%25E8%25AE%25BA%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 操作系统引论 on reddit"
+        href="https://reddit.com/submit?url=https%3a%2f%2flambertxiao.github.io%2fposts%2f_posts%2f2018-09-01-%25E6%2593%258D%25E4%25BD%259C%25E7%25B3%25BB%25E7%25BB%259F%25E5%25BC%2595%25E8%25AE%25BA%2f&title=%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%e5%bc%95%e8%ae%ba">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 操作系统引论 on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flambertxiao.github.io%2fposts%2f_posts%2f2018-09-01-%25E6%2593%258D%25E4%25BD%259C%25E7%25B3%25BB%25E7%25BB%259F%25E5%25BC%2595%25E8%25AE%25BA%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 操作系统引论 on whatsapp"
+        href="https://api.whatsapp.com/send?text=%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%e5%bc%95%e8%ae%ba%20-%20https%3a%2f%2flambertxiao.github.io%2fposts%2f_posts%2f2018-09-01-%25E6%2593%258D%25E4%25BD%259C%25E7%25B3%25BB%25E7%25BB%259F%25E5%25BC%2595%25E8%25AE%25BA%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 操作系统引论 on telegram"
+        href="https://telegram.me/share/url?text=%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%e5%bc%95%e8%ae%ba&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f_posts%2f2018-09-01-%25E6%2593%258D%25E4%25BD%259C%25E7%25B3%25BB%25E7%25BB%259F%25E5%25BC%2595%25E8%25AE%25BA%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_KY25sRiRtb" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>数据库 on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/</link>
+    <description>Recent content in 数据库 on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Sun, 06 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>如何通过存储过程计算用户留存</title>
+      <link>https://lambertxiao.github.io/posts/%E4%B8%9A%E5%8A%A1%E8%AE%A1%E7%AE%97-%E7%95%99%E5%AD%98/%E7%95%99%E5%AD%98%E8%AE%A1%E7%AE%97/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E4%B8%9A%E5%8A%A1%E8%AE%A1%E7%AE%97-%E7%95%99%E5%AD%98/%E7%95%99%E5%AD%98%E8%AE%A1%E7%AE%97/</guid>
+      <description>留存计算 DELIMITER $$ CREATE DEFINER=`vpRoot`@`%` PROCEDURE `retention`(IN datestr VARCHAR(20)) BEGIN DECLARE s INT DEFAULT 0; DECLARE sdate VARCHAR(20) CHARACTER SET utf8; DECLARE country_zh VARCHAR(20) CHARACTER SET utf8; DECLARE pkg_name VARCHAR(50) CHARACTER SET utf8 ; DECLARE register_num INT DEFAULT 0; DECLARE keep_number_1 INT DEFAULT 0; DECLARE keep_number_2 INT DEFAULT 0; DECLARE keep_number_3 INT DEFAULT 0; DECLARE keep_number_7 INT DEFAULT 0; DECLARE keep_number_15 INT DEFAULT 0; DECLARE keep_number_30 INT DEFAULT 0; DECLARE report CURSOR FOR SELECT t5.</description>
+    </item>
+    
+    <item>
+      <title>数据库索引</title>
+      <link>https://lambertxiao.github.io/posts/database-%E7%B4%A2%E5%BC%95%E7%9B%B8%E5%85%B3/%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E7%B4%A2%E5%BC%95/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/database-%E7%B4%A2%E5%BC%95%E7%9B%B8%E5%85%B3/%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E7%B4%A2%E5%BC%95/</guid>
+      <description>B树和B+树</description>
+    </item>
+    
+    <item>
+      <title>数据库锁</title>
+      <link>https://lambertxiao.github.io/posts/database-%E9%94%81%E7%9B%B8%E5%85%B3/%E6%95%B0%E6%8D%AE%E5%BA%93%E9%94%81/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/database-%E9%94%81%E7%9B%B8%E5%85%B3/%E6%95%B0%E6%8D%AE%E5%BA%93%E9%94%81/</guid>
+      <description>数据库锁  按锁的粒度划分（即，每次上锁的对象是表，行还是页）：表级锁，行级锁，页级锁 按锁的级别划分：共享锁、排他锁 按加锁方式分：自动锁（存储引擎自行根据需要施加的锁）、显式锁（用户手动请求的锁） 按操作划分：DML锁（对数据进行操作的锁)、DDL锁（对表结构进行变更的锁） 最后按使用方式划分：悲观锁、乐观锁  共享锁 共享锁(S)表示对数据进行读操作。因此多个事务可以同时为一个对象加共享锁。（对于写作来说就是，如果文章处于「已发布」的状态，则所有人都可以同时看。）
+SELECT ... LOCK IN SHARE MODE; 排他锁 排他锁表示对数据进行写操作。如果一个事务对对象加了排他锁，其他事务就不能再给它加任何锁了。（对于写作来说就是，如果文章正在被修改的时候，其他的读者无法看到这篇文章，其他的编辑也无法修改这篇文章。）
+SELECT ... FOR UPDATE; 悲观锁 在关系数据库管理系统里，悲观并发控制（又名“悲观锁”，Pessimistic Concurrency Control，缩写“PCC”）是一种并发控制的方法，即为悲观的思想，认为并发问题总会出现，所以每次一个事务读取某一条记录后，就会把这条记录锁住，这样其它的事务要想更新，必须等以前的事务提交或者回滚解除锁。
+悲观并发控制主要用于数据争用激烈的环境，以及发生并发冲突时使用锁保护数据的成本要低于回滚事务的成本的环境中。
+乐观锁 总是假设最好的情况，每次去拿数据的时候都认为别人不会修改，所以不会上锁，但是在更新的时候会判断一下在此期间别人有没有去更新这个数据，乐观锁假设认为数据一般情况下不会造成冲突，所以在数据进行提交更新的时候，才会正式对数据的冲突与否进行检测，如果发现冲突了，则让返回用户错误的信息，让用户决定如何去做，一般来说可以使用版本号机制和 CAS 算法实现。
+版本号机制 一般是在数据表中加上一个数据版本号 version 字段，表示数据被修改的次数，当数据被修改时，version 值会加一，当读取数据时，将 version 字段的值一同读出，数据每更新一次，对此 version 值加一。当我们提交更新的时候，判断数据库表对应记录的当前版本信息与第一次取出来的 version 值进行比对，如果数据库表当前版本号与第一次取出来的 version 值相等，则予以更新，否则认为是过期数据。
+CAS 算法 即 compare and swap（比较与交换），是一种有名的无锁算法。
+无锁编程，即不使用锁的情况下实现多线程之间的变量同步，也就是在没有线程被阻塞的情况下实现变量的同步，所以也叫非阻塞同步（Non-blocking Synchronization）。CAS 算法涉及到三个操作数：
+需要读写的内存值 V 进行比较的值 A 拟写入的新值 B
+当且仅当 V 的值等于 A 时，CAS 通过原子方式用新值B来更新V的值，否则不会执行任何操作（比较和替换是一个原子操作）。一般情况下是一个自旋操作，即不断的重试，与 version 事务机制类似，CAS 事务也是一种细粒度的锁。然而，version 为行级锁，粒度过大， 而 CAS 事务为列级锁，粒度更小。根据锁机制的一般原则，粒度越小，并发性能越高。</description>
+    </item>
+    
+  </channel>
+</rss>

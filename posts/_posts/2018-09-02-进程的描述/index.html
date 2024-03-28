@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>进程的描述操作系统引论 | Lambert&#39;s blog</title>
+<meta name="keywords" content="操作系统, os" />
+<meta name="description" content="进程的描述 在多道程序环境下，程序的执行属于并发执行，此时它们将失去其封闭性，并具有间断性及不可再现性的特征。这决定了通常的程序是不能参与并发执行的，因为程序执行的结果是不可再现的。这样，程序的运行也就失去了意义。为使程序能并发执行，且为了对并发执行的程序加以描述和控制，人们引入了“进程”的概念。
+  结构特征
+通常的程序是不能并发执行的。为使程序(含数据)能独立运行，应为之配置一进程控制块，即PCB(ProcessControlBlock)；而由 程序段 、相关的 数据段 和 PCB 三部分便构了进程实体。所谓创建进程，实质上是创建进程实体 中的 PCB；而撤消进程，实质上是撤消进程的 PCB，本
+  动态性
+进程的实质是进程实体的一次执行过程，“它由创建而产生，由调度而执行，由撤消而消亡
+  并发性
+这是指多个进程实体同存于内存中，且能在一段时间内同时运行
+  独立性
+指进程实体是一个能独立运行、独立分配资源和独立接受调 度的基本单位
+  异步性
+指进程按各自独立的、不可预知的速度向前推进，或说进程实体按异步方式运行
+  进程的三种基本状态   就绪(Ready)状态
+当进程已分配到除 CPU以外的所有必要资源后，只要再获得CPU，便可立即执行，进程这时的状态称为就绪状态。在一个系统中处于就绪状态的进程可能有多个，通常将它们排成一个队列，称为就绪队列。
+  执行状态
+进程已获得 CPU，其程序正在执行。在单处理机系统中，只有一个进程处于执行状态；在多处理机系统中，则有多个进程处于执行状态。
+  阻塞状态
+正在执行的进程由于发生某事件而暂时无法继续执行时，便放弃处理机而处于暂停状态，亦即进程的执行受到阻塞，把这种暂停状态称为阻塞状态。
+  进程状态转化图
+  挂起状态的引入   引入原因
+  终端用户的请求。当终端用户在自己的程序运行期间发现有可疑问题时，希望暂时使自己的程序静止下来。亦即，使正在执行的进程暂停执行；若此时用户进程正处于就绪状态而未执行，则该进程暂不接受调度，以便用户研究其执行情况或对程序进行修改。我们把这种静止状态称为挂起状态。
+  父进程请求。有时父进程希望挂起自己的某个子进程，以便考查和修改该子进程，或者协调各子进程间的活动。
+  负荷调节的需要。当实时系统中的工作负荷较重，已可能影响到对实时任务的控制时，可由系统把一些不重要的进程挂起，以保证系统能正常运行。
+  操作系统的需要。操作系统有时希望挂起某些进程，以便检查运行中的资源使用情况或进行记账。">
+<meta name="author" content="Theme PaperMod">
+<link rel="canonical" href="https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9B%E7%A8%8B%E7%9A%84%E6%8F%8F%E8%BF%B0/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js" integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5&#43;kdJvBz5iKbt6B5PJI="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="进程的描述操作系统引论" />
+<meta property="og:description" content="进程的描述 在多道程序环境下，程序的执行属于并发执行，此时它们将失去其封闭性，并具有间断性及不可再现性的特征。这决定了通常的程序是不能参与并发执行的，因为程序执行的结果是不可再现的。这样，程序的运行也就失去了意义。为使程序能并发执行，且为了对并发执行的程序加以描述和控制，人们引入了“进程”的概念。
+  结构特征
+通常的程序是不能并发执行的。为使程序(含数据)能独立运行，应为之配置一进程控制块，即PCB(ProcessControlBlock)；而由 程序段 、相关的 数据段 和 PCB 三部分便构了进程实体。所谓创建进程，实质上是创建进程实体 中的 PCB；而撤消进程，实质上是撤消进程的 PCB，本
+  动态性
+进程的实质是进程实体的一次执行过程，“它由创建而产生，由调度而执行，由撤消而消亡
+  并发性
+这是指多个进程实体同存于内存中，且能在一段时间内同时运行
+  独立性
+指进程实体是一个能独立运行、独立分配资源和独立接受调 度的基本单位
+  异步性
+指进程按各自独立的、不可预知的速度向前推进，或说进程实体按异步方式运行
+  进程的三种基本状态   就绪(Ready)状态
+当进程已分配到除 CPU以外的所有必要资源后，只要再获得CPU，便可立即执行，进程这时的状态称为就绪状态。在一个系统中处于就绪状态的进程可能有多个，通常将它们排成一个队列，称为就绪队列。
+  执行状态
+进程已获得 CPU，其程序正在执行。在单处理机系统中，只有一个进程处于执行状态；在多处理机系统中，则有多个进程处于执行状态。
+  阻塞状态
+正在执行的进程由于发生某事件而暂时无法继续执行时，便放弃处理机而处于暂停状态，亦即进程的执行受到阻塞，把这种暂停状态称为阻塞状态。
+  进程状态转化图
+  挂起状态的引入   引入原因
+  终端用户的请求。当终端用户在自己的程序运行期间发现有可疑问题时，希望暂时使自己的程序静止下来。亦即，使正在执行的进程暂停执行；若此时用户进程正处于就绪状态而未执行，则该进程暂不接受调度，以便用户研究其执行情况或对程序进行修改。我们把这种静止状态称为挂起状态。
+  父进程请求。有时父进程希望挂起自己的某个子进程，以便考查和修改该子进程，或者协调各子进程间的活动。
+  负荷调节的需要。当实时系统中的工作负荷较重，已可能影响到对实时任务的控制时，可由系统把一些不重要的进程挂起，以保证系统能正常运行。
+  操作系统的需要。操作系统有时希望挂起某些进程，以便检查运行中的资源使用情况或进行记账。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9B%E7%A8%8B%E7%9A%84%E6%8F%8F%E8%BF%B0/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2018-09-02T00:00:00&#43;00:00" />
+<meta property="article:modified_time" content="2018-09-02T00:00:00&#43;00:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="进程的描述操作系统引论"/>
+<meta name="twitter:description" content="进程的描述 在多道程序环境下，程序的执行属于并发执行，此时它们将失去其封闭性，并具有间断性及不可再现性的特征。这决定了通常的程序是不能参与并发执行的，因为程序执行的结果是不可再现的。这样，程序的运行也就失去了意义。为使程序能并发执行，且为了对并发执行的程序加以描述和控制，人们引入了“进程”的概念。
+  结构特征
+通常的程序是不能并发执行的。为使程序(含数据)能独立运行，应为之配置一进程控制块，即PCB(ProcessControlBlock)；而由 程序段 、相关的 数据段 和 PCB 三部分便构了进程实体。所谓创建进程，实质上是创建进程实体 中的 PCB；而撤消进程，实质上是撤消进程的 PCB，本
+  动态性
+进程的实质是进程实体的一次执行过程，“它由创建而产生，由调度而执行，由撤消而消亡
+  并发性
+这是指多个进程实体同存于内存中，且能在一段时间内同时运行
+  独立性
+指进程实体是一个能独立运行、独立分配资源和独立接受调 度的基本单位
+  异步性
+指进程按各自独立的、不可预知的速度向前推进，或说进程实体按异步方式运行
+  进程的三种基本状态   就绪(Ready)状态
+当进程已分配到除 CPU以外的所有必要资源后，只要再获得CPU，便可立即执行，进程这时的状态称为就绪状态。在一个系统中处于就绪状态的进程可能有多个，通常将它们排成一个队列，称为就绪队列。
+  执行状态
+进程已获得 CPU，其程序正在执行。在单处理机系统中，只有一个进程处于执行状态；在多处理机系统中，则有多个进程处于执行状态。
+  阻塞状态
+正在执行的进程由于发生某事件而暂时无法继续执行时，便放弃处理机而处于暂停状态，亦即进程的执行受到阻塞，把这种暂停状态称为阻塞状态。
+  进程状态转化图
+  挂起状态的引入   引入原因
+  终端用户的请求。当终端用户在自己的程序运行期间发现有可疑问题时，希望暂时使自己的程序静止下来。亦即，使正在执行的进程暂停执行；若此时用户进程正处于就绪状态而未执行，则该进程暂不接受调度，以便用户研究其执行情况或对程序进行修改。我们把这种静止状态称为挂起状态。
+  父进程请求。有时父进程希望挂起自己的某个子进程，以便考查和修改该子进程，或者协调各子进程间的活动。
+  负荷调节的需要。当实时系统中的工作负荷较重，已可能影响到对实时任务的控制时，可由系统把一些不重要的进程挂起，以保证系统能正常运行。
+  操作系统的需要。操作系统有时希望挂起某些进程，以便检查运行中的资源使用情况或进行记账。"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Posts",
+      "item": "https://lambertxiao.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "进程的描述操作系统引论",
+      "item": "https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9B%E7%A8%8B%E7%9A%84%E6%8F%8F%E8%BF%B0/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "进程的描述操作系统引论",
+  "name": "进程的描述操作系统引论",
+  "description": "进程的描述 在多道程序环境下，程序的执行属于并发执行，此时它们将失去其封闭性，并具有间断性及不可再现性的特征。这决定了通常的程序是不能参与并发执行的，因为程序执行的结果是不可再现的。这样，程序的运行也就失去了意义。为使程序能并发执行，且为了对并发执行的程序加以描述和控制，人们引入了“进程”的概念。\n  结构特征\n通常的程序是不能并发执行的。为使程序(含数据)能独立运行，应为之配置一进程控制块，即PCB(ProcessControlBlock)；而由 程序段 、相关的 数据段 和 PCB 三部分便构了进程实体。所谓创建进程，实质上是创建进程实体 中的 PCB；而撤消进程，实质上是撤消进程的 PCB，本\n  动态性\n进程的实质是进程实体的一次执行过程，“它由创建而产生，由调度而执行，由撤消而消亡\n  并发性\n这是指多个进程实体同存于内存中，且能在一段时间内同时运行\n  独立性\n指进程实体是一个能独立运行、独立分配资源和独立接受调 度的基本单位\n  异步性\n指进程按各自独立的、不可预知的速度向前推进，或说进程实体按异步方式运行\n  进程的三种基本状态   就绪(Ready)状态\n当进程已分配到除 CPU以外的所有必要资源后，只要再获得CPU，便可立即执行，进程这时的状态称为就绪状态。在一个系统中处于就绪状态的进程可能有多个，通常将它们排成一个队列，称为就绪队列。\n  执行状态\n进程已获得 CPU，其程序正在执行。在单处理机系统中，只有一个进程处于执行状态；在多处理机系统中，则有多个进程处于执行状态。\n  阻塞状态\n正在执行的进程由于发生某事件而暂时无法继续执行时，便放弃处理机而处于暂停状态，亦即进程的执行受到阻塞，把这种暂停状态称为阻塞状态。\n  进程状态转化图\n  挂起状态的引入   引入原因\n  终端用户的请求。当终端用户在自己的程序运行期间发现有可疑问题时，希望暂时使自己的程序静止下来。亦即，使正在执行的进程暂停执行；若此时用户进程正处于就绪状态而未执行，则该进程暂不接受调度，以便用户研究其执行情况或对程序进行修改。我们把这种静止状态称为挂起状态。\n  父进程请求。有时父进程希望挂起自己的某个子进程，以便考查和修改该子进程，或者协调各子进程间的活动。\n  负荷调节的需要。当实时系统中的工作负荷较重，已可能影响到对实时任务的控制时，可由系统把一些不重要的进程挂起，以保证系统能正常运行。\n  操作系统的需要。操作系统有时希望挂起某些进程，以便检查运行中的资源使用情况或进行记账。",
+  "keywords": [
+    "操作系统", "os"
+  ],
+  "articleBody": "进程的描述 在多道程序环境下，程序的执行属于并发执行，此时它们将失去其封闭性，并具有间断性及不可再现性的特征。这决定了通常的程序是不能参与并发执行的，因为程序执行的结果是不可再现的。这样，程序的运行也就失去了意义。为使程序能并发执行，且为了对并发执行的程序加以描述和控制，人们引入了“进程”的概念。\n  结构特征\n通常的程序是不能并发执行的。为使程序(含数据)能独立运行，应为之配置一进程控制块，即PCB(ProcessControlBlock)；而由 程序段 、相关的 数据段 和 PCB 三部分便构了进程实体。所谓创建进程，实质上是创建进程实体 中的 PCB；而撤消进程，实质上是撤消进程的 PCB，本\n  动态性\n进程的实质是进程实体的一次执行过程，“它由创建而产生，由调度而执行，由撤消而消亡\n  并发性\n这是指多个进程实体同存于内存中，且能在一段时间内同时运行\n  独立性\n指进程实体是一个能独立运行、独立分配资源和独立接受调 度的基本单位\n  异步性\n指进程按各自独立的、不可预知的速度向前推进，或说进程实体按异步方式运行\n  进程的三种基本状态   就绪(Ready)状态\n当进程已分配到除 CPU以外的所有必要资源后，只要再获得CPU，便可立即执行，进程这时的状态称为就绪状态。在一个系统中处于就绪状态的进程可能有多个，通常将它们排成一个队列，称为就绪队列。\n  执行状态\n进程已获得 CPU，其程序正在执行。在单处理机系统中，只有一个进程处于执行状态；在多处理机系统中，则有多个进程处于执行状态。\n  阻塞状态\n正在执行的进程由于发生某事件而暂时无法继续执行时，便放弃处理机而处于暂停状态，亦即进程的执行受到阻塞，把这种暂停状态称为阻塞状态。\n  进程状态转化图\n  挂起状态的引入   引入原因\n  终端用户的请求。当终端用户在自己的程序运行期间发现有可疑问题时，希望暂时使自己的程序静止下来。亦即，使正在执行的进程暂停执行；若此时用户进程正处于就绪状态而未执行，则该进程暂不接受调度，以便用户研究其执行情况或对程序进行修改。我们把这种静止状态称为挂起状态。\n  父进程请求。有时父进程希望挂起自己的某个子进程，以便考查和修改该子进程，或者协调各子进程间的活动。\n  负荷调节的需要。当实时系统中的工作负荷较重，已可能影响到对实时任务的控制时，可由系统把一些不重要的进程挂起，以保证系统能正常运行。\n  操作系统的需要。操作系统有时希望挂起某些进程，以便检查运行中的资源使用情况或进行记账。\n    状态的切换\n    创建状态和终止状态   创建状态\n为一个新进程创建PCB，并填写必要的管理信息；其次，把该进程转入就绪状态并插入就绪队列之中。当一个新进程被创建时，系统已为其分配了PCB，填写了进程标识等信息，但由于该进程所必需的资源或其它信息，如主存资源尚未分配等，一般而言，此时的进程已拥有了自己的PCB，但进程自身还未进入主存，即创建工作尚未完成，进程还不能被调度运行，其所处的状态就是创建状态。\n  为什么引入创建状态？\n引入创建状态，是为了保证进程的调度必须在创建工作完成后进行，以确保对进程控制块操作的完整性。同时，创建状态的引入，也增加了管理的灵活性，操作系统可以根据系统性能或主存容量的限制，推迟创建状态进程的提交。对于处于创建状态的进程，获得了其所必需的资源，以及对其PCB初始化工作完成后，进程状态便可由创建状态转入就绪状态\n  终止状态\n进程的终止也要通过两个步骤：首先等待操作系统进行善后处理，然后将其 PCB 清零，并将PCB空间返还系统。当一个进程到达了自然结束点，或是出现了无法克服的错误，或是被操作系统所终结，或是被其他有终止权的进程所终结，它将进入终止状态。进入终止态的进程以后不能再执行，但在操作系统中依然保留一个记录，其中保存状态码和一些计时统计数据，供其它进程收集。一旦其它进程完成了对终止状态进程的信息提取之后，操作系统将删除该进程。\n  进程的五种基本状态及转换\n  具有创建、终止和挂起状态的进程状态图\n  进程控制块 进程控制块的作用是使一个在多道程序环境下不能独立运行的程序(含数据)，成为一个能独立运行的基本单位。\n  进程控制块中的信息\n  进程标识符（符用于惟一地标识一个进程）\n  内部标识符。在所有的操作系统中，都为每一个进程赋予了一个惟一的数字标识符，它通常是一个进程的序号。设置内部标识符主要是为了方便系统使用。\n  外部标识符。它由创建者提供，通常是由字母、数字组成，往往是由用户(进程)在访问该进程时使用。为了描述进程的家族关系，还应设置父进程标识及子进程标识。此外，还可设置用户标识，以指示拥有该进程的用户。\n    处理机状态（是进程去记录CPU的状态值，而不是CPU去记录每一个进程的状态值）\n处理机状态信息主要是由处理机的各种寄存器中的内容组成的。处理机在运行时，许多信息都放在寄存器中。当处理机被中断时，所有这些信息都必须保存在 PCB中，以便在该进程重新执行时，能从断点继续执行。这些寄存器包括：\n  通用寄存器\n又称为用户可视寄存器，它们是用户程序可以访问的，用于暂存信息，在大多数处理机中，有 8～32 个通用寄存器，在 RISC 结构的计算机中可超过 100 个；\n  指令计数器\n其中存放了要访问的下一条指令的地址；\n  程序状态字 PSW\n其中含有状态信息，如条件码、执行方式、中断屏蔽标志等；\n  用户栈指针\n指每个用户进程都有一个或若干个与之相关的系统栈，用于存放过程和系统调用参数及调用地址，栈指针指向该栈的栈顶。\n      进程调度信息\n  进程状态\n指明进程的当前状态，作为进程调度和对换时的依据\n  进程优先级\n用于描述进程使用处理机的优先级别的一个整数，优先级高的进程应优先获得处理机\n  进程调度所需的其它信息\n它们与所采用的进程调度算法有关，比如，进程已等待 CPU 的时间总和、进程已执行的时间总和等\n    进程控制信息\n  程序和数据的地址\n指进程的程序和数据所在的内存或外存地(首)址，以便再调度到该进程执行时，能从 PCB 中找到其程序和数据\n  进程同步和通信机制\n指实现进程同步和进程通信时必需的机制，如 消息队列 指针、信号量等，它们可能全部或部分地放在 PCB 中\n      进程控制块的组织方式 在一个系统中，通常可拥有数十个、数百个乃至数千个PCB。为了能对它们加以有效的管理，应该用适当的方式将这些PCB组织起来。目前常用的组织方式有以下两种。\n  链接方式\n这是把具有同一状态的PCB，用其中的链接字链接成一个队列。这样，可以形成就绪队列、若干个阻塞队列和空白队列等。对其中的就绪队列常按进程优先级的高低排列，把优先级高的进程的PCB排在队列前面。此外，也可根据阻塞原因的不同而把处于阻塞状态的进程的PCB排成等待I/O操作完成的队列和等待分配内存的队列等。\n  索引方式\n系统根据所有进程的状态建立几张索引表。例如，就绪索引表、阻塞索引表等，并把各索引表在内存的首地址记录在内存的一些专用单元中。在每个索引表的表目中，记录具有相应状态的某个 PCB 在 PCB 表中的地址。\n  ",
+  "wordCount" : "104",
+  "inLanguage": "en",
+  "datePublished": "2018-09-02T00:00:00Z",
+  "dateModified": "2018-09-02T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "Theme PaperMod"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9B%E7%A8%8B%E7%9A%84%E6%8F%8F%E8%BF%B0/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lambert's blog",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lambertxiao.github.io/avatar.jpeg"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      进程的描述操作系统引论
+    </h1>
+    <div class="post-meta"><span title='2018-09-02 00:00:00 +0000 UTC'>September 2, 2018</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Theme PaperMod&nbsp;|&nbsp;<a href="https://github.com/adityatelange/hugo-PaperMod/tree/exampleSite/content/posts/_posts/2018-09-02-%e8%bf%9b%e7%a8%8b%e7%9a%84%e6%8f%8f%e8%bf%b0.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#%e8%bf%9b%e7%a8%8b%e7%9a%84%e6%8f%8f%e8%bf%b0" aria-label="进程的描述">进程的描述</a></li>
+                <li>
+                    <a href="#%e8%bf%9b%e7%a8%8b%e7%9a%84%e4%b8%89%e7%a7%8d%e5%9f%ba%e6%9c%ac%e7%8a%b6%e6%80%81" aria-label="进程的三种基本状态">进程的三种基本状态</a></li>
+                <li>
+                    <a href="#%e6%8c%82%e8%b5%b7%e7%8a%b6%e6%80%81%e7%9a%84%e5%bc%95%e5%85%a5" aria-label="挂起状态的引入">挂起状态的引入</a></li>
+                <li>
+                    <a href="#%e5%88%9b%e5%bb%ba%e7%8a%b6%e6%80%81%e5%92%8c%e7%bb%88%e6%ad%a2%e7%8a%b6%e6%80%81" aria-label="创建状态和终止状态">创建状态和终止状态</a></li>
+                <li>
+                    <a href="#%e8%bf%9b%e7%a8%8b%e6%8e%a7%e5%88%b6%e5%9d%97" aria-label="进程控制块">进程控制块</a></li>
+                <li>
+                    <a href="#%e8%bf%9b%e7%a8%8b%e6%8e%a7%e5%88%b6%e5%9d%97%e7%9a%84%e7%bb%84%e7%bb%87%e6%96%b9%e5%bc%8f" aria-label="进程控制块的组织方式">进程控制块的组织方式</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h2 id="进程的描述">进程的描述<a hidden class="anchor" aria-hidden="true" href="#进程的描述">#</a></h2>
+<p>在多道程序环境下，程序的执行属于并发执行，此时它们将失去其封闭性，并具有间断性及不可再现性的特征。这决定了通常的程序是不能参与并发执行的，因为程序执行的结果是不可再现的。这样，程序的运行也就失去了意义。为使程序能并发执行，且为了对并发执行的程序加以描述和控制，人们引入了“进程”的概念。</p>
+<ul>
+<li>
+<p>结构特征</p>
+<p>通常的程序是不能并发执行的。为使程序(含数据)能独立运行，应为之配置一进程控制块，即PCB(ProcessControlBlock)；而由 <strong>程序段</strong> 、相关的 <strong>数据段</strong> 和 <strong>PCB</strong> 三部分便构了进程实体。所谓创建进程，实质上是创建进程实体
+中的 PCB；而撤消进程，实质上是撤消进程的 PCB，本</p>
+</li>
+<li>
+<p>动态性</p>
+<p>进程的实质是进程实体的一次执行过程，“它由创建而产生，由调度而执行，由撤消而消亡</p>
+</li>
+<li>
+<p>并发性</p>
+<p>这是指多个进程实体同存于内存中，且能在一段时间内同时运行</p>
+</li>
+<li>
+<p>独立性</p>
+<p>指进程实体是一个能独立运行、独立分配资源和独立接受调
+度的基本单位</p>
+</li>
+<li>
+<p>异步性</p>
+<p>指进程按各自独立的、不可预知的速度向前推进，或说进程实体按异步方式运行</p>
+</li>
+</ul>
+<h2 id="进程的三种基本状态">进程的三种基本状态<a hidden class="anchor" aria-hidden="true" href="#进程的三种基本状态">#</a></h2>
+<ul>
+<li>
+<p>就绪(Ready)状态</p>
+<p>当进程已分配到除 CPU以外的所有必要资源后，只要再获得CPU，便可立即执行，进程这时的状态称为就绪状态。在一个系统中处于就绪状态的进程可能有多个，通常将它们排成一个队列，称为就绪队列。</p>
+</li>
+<li>
+<p>执行状态</p>
+<p>进程已获得 CPU，其程序正在执行。在单处理机系统中，只有一个进程处于执行状态；在多处理机系统中，则有多个进程处于执行状态。</p>
+</li>
+<li>
+<p>阻塞状态</p>
+<p>正在执行的进程由于发生某事件而暂时无法继续执行时，便放弃处理机而处于暂停状态，亦即进程的执行受到阻塞，把这种暂停状态称为阻塞状态。</p>
+</li>
+<li>
+<p>进程状态转化图</p>
+<p><img loading="lazy" src="https://s1.ax1x.com/2018/09/01/PxMBp8.jpg" alt="进程状态转化图"  />
+</p>
+</li>
+</ul>
+<h2 id="挂起状态的引入">挂起状态的引入<a hidden class="anchor" aria-hidden="true" href="#挂起状态的引入">#</a></h2>
+<ul>
+<li>
+<p>引入原因</p>
+<ul>
+<li>
+<p>终端用户的请求。当终端用户在自己的程序运行期间发现有可疑问题时，希望暂时使自己的程序静止下来。亦即，使正在执行的进程暂停执行；若此时用户进程正处于就绪状态而未执行，则该进程暂不接受调度，以便用户研究其执行情况或对程序进行修改。我们把这种静止状态称为挂起状态。</p>
+<ul>
+<li>
+<p>父进程请求。有时父进程希望挂起自己的某个子进程，以便考查和修改该子进程，或者协调各子进程间的活动。</p>
+</li>
+<li>
+<p>负荷调节的需要。当实时系统中的工作负荷较重，已可能影响到对实时任务的控制时，可由系统把一些不重要的进程挂起，以保证系统能正常运行。</p>
+</li>
+<li>
+<p>操作系统的需要。操作系统有时希望挂起某些进程，以便检查运行中的资源使用情况或进行记账。</p>
+</li>
+</ul>
+</li>
+<li>
+<p>状态的切换</p>
+<p><img loading="lazy" src="https://s1.ax1x.com/2018/09/01/PxMb7R.jpg" alt="状态的切换"  />
+</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="创建状态和终止状态">创建状态和终止状态<a hidden class="anchor" aria-hidden="true" href="#创建状态和终止状态">#</a></h2>
+<ul>
+<li>
+<p>创建状态</p>
+<p>为一个新进程创建PCB，并填写必要的管理信息；其次，把该进程转入就绪状态并插入就绪队列之中。当一个新进程被创建时，系统已为其分配了PCB，填写了进程标识等信息，但由于该进程所必需的资源或其它信息，如主存资源尚未分配等，一般而言，此时的进程已拥有了自己的PCB，但进程自身还未进入主存，即创建工作尚未完成，进程还不能被调度运行，其所处的状态就是创建状态。</p>
+</li>
+<li>
+<p>为什么引入创建状态？</p>
+<p>引入创建状态，是为了保证进程的调度必须在创建工作完成后进行，以确保对进程控制块操作的完整性。同时，创建状态的引入，也增加了管理的灵活性，操作系统可以根据系统性能或主存容量的限制，推迟创建状态进程的提交。对于处于创建状态的进程，获得了其所必需的资源，以及对其PCB初始化工作完成后，进程状态便可由创建状态转入就绪状态</p>
+</li>
+<li>
+<p>终止状态</p>
+<p>进程的终止也要通过两个步骤：首先等待操作系统进行善后处理，然后将其 PCB 清零，并将PCB空间返还系统。当一个进程到达了自然结束点，或是出现了无法克服的错误，或是被操作系统所终结，或是被其他有终止权的进程所终结，它将进入终止状态。进入终止态的进程以后不能再执行，但在操作系统中依然保留一个记录，其中保存状态码和一些计时统计数据，供其它进程收集。一旦其它进程完成了对终止状态进程的信息提取之后，操作系统将删除该进程。</p>
+</li>
+<li>
+<p>进程的五种基本状态及转换</p>
+<p><img loading="lazy" src="https://s1.ax1x.com/2018/09/01/PxQUu4.jpg" alt="此处输入图片的描述"  />
+</p>
+</li>
+<li>
+<p>具有创建、终止和挂起状态的进程状态图</p>
+<p><img loading="lazy" src="https://s1.ax1x.com/2018/09/01/PxQ0ER.jpg" alt="此处输入图片的描述"  />
+</p>
+</li>
+</ul>
+<h2 id="进程控制块">进程控制块<a hidden class="anchor" aria-hidden="true" href="#进程控制块">#</a></h2>
+<p>进程控制块的作用是使一个在多道程序环境下不能独立运行的程序(含数据)，成为一个能独立运行的基本单位。</p>
+<ul>
+<li>
+<p>进程控制块中的信息</p>
+<ul>
+<li>
+<p>进程标识符（符用于惟一地标识一个进程）</p>
+<ul>
+<li>
+<p>内部标识符。在所有的操作系统中，都为每一个进程赋予了一个惟一的数字标识符，它通常是一个进程的序号。设置内部标识符主要是为了方便系统使用。</p>
+</li>
+<li>
+<p>外部标识符。它由创建者提供，通常是由字母、数字组成，往往是由用户(进程)在访问该进程时使用。为了描述进程的家族关系，还应设置父进程标识及子进程标识。此外，还可设置用户标识，以指示拥有该进程的用户。</p>
+</li>
+</ul>
+</li>
+<li>
+<p>处理机状态（是进程去记录CPU的状态值，而不是CPU去记录每一个进程的状态值）</p>
+<p>处理机状态信息主要是由处理机的各种寄存器中的内容组成的。处理机在运行时，许多信息都放在寄存器中。当处理机被中断时，所有这些信息都必须保存在 PCB中，以便在该进程重新执行时，能从断点继续执行。这些寄存器包括：</p>
+<ul>
+<li>
+<p>通用寄存器</p>
+<p>又称为用户可视寄存器，它们是用户程序可以访问的，用于暂存信息，在大多数处理机中，有 8～32 个通用寄存器，在 RISC 结构的计算机中可超过 100 个；</p>
+</li>
+<li>
+<p>指令计数器</p>
+<p>其中存放了要访问的下一条指令的地址；</p>
+</li>
+<li>
+<p>程序状态字 PSW</p>
+<p>其中含有状态信息，如条件码、执行方式、中断屏蔽标志等；</p>
+</li>
+<li>
+<p>用户栈指针</p>
+<p>指每个用户进程都有一个或若干个与之相关的系统栈，用于存放过程和系统调用参数及调用地址，栈指针指向该栈的栈顶。</p>
+</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>
+<p>进程调度信息</p>
+<ul>
+<li>
+<p>进程状态</p>
+<p>指明进程的当前状态，作为进程调度和对换时的依据</p>
+</li>
+<li>
+<p>进程优先级</p>
+<p>用于描述进程使用处理机的优先级别的一个整数，优先级高的进程应优先获得处理机</p>
+</li>
+<li>
+<p>进程调度所需的其它信息</p>
+<p>它们与所采用的进程调度算法有关，比如，进程已等待 CPU 的时间总和、进程已执行的时间总和等</p>
+</li>
+</ul>
+</li>
+<li>
+<p>进程控制信息</p>
+<ul>
+<li>
+<p>程序和数据的地址</p>
+<p>指进程的程序和数据所在的内存或外存地(首)址，以便再调度到该进程执行时，能从 PCB 中找到其程序和数据</p>
+</li>
+<li>
+<p>进程同步和通信机制</p>
+<p>指实现进程同步和进程通信时必需的机制，如 <strong>消息队列</strong> 指针、信号量等，它们可能全部或部分地放在 PCB 中</p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="进程控制块的组织方式">进程控制块的组织方式<a hidden class="anchor" aria-hidden="true" href="#进程控制块的组织方式">#</a></h2>
+<p>在一个系统中，通常可拥有数十个、数百个乃至数千个PCB。为了能对它们加以有效的管理，应该用适当的方式将这些PCB组织起来。目前常用的组织方式有以下两种。</p>
+<ul>
+<li>
+<p>链接方式</p>
+<p>这是把具有同一状态的PCB，用其中的链接字链接成一个队列。这样，可以形成就绪队列、若干个阻塞队列和空白队列等。对其中的就绪队列常按进程优先级的高低排列，把优先级高的进程的PCB排在队列前面。此外，也可根据阻塞原因的不同而把处于阻塞状态的进程的PCB排成等待I/O操作完成的队列和等待分配内存的队列等。</p>
+</li>
+<li>
+<p>索引方式</p>
+<p>系统根据所有进程的状态建立几张索引表。例如，就绪索引表、阻塞索引表等，并把各索引表在内存的首地址记录在内存的一些专用单元中。在每个索引表的表目中，记录具有相应状态的某个 PCB 在 PCB 表中的地址。</p>
+</li>
+</ul>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lambertxiao.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></li>
+      <li><a href="https://lambertxiao.github.io/tags/os/">os</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9B%E7%A8%8B%E6%8E%A7%E5%88%B6/">
+    <span class="title">« Prev Page</span>
+    <br>
+    <span>进程控制</span>
+  </a>
+  <a class="next" href="https://lambertxiao.github.io/posts/_posts/2018-09-02-%E8%BF%9B%E7%A8%8B%E9%80%9A%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B/">
+    <span class="title">Next Page »</span>
+    <br>
+    <span>进程通信的类型</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 进程的描述操作系统引论 on twitter"
+        href="https://twitter.com/intent/tweet/?text=%e8%bf%9b%e7%a8%8b%e7%9a%84%e6%8f%8f%e8%bf%b0%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%e5%bc%95%e8%ae%ba&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f_posts%2f2018-09-02-%25E8%25BF%259B%25E7%25A8%258B%25E7%259A%2584%25E6%258F%258F%25E8%25BF%25B0%2f&amp;hashtags=%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%2cos">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 进程的描述操作系统引论 on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f_posts%2f2018-09-02-%25E8%25BF%259B%25E7%25A8%258B%25E7%259A%2584%25E6%258F%258F%25E8%25BF%25B0%2f&amp;title=%e8%bf%9b%e7%a8%8b%e7%9a%84%e6%8f%8f%e8%bf%b0%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%e5%bc%95%e8%ae%ba&amp;summary=%e8%bf%9b%e7%a8%8b%e7%9a%84%e6%8f%8f%e8%bf%b0%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%e5%bc%95%e8%ae%ba&amp;source=https%3a%2f%2flambertxiao.github.io%2fposts%2f_posts%2f2018-09-02-%25E8%25BF%259B%25E7%25A8%258B%25E7%259A%2584%25E6%258F%258F%25E8%25BF%25B0%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 进程的描述操作系统引论 on reddit"
+        href="https://reddit.com/submit?url=https%3a%2f%2flambertxiao.github.io%2fposts%2f_posts%2f2018-09-02-%25E8%25BF%259B%25E7%25A8%258B%25E7%259A%2584%25E6%258F%258F%25E8%25BF%25B0%2f&title=%e8%bf%9b%e7%a8%8b%e7%9a%84%e6%8f%8f%e8%bf%b0%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%e5%bc%95%e8%ae%ba">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 进程的描述操作系统引论 on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flambertxiao.github.io%2fposts%2f_posts%2f2018-09-02-%25E8%25BF%259B%25E7%25A8%258B%25E7%259A%2584%25E6%258F%258F%25E8%25BF%25B0%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 进程的描述操作系统引论 on whatsapp"
+        href="https://api.whatsapp.com/send?text=%e8%bf%9b%e7%a8%8b%e7%9a%84%e6%8f%8f%e8%bf%b0%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%e5%bc%95%e8%ae%ba%20-%20https%3a%2f%2flambertxiao.github.io%2fposts%2f_posts%2f2018-09-02-%25E8%25BF%259B%25E7%25A8%258B%25E7%259A%2584%25E6%258F%258F%25E8%25BF%25B0%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share 进程的描述操作系统引论 on telegram"
+        href="https://telegram.me/share/url?text=%e8%bf%9b%e7%a8%8b%e7%9a%84%e6%8f%8f%e8%bf%b0%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f%e5%bc%95%e8%ae%ba&amp;url=https%3a%2f%2flambertxiao.github.io%2fposts%2f_posts%2f2018-09-02-%25E8%25BF%259B%25E7%25A8%258B%25E7%259A%2584%25E6%258F%258F%25E8%25BF%25B0%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+
+  </footer><div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_KY25sRiRtb" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

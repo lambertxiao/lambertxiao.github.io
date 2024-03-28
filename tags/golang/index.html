@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>golang | Lambert&#39;s blog</title>
+<meta name="keywords" content="" />
+<meta name="description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod">
+<meta name="author" content="Theme PaperMod">
+<link rel="canonical" href="https://lambertxiao.github.io/tags/golang/" />
+<link crossorigin="anonymous" href="/assets/css/stylesheet.min.f930089bcedc85892fe03ed179c7aff545249b87bdabbcac09cc1895e74257eb.css" integrity="sha256-&#43;TAIm87chYkv4D7Recev9UUkm4e9q7ysCcwYledCV&#43;s=" rel="preload stylesheet" as="style">
+<link rel="preload" href="/avatar.jpeg" as="image">
+<link rel="icon" href="https://lambertxiao.github.io/avatar.jpeg">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lambertxiao.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lambertxiao.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lambertxiao.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lambertxiao.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" type="application/rss+xml" href="https://lambertxiao.github.io/tags/golang/index.xml">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="golang" />
+<meta property="og:description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://lambertxiao.github.io/tags/golang/" /><meta property="og:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://lambertxiao.github.io/papermod-cover.png"/>
+
+<meta name="twitter:title" content="golang"/>
+<meta name="twitter:description" content="Theme PaperMod - https://github.com/adityatelange/hugo-PaperMod"/>
+
+</head>
+
+<body class="list" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lambertxiao.github.io" accesskey="h" title="Lambert&#39;s Blog (Alt + H)">
+                <img src="https://lambertxiao.github.io/avatar.jpeg" alt="logo" aria-label="logo"
+                    height="35">Lambert&#39;s Blog</a>
+            <span class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lambertxiao.github.io/archives" title="文章">
+                    <span>文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/search/" title="搜索">
+                    <span>搜索</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lambertxiao.github.io/tags/" title="标签">
+                    <span>标签</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main"> 
+<header class="page-header"><div class="breadcrumbs"><a href="https://lambertxiao.github.io">Home</a>&nbsp;»&nbsp;<a href="https://lambertxiao.github.io/tags/">Tags</a></div>
+  <h1>golang</h1>
+</header>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Golang-Coredump设置
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>定位crash问题少不了</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-06-14 00:00:00 +0000 UTC'>June 14, 2022</span>&nbsp;·&nbsp;3 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-Coredump设置" href="https://lambertxiao.github.io/posts/golang/golang-coredump%E8%AE%BE%E7%BD%AE/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>golang-pprof使用
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>pprof能做什么 pprof能提供正在运行的go程序的各项维度指标，可以帮助我们很好的了解程序的运行状态，如内存的使用，cpu的消耗，是否发现死锁等
+pprof提供的profile    profile 解释     cpu 默认进行 30s 的 CPU Profiling，得到一个分析用的 profile 文件   goroutine 查看当前所有运行的 goroutines 堆栈跟踪   block 查看导致阻塞同步的堆栈跟踪   heap 查看活动对象的内存分配情况   mutex 查看导致互斥锁的竞争持有者的堆栈跟踪   threadcreate 查看创建新OS线程的堆栈跟踪    怎么拿到对应的profile文件 当在服务里引入pprof包之后，可能通过http访问的方式拿到profile文件
+wget - O analysis.pprof http://${ip}:${port}/debug/pprof/${profile} 怎么分析 以heap.pprof举例
+// 查看常驻内存的使用情况 go tool pprof -inuse_space heap.pprof // 查看常驻对象的使用情况 go tool pprof -inuse_objects heap.pprof // 查看内存临时分配情况 go tool pprof -alloc_space heap....</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-06-08 00:00:00 +0000 UTC'>June 8, 2022</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to golang-pprof使用" href="https://lambertxiao.github.io/posts/golang/golang-pprof%E4%BD%BF%E7%94%A8/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>golang-runtime
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool) func deferproc(siz int32, fn *funcval) </p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-25 00:00:00 +0000 UTC'>March 25, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to golang-runtime" href="https://lambertxiao.github.io/posts/golang/golang-runtime/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Golang-epoll
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>go怎么用的epoll</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-24 00:00:00 +0000 UTC'>March 24, 2022</span>&nbsp;·&nbsp;15 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-epoll" href="https://lambertxiao.github.io/posts/golang/golang-epoll/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+<figure class="entry-cover"><img loading="lazy" src="https://lambertxiao.github.io/cover/golang-%E5%87%BD%E6%95%B0%E6%A0%88%E5%B8%A7%E5%B8%83%E5%B1%80.png" alt="">
+</figure>
+  <header class="entry-header">
+    <h2>Golang-函数栈帧布局
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>学会golang函数栈帧布局让你团灭各种defer面试题</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-12 00:00:00 +0000 UTC'>March 12, 2022</span>&nbsp;·&nbsp;4 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-函数栈帧布局" href="https://lambertxiao.github.io/posts/golang/golang-%E5%87%BD%E6%95%B0%E6%A0%88%E5%B8%A7%E5%B8%83%E5%B1%80/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Golang-sync.Pool结构之poolDequeue
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>环形队列，无锁，CAS</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-09 00:00:00 +0000 UTC'>March 9, 2022</span>&nbsp;·&nbsp;5 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-sync.Pool结构之poolDequeue" href="https://lambertxiao.github.io/posts/golang/golang-sync.pool%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0/1-pooldequeue/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Golang-Defer底层实现机制
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>麻了呀，面试面到了答不出来</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-08 00:00:00 +0000 UTC'>March 8, 2022</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-Defer底层实现机制" href="https://lambertxiao.github.io/posts/golang/golang-defer%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+<figure class="entry-cover"><img loading="lazy" src="https://lambertxiao.github.io/cover/golang-syncpool.png" alt="">
+</figure>
+  <header class="entry-header">
+    <h2>Golang-Sync.Pool底层结构
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>sync.Pool在项目中被频繁用到，那么它底下是怎么实现的呢</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-08 00:00:00 +0000 UTC'>March 8, 2022</span>&nbsp;·&nbsp;7 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-Sync.Pool底层结构" href="https://lambertxiao.github.io/posts/golang/golang-sync.pool%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0/pool/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+<figure class="entry-cover"><img loading="lazy" src="https://lambertxiao.github.io/cover/golang-%E5%AE%9E%E7%8E%B0%E9%99%90%E6%B5%81%E5%99%A8.png" alt="">
+</figure>
+  <header class="entry-header">
+    <h2>Golang-实现限流器
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>麻了呀，面试问到限流器相关的知识答不出来</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-08 00:00:00 +0000 UTC'>March 8, 2022</span>&nbsp;·&nbsp;7 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-实现限流器" href="https://lambertxiao.github.io/posts/golang/golang-%E5%AE%9E%E7%8E%B0%E9%99%90%E6%B5%81%E5%99%A8/doc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Golang-Channel的底层结构
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>一把锁&#43;一个环形数组&#43;两个等待队列</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-Channel的底层结构" href="https://lambertxiao.github.io/posts/golang/golang-channel%E7%9A%84%E5%BA%95%E5%B1%82%E7%BB%93%E6%9E%84/channel%E7%9A%84%E5%BA%95%E5%B1%82%E7%BB%93%E6%9E%84/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Golang-小知识
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>面试前总得背一背吧</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-小知识" href="https://lambertxiao.github.io/posts/golang/golang-%E5%B0%8F%E7%9F%A5%E8%AF%86/golang%E5%B0%8F%E7%9F%A5%E8%AF%86/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Golang-线程模型
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>M(内核线程)、P(处理器)、G(协程)</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang-线程模型" href="https://lambertxiao.github.io/posts/golang/golang-%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B/golang%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Golang垃圾回收
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>三色标记法</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;2 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to Golang垃圾回收" href="https://lambertxiao.github.io/posts/golang/golang-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/golang%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>TCMalloc
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>Golang的内存分配算法都是跟我学的</p>
+  </section>
+  <footer class="entry-footer"><span title='2022-03-06 00:00:00 +0000 UTC'>March 6, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;Lambert Xiao</footer>
+  <a class="entry-link" aria-label="post link to TCMalloc" href="https://lambertxiao.github.io/posts/tcmalloc/tcmalloc/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2>Java和Golang的区别
+    </h2>
+  </header>
+  <section class="entry-content">
+    <p>Golang与Java的区别 1. 结构体 -&gt; 类 // 包名即为包含该文件的目录名字 package collection // 声明一个结构体，类似Java中的类 type Stack struct { data []string } // 声明一个Push函数，并通过一个Stack的指针对象实现该方法 // 类似声明了Stack的成员方法 func (s *Stack) Push(x string) { s.data = append(s.data, x) } func (s *Stack) Pop() string { n := len(s.data) - 1 res := s.data[n] s.data[n] = &#34;&#34; // to avoid memory leak  s.data = s.data[:n] return res } func (s *Stack) Size() int { return len(s.data) }   结构体对应Java里的类, 但结构体里只能有变量，不能有方法...</p>
+  </section>
+  <footer class="entry-footer"><span title='2012-05-22 00:00:00 +0000 UTC'>May 22, 2012</span>&nbsp;·&nbsp;3 min&nbsp;·&nbsp;Theme PaperMod</footer>
+  <a class="entry-link" aria-label="post link to Java和Golang的区别" href="https://lambertxiao.github.io/posts/_posts/2018-09-01-java-golang-defference/"></a>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024 <a href="https://lambertxiao.github.io">Lambert&#39;s blog</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://git.io/hugopapermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>

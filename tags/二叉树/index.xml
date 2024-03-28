@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>二叉树 on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/%E4%BA%8C%E5%8F%89%E6%A0%91/</link>
+    <description>Recent content in 二叉树 on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Sun, 13 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/%E4%BA%8C%E5%8F%89%E6%A0%91/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>算法-二叉树</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%8F%89%E6%A0%91/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%8F%89%E6%A0%91/doc/</guid>
+      <description>子串和子序列是一块难啃的骨头，但大多数时候可以通过动态规划来解决</description>
+    </item>
+    
+  </channel>
+</rss>

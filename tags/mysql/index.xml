@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>mysql on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/mysql/</link>
+    <description>Recent content in mysql on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Fri, 11 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/mysql/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>MySQL的三种日志-binlog、redolog、undolog</title>
+      <link>https://lambertxiao.github.io/posts/mysql-binlog-redolog-undolog/doc/</link>
+      <pubDate>Fri, 11 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/mysql-binlog-redolog-undolog/doc/</guid>
+      <description>名字相近，其实长得不一样</description>
+    </item>
+    
+  </channel>
+</rss>

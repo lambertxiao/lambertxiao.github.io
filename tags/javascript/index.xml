@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Javascript on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/javascript/</link>
+    <description>Recent content in Javascript on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Wed, 14 Aug 2019 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/javascript/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>NodeJS与ES6的模块化</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2019-08-14-nodejs%E4%B8%8Ees6%E7%9A%84%E6%A8%A1%E5%9D%97%E5%8C%96/</link>
+      <pubDate>Wed, 14 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2019-08-14-nodejs%E4%B8%8Ees6%E7%9A%84%E6%A8%A1%E5%9D%97%E5%8C%96/</guid>
+      <description>NodeJS的module 对于 circle.js
+// 这种导出方式，相当于将变量地址导出，会被外界修改 exports.varA = &amp;#39;varA&amp;#39; exports.func1 = () =&amp;gt; { console.log(&amp;#39;func1&amp;#39;) } module.exports.varB = &amp;#39;varB&amp;#39; // 以上写法等价于 module.exports = { varA: &amp;#39;varA&amp;#39;, varB: &amp;#39;varB&amp;#39;, func1 () { console.log(&amp;#39;func&amp;#39;) } } 在 main.js 中可以这么引入
+let math = require(&amp;#39;./utils/math&amp;#39;) console.log(math.varA) console.log(math.varB) math.func1() math.varA = &amp;#39;A&amp;#39;; math.varB = &amp;#39;B&amp;#39;; math.func1 = () =&amp;gt; { console.log(&amp;#39;another func&amp;#39;) } let math2 = require(&amp;#39;./utils/math&amp;#39;) // varA, varB 和 func1 都发生了改变，证明import进来的模块是单例的 console.log(math2.varA) console.log(math2.varB) math2.func1() ES6的module ES6 模块不是对象，而是通过export命令显式指定输出的代码，再通过import命令输入。</description>
+    </item>
+    
+    <item>
+      <title>nodejs-异步编程</title>
+      <link>https://lambertxiao.github.io/posts/_posts/2019-08-06-nodejs-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B/</link>
+      <pubDate>Sat, 06 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/_posts/2019-08-06-nodejs-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B/</guid>
+      <description>异步编程 callback瀑布级回调 Promise Generator Async 和 Await   在函数体前通过关键字async可以将函数变为async函数
+  在async函数中对需要异步执行的函数前需加await关键字
+  await后的函数必须使用Promise对象封装
+  async函数执行后返回的是一个Promise对象
+  NodeJs单线程是怎么保证效率的 </description>
+    </item>
+    
+    <item>
+      <title>Grunt</title>
+      <link>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/grunt/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/grunt/</guid>
+      <description>Grunt是一个基于NodeJS，可用于自动化构建、测试、生成文档的项目管理工具。</description>
+    </item>
+    
+    <item>
+      <title>Gulp</title>
+      <link>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/gulp/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/gulp/</guid>
+      <description>Gulp 是一个构建工具，可以通过它自动执行网站开发过程中的公共任务，比如编译 SASS/Less，编译压缩混淆 JavaScript,，合并编译模板和版本控制等。因为 gulp 是基于 Node.js 构建的，所以 gulp 源文件和开发者自己定义的 gulpfile 都被写进 JavaScript 里，前端开发者可以用自己熟悉的语言来编写 gulp 任务。</description>
+    </item>
+    
+    <item>
+      <title>Webpack</title>
+      <link>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/webpack/</link>
+      <pubDate>Tue, 04 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/web%E5%89%8D%E7%AB%AF/webpack/</guid>
+      <description>webpack 是一个模块打包器(module bundler)。打包器(bundler)帮助您取得准备用于部署的 JavaScript 和样式表，将它们转换为适合浏览器的可用格式。</description>
+    </item>
+    
+  </channel>
+</rss>

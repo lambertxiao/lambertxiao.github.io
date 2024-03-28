@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>http2 on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/http2/</link>
+    <description>Recent content in http2 on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Fri, 25 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/http2/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>golang-http2实现</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-http2%E7%9A%84%E5%AE%9E%E7%8E%B0/doc/</link>
+      <pubDate>Fri, 25 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-http2%E7%9A%84%E5%AE%9E%E7%8E%B0/doc/</guid>
+      <description>扒开go源码，看看http2在go里的实现</description>
+    </item>
+    
+    <item>
+      <title>Http2简介</title>
+      <link>https://lambertxiao.github.io/posts/http2-%E7%AE%80%E4%BB%8B/http2/</link>
+      <pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/http2-%E7%AE%80%E4%BB%8B/http2/</guid>
+      <description>二进制协议、多路复用、流量控制、首部压缩</description>
+    </item>
+    
+  </channel>
+</rss>

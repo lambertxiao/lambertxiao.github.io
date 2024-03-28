@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>算法 on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/tags/%E7%AE%97%E6%B3%95/</link>
+    <description>Recent content in 算法 on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Tue, 21 Jun 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/tags/%E7%AE%97%E6%B3%95/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>网络-ssdp协议</title>
+      <link>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C-ssdp%E5%8D%8F%E8%AE%AE/doc/</link>
+      <pubDate>Tue, 21 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%BD%91%E7%BB%9C-ssdp%E5%8D%8F%E8%AE%AE/doc/</guid>
+      <description>基于udp+http协议，在upnp中被使用到</description>
+    </item>
+    
+    <item>
+      <title>算法-两数之和变种</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%B8%A4%E6%95%B0%E4%B9%8B%E5%92%8C%E5%8F%98%E7%A7%8D/doc/</link>
+      <pubDate>Tue, 07 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%B8%A4%E6%95%B0%E4%B9%8B%E5%92%8C%E5%8F%98%E7%A7%8D/doc/</guid>
+      <description>面试流利说遇到了，做得磕磕绊绊</description>
+    </item>
+    
+    <item>
+      <title>算法-设计数据结构</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E8%AE%BE%E8%AE%A1%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/doc/</link>
+      <pubDate>Mon, 04 Apr 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E8%AE%BE%E8%AE%A1%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/doc/</guid>
+      <description>双向队列，跳表等</description>
+    </item>
+    
+    <item>
+      <title>算法-只出现一次的数字</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8F%AA%E5%87%BA%E7%8E%B0%E4%B8%80%E6%AC%A1%E7%9A%84%E6%95%B0%E5%AD%97/doc/</link>
+      <pubDate>Sun, 27 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8F%AA%E5%87%BA%E7%8E%B0%E4%B8%80%E6%AC%A1%E7%9A%84%E6%95%B0%E5%AD%97/doc/</guid>
+      <description>挺恶心的位运行</description>
+    </item>
+    
+    <item>
+      <title>算法-全O(1)的数据结构</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%85%A8o1%E7%9A%84%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/doc/</link>
+      <pubDate>Wed, 23 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%85%A8o1%E7%9A%84%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/doc/</guid>
+      <description>写在字节4面后</description>
+    </item>
+    
+    <item>
+      <title>算法-BFS</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-bfs/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-bfs/doc/</guid>
+      <description>200. 岛屿数量 200. 岛屿数量 给你一个由 &amp;lsquo;1&amp;rsquo;（陆地）和 &amp;lsquo;0&amp;rsquo;（水）组成的的二维网格，请你计算网格中岛屿的数量。
+岛屿总是被水包围，并且每座岛屿只能由水平方向和/或竖直方向上相邻的陆地连接形成。
+此外，你可以假设该网格的四条边均被水包围。
+func numIslands(grid [][]byte) int { m, n := len(grid), len(grid[0]) bfs := func(i, j int) { // 从[i, j]位置开始扩散  q := [][]int{{i, j}} for len(q) != 0 { e := q[0] q = q[1:] x, y := e[0], e[1] if x &amp;gt;= 0 &amp;amp;&amp;amp; x &amp;lt; m &amp;amp;&amp;amp; y &amp;gt;= 0 &amp;amp;&amp;amp; y &amp;lt; n &amp;amp;&amp;amp; grid[x][y] == &amp;#39;1&amp;#39; { grid[x][y] = &amp;#39;0&amp;#39; q = append(q, []int{x+1, y}) q = append(q, []int{x-1, y}) q = append(q, []int{x, y+1}) q = append(q, []int{x, y-1}) } } } cnt := 0 for i := 0; i &amp;lt; m; i++ { for j := 0; j &amp;lt; n; j++ { if grid[i][j] == &amp;#39;0&amp;#39; { continue } bfs(i, j) // 为什么找到了一块陆地就可以增加一个岛屿数呢，  // 是因为在bfs方法中会将跟这块陆地相连的其他陆地染色，不会再次重复计算  cnt++ } } return cnt } 301.</description>
+    </item>
+    
+    <item>
+      <title>算法-DFS</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-dfs/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-dfs/doc/</guid>
+      <description>22. 括号生成 22. 括号生成 数字 n 代表生成括号的对数，请你设计一个函数，用于能够生成所有可能的并且 有效的 括号组合。
+func generateParenthesis(n int) []string { ans := []string{} var dfs func(lb, rb int, s string) dfs = func(lb, rb int, s string) { if lb &amp;gt; rb { return } if lb == 0 &amp;amp;&amp;amp; rb == 0 { // 括号用完了，并且是合法的  if isValid(s) { ans = append(ans, s) } return } if lb != 0 { dfs(lb - 1, rb, s + &amp;#34;(&amp;#34;) } if rb !</description>
+    </item>
+    
+    <item>
+      <title>算法-hash表</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-hash%E8%A1%A8/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-hash%E8%A1%A8/doc/</guid>
+      <description>hash表也算是刷题中的老常客了</description>
+    </item>
+    
+    <item>
+      <title>算法-LRU和LFU</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-lru%E5%92%8Clfu/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-lru%E5%92%8Clfu/doc/</guid>
+      <description>经典面试题了属实是</description>
+    </item>
+    
+    <item>
+      <title>算法-topK</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-topk/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-topk/doc/</guid>
+      <description>通常可以使用堆来解决topK的问题</description>
+    </item>
+    
+    <item>
+      <title>算法-二叉树</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%8F%89%E6%A0%91/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%8F%89%E6%A0%91/doc/</guid>
+      <description>子串和子序列是一块难啃的骨头，但大多数时候可以通过动态规划来解决</description>
+    </item>
+    
+    <item>
+      <title>算法-位运算</title>
+      <link>https://lambertxiao.github.io/posts/golang/golang-%E4%BD%8D%E8%BF%90%E7%AE%97/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/golang/golang-%E4%BD%8D%E8%BF%90%E7%AE%97/doc/</guid>
+      <description>461. 汉明距离 461. 汉明距离 两个整数之间的 汉明距离 指的是这两个数字对应二进制位不同的位置的数目。
+给你两个整数 x 和 y，计算并返回它们之间的汉明距离。
+func hammingDistance(x int, y int) int { s := x ^ y // 汉明距离即为s中1的数量  res := 0 for s &amp;gt; 0 { // 判断最低位是不是1  res += s &amp;amp; 1 s &amp;gt;&amp;gt;= 1 } return res } 397. 整数替换 397. 整数替换
+给定一个正整数 n ，你可以做如下操作：
+如果 n 是偶数，则用 n / 2替换 n 。 如果 n 是奇数，则可以用 n + 1或n - 1替换 n 。 返回 n 变为 1 所需的 最小替换次数 。</description>
+    </item>
+    
+    <item>
+      <title>算法-前缀和</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%89%8D%E7%BC%80%E5%92%8C/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%89%8D%E7%BC%80%E5%92%8C/doc/</guid>
+      <description>前缀和也是常见的数组题的解法了吧</description>
+    </item>
+    
+    <item>
+      <title>算法-动态规划</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92/doc/</guid>
+      <description>55. 跳跃游戏 55. 跳跃游戏 给定一个非负整数数组 nums ，你最初位于数组的 第一个下标 。
+数组中的每个元素代表你在该位置可以跳跃的最大长度。
+判断你是否能够到达最后一个下标。
+func canJump(nums []int) bool { l := len(nums) if l == 0 || l == 1 { return true } // 表示能不能到达第i位下标，true代表可以，false代表不可以  d := make([]bool, l) d[0] = true for i := 1; i &amp;lt; l; i++ { for j := i - 1; j &amp;gt;= 0; j-- { // 能找到一个j就好了  d[i] = d[j] &amp;amp;&amp;amp; (j + nums[j]) &amp;gt;= i if d[i] { break } } if !</description>
+    </item>
+    
+    <item>
+      <title>算法-子串子序列问题</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%AD%90%E4%B8%B2%E5%AD%90%E5%BA%8F%E5%88%97%E9%97%AE%E9%A2%98/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%AD%90%E4%B8%B2%E5%AD%90%E5%BA%8F%E5%88%97%E9%97%AE%E9%A2%98/doc/</guid>
+      <description>子串和子序列是一块难啃的骨头，但大多数时候可以通过动态规划来解决</description>
+    </item>
+    
+    <item>
+      <title>算法-快慢指针</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%BF%AB%E6%85%A2%E6%8C%87%E9%92%88/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%BF%AB%E6%85%A2%E6%8C%87%E9%92%88/doc/</guid>
+      <description>19. 删除链表的倒数第 N 个结点
+给你一个链表，删除链表的倒数第 n 个结点，并且返回链表的头结点。
+func removeNthFromEnd(head *ListNode, n int) *ListNode { // 快慢指针  dummy := &amp;amp;ListNode{} dummy.Next = head s, f := dummy, dummy // faster向前走n+1步，一会可以让slow停在想要删除的节点的前继节点上  for n &amp;gt;= 0 &amp;amp;&amp;amp; f != nil { f = f.Next n-- } for f != nil { f = f.Next s = s.Next } s.Next = s.Next.Next return dummy.Next } </description>
+    </item>
+    
+    <item>
+      <title>算法-拓扑排序</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%8B%93%E8%A1%A5%E6%8E%92%E5%BA%8F/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%8B%93%E8%A1%A5%E6%8E%92%E5%BA%8F/doc/</guid>
+      <description>207. 课程表 207. 课程表 你这个学期必须选修 numCourses 门课程，记为 0 到 numCourses - 1 。
+在选修某些课程之前需要一些先修课程。 先修课程按数组 prerequisites 给出，其中 prerequisites[i] = [ai, bi] ，表示如果要学习课程 ai 则 必须 先学习课程 bi 。
+例如，先修课程对 [0, 1] 表示：想要学习课程 0 ，你需要先完成课程 1 。 请你判断是否可能完成所有课程的学习？如果可以，返回 true ；否则，返回 false 。
+func canFinish(numCourses int, prerequisites [][]int) bool { // 入度  indeg := make([]int, numCourses) // 邻接表  g := make(map[int][]int) for _, q := range prerequisites { indeg[q[0]]++ g[q[1]] = append(g[q[1]], q[0]) } q := make([]int, 0, numCourses) // 无入度节点入队  for i := range indeg { if indeg[i] == 0 { q = append(q, i) } } resCount := 0 for len(q) &amp;gt; 0 { head := q[0] q = q[1:] resCount++ for _, i := range g[head] { indeg[i]-- if indeg[i] == 0 { q = append(q, i) } } } return resCount == numCourses } </description>
+    </item>
+    
+    <item>
+      <title>算法-括号问题</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%8B%AC%E5%8F%B7%E9%97%AE%E9%A2%98/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%8B%AC%E5%8F%B7%E9%97%AE%E9%A2%98/doc/</guid>
+      <description>20. 有效的括号
+给定一个只包括 &amp;lsquo;(&#39;，&#39;)&#39;，&#39;{&#39;，&#39;}&#39;，&#39;[&#39;，&#39;]&amp;rsquo; 的字符串 s ，判断字符串是否有效。
+有效字符串需满足： 左括号必须用相同类型的右括号闭合。 左括号必须以正确的顺序闭合。
+function isValid(s: string): boolean { let stack = [] for (let c of s) { if (c == &amp;#39;(&amp;#39; || c == &amp;#39;{&amp;#39; || c == &amp;#39;[&amp;#39;) { stack.push(c) } if (c == &amp;#39;)&amp;#39; || c == &amp;#39;}&amp;#39; || c == &amp;#39;]&amp;#39;) { let e = stack.pop() if (c != rightof(e)) { return false } } } if (stack.length &amp;gt; 0) { return false } return true }; function rightof(c: string): string { if (c == &amp;#34;{&amp;#34;) { return &amp;#34;}&amp;#34; } if (c == &amp;#34;[&amp;#34;) { return &amp;#34;]&amp;#34; } if (c == &amp;#34;(&amp;#34;) { return &amp;#34;)&amp;#34; } return &amp;#34;&amp;#34; } </description>
+    </item>
+    
+    <item>
+      <title>算法-数组</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%95%B0%E7%BB%84/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%95%B0%E7%BB%84/doc/</guid>
+      <description>与数组相关的算法题可以又各种骚操作</description>
+    </item>
+    
+    <item>
+      <title>算法-滑动窗口</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3/doc/</guid>
+      <description>LR两指针</description>
+    </item>
+    
+    <item>
+      <title>算法-链表</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E9%93%BE%E8%A1%A8/doc/</link>
+      <pubDate>Sun, 13 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E9%93%BE%E8%A1%A8/doc/</guid>
+      <description>2. 两数相加 2. 两数相加
+给你两个 非空 的链表，表示两个非负的整数。它们每位数字都是按照 逆序 的方式存储的，并且每个节点只能存储 一位 数字。
+请你将两个数相加，并以相同形式返回一个表示和的链表。 你可以假设除了数字 0 之外，这两个数都不会以 0 开头。
+206. 反转链表 206. 反转链表 给你单链表的头节点 head ，请你反转链表，并返回反转后的链表。
+func reverseList(head *ListNode) *ListNode { // 双指针，pre和curr一前一后  var pre *ListNode curr := head for curr != nil { tmp := curr.Next curr.Next = pre pre = curr curr = tmp } return pre } func reverseList(head *ListNode) *ListNode { if head == nil || head.Next == nil { return head } nhead := reverseList(head.</description>
+    </item>
+    
+    <item>
+      <title>算法-二分法</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%88%86%E6%B3%95/doc/</link>
+      <pubDate>Thu, 10 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%88%86%E6%B3%95/doc/</guid>
+      <description>最难不过二分，边界问题最蛋疼</description>
+    </item>
+    
+    <item>
+      <title>算法-单调栈</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8D%95%E8%B0%83%E6%A0%88/doc/</link>
+      <pubDate>Thu, 10 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E5%8D%95%E8%B0%83%E6%A0%88/doc/</guid>
+      <description>单调栈总是能解决一些看起来很困难的题</description>
+    </item>
+    
+    <item>
+      <title>动态规划-买卖股票</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%B9%B0%E5%8D%96%E8%82%A1%E7%A5%A8/doc/</link>
+      <pubDate>Wed, 09 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E4%B9%B0%E5%8D%96%E8%82%A1%E7%A5%A8/doc/</guid>
+      <description>啥时候A股的最大收益能用算法算出来也就不用上班了</description>
+    </item>
+    
+    <item>
+      <title>动态规划-打家劫舍</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%89%93%E5%AE%B6%E5%8A%AB%E8%88%8D/doc/</link>
+      <pubDate>Wed, 09 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E6%89%93%E5%AE%B6%E5%8A%AB%E8%88%8D/doc/</guid>
+      <description>不会打家劫舍的程序员不是好的小偷</description>
+    </item>
+    
+    <item>
+      <title>动态规划-爬楼梯</title>
+      <link>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E7%88%AC%E6%A5%BC%E6%A2%AF/doc/</link>
+      <pubDate>Wed, 09 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E7%AE%97%E6%B3%95/%E7%AE%97%E6%B3%95-%E7%88%AC%E6%A5%BC%E6%A2%AF/doc/</guid>
+      <description>爬个楼梯也事多</description>
+    </item>
+    
+    <item>
+      <title>角落生物-坨坨坨酱</title>
+      <link>https://lambertxiao.github.io/posts/%E8%A7%92%E8%90%BD%E7%94%9F%E7%89%A9-%E5%9D%A8/doc/</link>
+      <pubDate>Wed, 09 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/%E8%A7%92%E8%90%BD%E7%94%9F%E7%89%A9-%E5%9D%A8/doc/</guid>
+      <description>坨坨酱</description>
+    </item>
+    
+  </channel>
+</rss>

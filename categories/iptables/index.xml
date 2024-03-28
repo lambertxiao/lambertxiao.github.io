@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>iptables on Lambert&#39;s blog</title>
+    <link>https://lambertxiao.github.io/categories/iptables/</link>
+    <description>Recent content in iptables on Lambert&#39;s blog</description>
+    <image>
+      <url>https://lambertxiao.github.io/papermod-cover.png</url>
+      <link>https://lambertxiao.github.io/papermod-cover.png</link>
+    </image>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Mon, 16 May 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://lambertxiao.github.io/categories/iptables/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>iptables和netfilter</title>
+      <link>https://lambertxiao.github.io/posts/iptables/doc/</link>
+      <pubDate>Mon, 16 May 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://lambertxiao.github.io/posts/iptables/doc/</guid>
+      <description>iptables, netfilter, 5链3表</description>
+    </item>
+    
+  </channel>
+</rss>
